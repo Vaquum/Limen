@@ -4,8 +4,11 @@ from functools import partial
 import inspect
 import math
 from numbers import Real
+from typing import cast
 
 import numpy as np
+import numpy.typing as npt
+import polars as pl
 
 from limen.calibration._objective_threshold import validate_probabilities
 from limen.calibration.pipeline import CalibrationConfigProtocol, ThresholdOptimizerProtocol
@@ -40,7 +43,7 @@ class ObjectiveOptimizer:
     scorer: Callable[[object, object], float]
     maximize: bool
     rows: int
-    evaluated: dict[bytes, float] = field(default_factory=dict)
+    evaluated: dict[bytes, float] = field(default_factory=dict[bytes, float])
 
     def score(self, labels: object, predictions: object) -> float:
         result = self.scorer(labels, predictions)
@@ -54,7 +57,8 @@ class ObjectiveOptimizer:
         if params.get('metric') is not self.scorer or params.get('_objective_maximize') is not self.maximize:
             raise ValueError('Objective optimizer metric/direction changed')
         self.evaluated.clear()
-        result = self.optimizer(y_val, probabilities.copy(), **{**params, 'metric': self.score})
+        labels = cast(npt.NDArray[np.generic] | pl.Series, y_val)
+        result = cast(object, self.optimizer(labels, probabilities.copy(), **{**params, 'metric': self.score}))
         if not isinstance(result, tuple) or len(result) != _RESULT_FIELDS:
             raise ValueError('Objective optimizer must return a threshold/score pair')
         threshold, score = _finite(result[0], 'threshold'), _finite(result[1], 'score')

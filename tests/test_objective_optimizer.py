@@ -51,9 +51,10 @@ def test_recorded_custom_objective_optimizer(direction, calibrated, optimizer):
 
 
 @pytest.mark.parametrize('binding', ['metric', '_objective_maximize', 'y_val', 'val_proba'])
-def test_objective_optimizer_refuses_bound_protected_inputs(binding):
+@pytest.mark.parametrize('function', [grid_threshold_optimizer, _decorated, _Optimizer()])
+def test_objective_optimizer_refuses_bound_protected_inputs(binding, function):
     manifest, params, data = _prepared(objective_config())
-    optimizer = partial(grid_threshold_optimizer, **{binding: object()})
+    optimizer = partial(function, **{binding: object()})
     manifest.prediction_calibration_config = replace(manifest.prediction_calibration_config, threshold_func=optimizer)
     with patch('limen.sfd.reference_architecture.logreg_binary.LogRegBinary.train', side_effect=AssertionError('must refuse before fitting')), pytest.raises(ValueError, match='conflicts'):
         manifest.run_model(data, params)
