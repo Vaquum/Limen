@@ -146,6 +146,30 @@ Trainer/Sensor and other scientific read-back paths retain that reconstruction
 boundary. This rule does not change unrelated integer schema versions in saved
 reports or checkpoints.
 
+Optional author metadata fields may be omitted; explicit `null` also means absence. Non-null values
+follow these contracts; validation rejects malformed shapes at the field or tag
+item before fresh CLI compilation or artifact publication.
+
+| Field | Admitted value |
+| --- | --- |
+| `metadata.author` | Nonblank string. |
+| `metadata.description` | String, including an empty string. |
+| `metadata.tags` | List of nonblank strings. Empty lists and duplicates are allowed; names and order are preserved. |
+| `metadata.created_at` | Quoted real calendar date `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM:SS` with optional 1–6 fractional digits and optional `Z` or `±HH:MM` offset. |
+| `metadata.limen_version` | Quoted [Python package-version string](https://packaging.python.org/en/latest/specifications/version-specifiers/#appendix-parsing-version-strings-with-regular-expressions), including release, pre/post/dev and local forms and `0+unknown`. No whitespace padding or installed-version comparison. |
+
+Quote author-created dates and timestamps, for example `created_at: "2025-10-25"`.
+Unquoted YAML dates/timestamps are native objects that cannot enter the run's JSON
+reference unchanged; validation rejects them with a quoting hint. Validation
+preserves every declaration value. The author's optional timestamp is independent
+of the runtime timestamp written to `metadata.json`; its timezone may be omitted.
+Old and future package-version metadata do not establish schema compatibility.
+
+These shapes apply to programmatic validation and fresh CLI admission, including
+stored URI execution. Committed content identities are unchanged. Direct
+prevalidated compilation and scientific reconstruction retain their existing
+boundary.
+
 `uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
 ### The `uel` Execution Block
@@ -1477,6 +1501,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `metadata` | Optional string, tag-list, quoted date/time and package-version shapes; null means absence. | [check_metadata](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_metadata_spec.py) |
 | `sfd.manifest.required_columns` | Explicit nonempty list of distinct nonblank strings; omission preserves the default and null is rejected. | [column_issue](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_required_columns.py) |
 | `schema_version` | Required string, exactly `"1.0"`; checked before interpreting the current-schema body. | [schema_errors](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_schema_version.py) |
 | `sfd.manifest` | Actual round-parameter lookup locations; literal fields keep their native meaning. | [lookup_references](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_parameter_refs.py) |

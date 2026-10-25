@@ -530,6 +530,7 @@
   "limen/experiment/_holdout_composition.py": 220,
   "limen/experiment/_holdout_folds.py": 180,
   "limen/experiment/_holdout_sources.py": 220,
+  "limen/yaml/_metadata_spec.py": 90,
   "limen/experiment/_boolean_controls.py": 35,
   "limen/yaml/_boolean_spec.py": 50,
   "limen/yaml/_parameter_refs.py": 75,

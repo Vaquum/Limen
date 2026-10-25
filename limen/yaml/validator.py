@@ -1,9 +1,9 @@
 from limen.yaml._assessment_spec import check_assessment
+from limen.yaml._metadata_spec import check_metadata
 from limen.yaml._schema_version import schema_errors
 from limen.yaml._boolean_spec import BooleanControlsSpec
 from dataclasses import dataclass, field
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 from limen.yaml.errors import YAMLError
 from limen.yaml._objective_spec import check_objective_spec
@@ -204,6 +204,7 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
     if errors:
         return ValidationResult(valid=False, errors=errors, warnings=warnings)
 
+    check_metadata(yaml_dict, errors)
     check_assessment(yaml_dict, errors)
     check_objective_spec(yaml_dict, errors)
     _MAIN_ENGINE.run(yaml_dict, errors, warnings)

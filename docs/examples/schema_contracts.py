@@ -6,6 +6,7 @@ from pathlib import Path
 
 # Open parameter mappings delegate to the named callable's argument contract.
 NESTED = {
+    'metadata': ('limen/yaml/_metadata_spec.py', 'check_metadata'),
     'sfd.manifest.required_columns': ('limen/experiment/_required_columns.py', 'column_issue'),
     'schema_version': ('limen/yaml/_schema_version.py', 'schema_errors'),
     'sfd.manifest': ('limen/yaml/_parameter_refs.py', 'lookup_references'),
