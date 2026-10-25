@@ -1,6 +1,6 @@
 import copy
 import warnings
-from dataclasses import fields, replace
+from dataclasses import dataclass, fields, replace
 from functools import partial
 from types import SimpleNamespace
 
@@ -199,6 +199,46 @@ def test_factorized_override_refuses_before_preparation():
     manifest = Changed(**{field.name: copy.deepcopy(getattr(original, field.name)) for field in fields(original) if field.init})
     with pytest.raises(ValueError, match='original manifest preparation'):
         _ = validate_domain(manifest, config['sfd']['params'], frozenset({'fee'}))
+
+
+def test_factorized_inherited_rule_manifest_refuses():
+    from limen.experiment import RuleBasedManifest
+    from limen.experiment._factorized_admission import validate_domain
+    from limen.yaml.compiler import build_manifest
+    from tests.fixtures.factorize.generate import manifest as rule_configuration
+
+    class Inherited(RuleBasedManifest):
+        """An inherited manifest has no separately declared cache semantics."""
+
+    config = rule_configuration('rule_based')
+    original = build_manifest(config)
+    manifest = Inherited(**{field.name: copy.deepcopy(getattr(original, field.name)) for field in fields(original) if field.init})
+    with pytest.raises(ValueError, match='original manifest preparation'):
+        _ = validate_domain(manifest, config['sfd']['params'], frozenset({'fee'}))
+
+
+@pytest.mark.parametrize('active', [False, True])
+def test_factorized_unhashable_transform_activation(active):
+    from limen.experiment._factorized_admission import validate_domain
+
+    @dataclass
+    class Undeclared:
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError('An inactive or undeclared transform must never execute')
+
+    config = _config()
+    config['sfd']['params']['optional'] = [active]
+    rounds = _rounds(config)
+    rounds.manifest.add_feature(Undeclared(), include_if='optional')
+    if active:
+        with pytest.raises(ValueError, match='missing deterministic reuse declaration'):
+            _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
+    else:
+        _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
+        for fee in (4., 9.):
+            _data, result, _, _ = rounds.evaluate(_params(config) | {'fee': fee})
+            assert np.isfinite(result['backtest_pnl_per_bar_bps'])
+        assert len(rounds.cache) == 1
 
 
 def test_factorized_custom_rule_requires_complete_economic_replay():
