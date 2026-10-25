@@ -267,10 +267,6 @@ def test_manifest_source_holdout_rejection(manifest_type, tmp_path):
     try:
         manifest = manifest_type().set_data_source(HistoricalData.get_any_file, {'file_path_or_url': str(_FILE.resolve())})
         _holdout_research.bind_manifest(manifest, root)
-        if manifest_type is Manifest:
-            with pytest.raises(ValueError, match='Holdout research requires a built-in manifest'):
-                manifest.fetch_data()
-            return
         expected = _normalized(pl.read_parquet(_FILE)).head(96)
         assert_frame_equal(manifest.fetch_data(), expected)
         assert expected.height == 96

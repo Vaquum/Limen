@@ -1514,7 +1514,8 @@ def _public_recorded_case(case, root, config, raw, monkeypatch=None):
             mutable.remove_is('n_estimators', 12)
         loop = UniversalExperimentLoop(sfd=compiled, project_root=root, data=None if case == 'cli_resume_drop' else raw, yaml_reference=reference,
             search_strategy=build_search_strategy(reference), experiment_dir=directory,
-            intra_callback=adjust_search if case == 'search_affecting_hook' else None, feedback_interval=1)
+            intra_callback=adjust_search if case == 'search_affecting_hook' else None,
+            feedback_interval=1 if case == 'search_affecting_hook' else reference['uel'].get('feedback_interval', 100))
         count = reference['uel']['n_permutations']
         keep = workers == 1 and not factorize and not case.endswith('_drop')
         options = {'n_permutations': count, 'progress_bar': False, 'record_model_outputs': True, 'post_processing': keep, 'record_execution': True, 'prep_each_round': True, 'workers': workers, 'factorize': factorize}
