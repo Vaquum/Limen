@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T13:26:56.236987+00:00",
-  "execution_checkout_head": "7b026c4775d44ada7967a74140c98e56433b2db6",
+  "observed_at": "2026-10-25T14:47:25.787390+00:00",
+  "execution_checkout_head": "bfa4e3f9767baf188c515bacec413fe94ae01fea",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -132,7 +132,7 @@
     "experiment/checkpoint_manager.py": "fb8587a9364816a7f70208daf615af0fbf7726894b00fbfb4d1365b75e0f497f",
     "experiment/convergence_report.py": "63a3cda8861a939ebfa5a6f1aaecd2abd9e3bab4663acace92542414e2d0e0b3",
     "experiment/errors.py": "dbf7edfb45abd2156a255588e04454b3ed285defa741ed15f6cd3c2a6f54e5f5",
-    "experiment/experiment_core.py": "2fbcc243d34d6e515e5a21964d92ff3021fe502a2a2bd35e923714c080f72828",
+    "experiment/experiment_core.py": "059e7688c01e9d03d22c597620935be9a702c375c858e5c0dec3be27d59a3fa1",
     "experiment/family_acceptance_report.py": "b1a15c0541433581a25cb5acc095a689f5f820a06f79539a0dc4f5ba93f7fa51",
     "experiment/feedback_controller.py": "d3f1fd75c0e6bc976f0815c925a4a944144cfbb373807495ba3b0826e29284e9",
     "experiment/holdout.py": "e6f6a90b16b47394e09749b94e2af30ddf3cd032e664db7eff8fe845665970d1",
