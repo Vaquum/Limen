@@ -59,9 +59,10 @@ class ObjectiveOptimizer:
         self.evaluated.clear()
         labels = cast(npt.NDArray[np.generic] | pl.Series, y_val)
         result = cast(object, self.optimizer(labels, probabilities.copy(), **{**params, 'metric': self.score}))
-        if not isinstance(result, tuple) or len(result) != _RESULT_FIELDS:
+        pair = cast(tuple[object, ...], result)
+        if not isinstance(result, tuple) or len(pair) != _RESULT_FIELDS:
             raise ValueError('Objective optimizer must return a threshold/score pair')
-        threshold, score = _finite(result[0], 'threshold'), _finite(result[1], 'score')
+        threshold, score = _finite(pair[0], 'threshold'), _finite(pair[1], 'score')
         decisions = (probabilities >= threshold).astype(np.int8)
         expected = self.scorer(y_val, decisions)
         if decisions.tobytes() not in self.evaluated or not np.isclose(score, expected, rtol=1e-9, atol=1e-12):
