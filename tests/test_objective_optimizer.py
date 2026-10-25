@@ -55,9 +55,8 @@ def test_objective_optimizer_refuses_bound_protected_inputs(binding):
     manifest, params, data = _prepared(objective_config())
     optimizer = partial(grid_threshold_optimizer, **{binding: object()})
     manifest.prediction_calibration_config = replace(manifest.prediction_calibration_config, threshold_func=optimizer)
-    with patch('limen.sfd.reference_architecture.logreg_binary.LogRegBinary.train', side_effect=AssertionError('must refuse before fitting')):
-        with pytest.raises(ValueError, match='conflicts'):
-            manifest.run_model(data, params)
+    with patch('limen.sfd.reference_architecture.logreg_binary.LogRegBinary.train', side_effect=AssertionError('must refuse before fitting')), pytest.raises(ValueError, match='conflicts'):
+        manifest.run_model(data, params)
     params['use_threshold'] = False
     assert np.isfinite(manifest.run_model(data, params)[COLUMN])
 

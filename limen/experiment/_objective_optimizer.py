@@ -12,6 +12,7 @@ from limen.calibration.pipeline import CalibrationConfigProtocol, ThresholdOptim
 
 __all__: list[str] = []
 _PROTECTED = {'metric', '_objective_maximize', 'y_val', 'val_proba'}
+_RESULT_FIELDS = 2
 
 
 def check_optimizer(config: CalibrationConfigProtocol) -> None:
@@ -22,7 +23,7 @@ def check_optimizer(config: CalibrationConfigProtocol) -> None:
         raise ValueError('Objective conflicts with explicit threshold metric/direction or validation operands')
     while isinstance(function, partial):
         bound = inspect.signature(function.func).bind_partial(*function.args, **function.keywords)
-        if _PROTECTED.intersection(bound.arguments):
+        if _PROTECTED.intersection(bound.arguments) or _PROTECTED.intersection(function.keywords):
             raise ValueError('Objective conflicts with bound threshold metric/direction or validation operands')
         function = function.func
 
@@ -54,7 +55,7 @@ class ObjectiveOptimizer:
             raise ValueError('Objective optimizer metric/direction changed')
         self.evaluated.clear()
         result = self.optimizer(y_val, probabilities.copy(), **{**params, 'metric': self.score})
-        if not isinstance(result, tuple) or len(result) != 2:
+        if not isinstance(result, tuple) or len(result) != _RESULT_FIELDS:
             raise ValueError('Objective optimizer must return a threshold/score pair')
         threshold, score = _finite(result[0], 'threshold'), _finite(result[1], 'score')
         decisions = (probabilities >= threshold).astype(np.int8)
