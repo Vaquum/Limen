@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T13:26:56.236987+00:00",
-  "execution_checkout_head": "7b026c4775d44ada7967a74140c98e56433b2db6",
+  "observed_at": "2026-10-25T15:12:16.469443+00:00",
+  "execution_checkout_head": "f7a92f60b1da8f352a22ed91a6a5290c27dabbdd",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -115,7 +115,7 @@
     "experiment/_parallel_sources.py": "1f14a9f7ad5e1d4d5c8679de43a2e5088b795e2cf6bb12f0964170ad73470670",
     "experiment/_parallel_worker.py": "e8d7178b3fb8dd99b3a58607c64dfe483aab3abf891bd6a47b36641506853800",
     "experiment/_prepare_backtest_data.py": "8c6800f2049ded544cede268a66cd2f2023d75b9f0bca50a2e5d8b46b427ad81",
-    "experiment/_prepare_trade_context.py": "43eeb3e90670298e48fbb9dc0a125c96ba5d2e5fde7bf54dfbd4045d8ffb3fa0",
+    "experiment/_prepare_trade_context.py": "520a8adb88daaf27a50e399350a70da195bc94e0869bdfd3ba91c8a2a94ef287",
     "experiment/_recording.py": "59c777d824fecf1239b6643a9ebc702b322aa77c7dc1c72fc35f4d60a16529a3",
     "experiment/_resolve_backtest_config.py": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f",
     "experiment/_resolve_trade_policy.py": "93d17a4cd19476017f250c5970d0d67f93c7a8941050902897b8545f7b970ce1",
@@ -136,7 +136,7 @@
     "experiment/family_acceptance_report.py": "b1a15c0541433581a25cb5acc095a689f5f820a06f79539a0dc4f5ba93f7fa51",
     "experiment/feedback_controller.py": "d3f1fd75c0e6bc976f0815c925a4a944144cfbb373807495ba3b0826e29284e9",
     "experiment/holdout.py": "e6f6a90b16b47394e09749b94e2af30ddf3cd032e664db7eff8fe845665970d1",
-    "experiment/manifest_core.py": "be598d11a0acbb34ab2146867373567e0e8590bbfde6296a0744c11c455aa9f6",
+    "experiment/manifest_core.py": "993d01128b48cde1c3aec92138c6878aeda87759fd64d4accce3f783f9c52cd3",
     "experiment/msq.py": "6a19bc2728e31abfa8ada6e04ef958b1d3ffe61186ab11f67ece95ad92888fa7",
     "experiment/param_domain.py": "f0c5fb40f8e47f92a9cd00fae30c3daa8e440290ccad16d65789c3ebc0667cba",
     "experiment/param_search/__init__.py": "0428f114569749bd7564043cc36b781576cb0699092ed09504846c5975963a0a",
