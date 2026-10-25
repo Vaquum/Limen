@@ -232,15 +232,15 @@ def test_relocated_legacy_absolute_output_run_resumes_without_template_admission
     project = tmp_path / 'project'
     config = _project(project)
     original_destination = project / 'legacy-output'
-    config['uel'].update(output_path=str(original_destination), n_permutations=2, feedback_interval=1)
+    config['uel'].update(output_path=str(original_destination), n_permutations=3, feedback_interval=1)
     submitted = project / 'experiment.yaml'
     _write(submitted, config)
     monkeypatch.chdir(project)
     original_run = UniversalExperimentLoop.run
 
-    def stop_after_first(loop, *args, **kwargs):
+    def stop_after_second(loop, *args, **kwargs):
         def stop(log, _msq):
-            if log.height == 1:
+            if log.height == 2:
                 loop._shutdown_requested = True
         loop._intra_callback = stop
         return original_run(loop, *args, **kwargs)
@@ -248,7 +248,7 @@ def test_relocated_legacy_absolute_output_run_resumes_without_template_admission
     # Produce the real checkpoint through the old destination-selection seam.
     with monkeypatch.context() as context:
         context.setattr(run_command, 'admit_output', lambda prefix, expanded: Path(expanded))
-        context.setattr(UniversalExperimentLoop, 'run', stop_after_first)
+        context.setattr(UniversalExperimentLoop, 'run', stop_after_second)
         interrupted = CliRunner().invoke(cli, ['run', '--no-progress-bar', str(submitted)])
     assert interrupted.exit_code == 1, interrupted.output
     assert 'Interrupted; checkpoint retained' in interrupted.output
@@ -258,12 +258,12 @@ def test_relocated_legacy_absolute_output_run_resumes_without_template_admission
     metadata_before = json.loads((relocated / 'metadata.json').read_text())
     assert metadata_before['yaml_reference']['uel']['output_path'] == str(original_destination)
     before = pl.read_csv(relocated / 'results.csv')
-    assert before.height == 1
+    assert before.height == 2
     result = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--resume', str(relocated)])
     assert result.exit_code == 0, result.output
     after = pl.read_csv(relocated / 'results.csv')
-    assert after.height == 2
-    assert after.head(1).equals(before)
+    assert after.height == 3
+    assert after.head(2).equals(before)
     assert (relocated / submitted.name).read_bytes() == saved_yaml
     assert json.loads((relocated / 'metadata.json').read_text())['yaml_reference'] == config
     assert not original_destination.exists()
