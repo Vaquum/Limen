@@ -84,16 +84,12 @@ class ValidationResult:
 
 
 _TOP_LEVEL_ENGINE = RuleEngine(cast(list[Rule], [
-    Required('schema_version', str, suggestion=f'Set schema_version: "{VERSION}"'),
     Required('metadata', dict),
     Required('sfd', dict),
     Required('uel', dict),
 ]))
 
 _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
-
-    SchemaVersion(VERSION),
-
     Required('metadata.name', str),
     NameSlug(),
     Required('metadata.mode', str),
@@ -193,12 +189,22 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 ]))
 
 
+def _schema_errors(yaml_dict: dict[str, object]) -> list[YAMLError]:
+    errors: list[YAMLError] = []
+    Required('schema_version', str, suggestion=f'Set schema_version: "{VERSION}"').check(yaml_dict, errors, [])
+    if not errors:
+        SchemaVersion(VERSION).check(yaml_dict, errors, [])
+    return errors
+
+
 def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 
     '''Collect YAML errors and warnings; validity requires no errors.'''
 
-    errors: list[YAMLError] = []
+    errors = _schema_errors(yaml_dict)
     warnings: list[YAMLError] = []
+    if errors:
+        return ValidationResult(valid=False, errors=errors)
 
     _TOP_LEVEL_ENGINE.run(yaml_dict, errors, warnings)
     if errors:

@@ -11,6 +11,7 @@ from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
 from limen.yaml.config import is_mapping
+from limen.yaml.validator import _schema_errors
 
 
 def run_resume(results_dir: Path, progress_bar: bool = True,
@@ -28,6 +29,10 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
     if metadata is None:
         return False
     yaml_reference = metadata['yaml_reference']
+    version_errors = _schema_errors(yaml_reference)
+    if version_errors:
+        click.secho(f'  ✗ schema_version: {version_errors[0].message}', fg='red')
+        return False
     effective_workers = metadata.get('workers', 1) if workers is None else workers
 
     target_permutations = _load_target_permutations(results_dir)
