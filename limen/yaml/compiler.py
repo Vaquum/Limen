@@ -1,4 +1,5 @@
 from limen.yaml._backtest_spec import apply_backtest
+from limen.yaml._boolean_spec import admit_controls
 from limen.experiment._allocation import apply_yaml as apply_allocation
 from limen.experiment._holdout_research import initialize_compiled, cached_manifest
 import inspect
@@ -48,6 +49,7 @@ def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
 
     '''Build the declared ML or rule-based manifest.'''
 
+    admit_controls(yaml_dict)
     m = yaml_dict['sfd']['manifest']
     manifest_type = m['type']
 
@@ -201,8 +203,8 @@ def _apply_scaler(manifest: MLManifest, m: dict[str, Any]) -> None:
 
 def _apply_strict_mode(manifest: MLManifest, m: dict[str, Any]) -> None:
 
-    if m.get('strict_mode'):
-        _ = manifest.set_strict_mode(True)
+    if 'strict_mode' in m:
+        _ = manifest.set_strict_mode(m['strict_mode'])
 
 
 def _apply_target(manifest: MLManifest, m: dict[str, Any]) -> None:
@@ -278,6 +280,7 @@ class CompiledSFD:
         super().__init__()
 
         self._yaml, self._holdout_project_root, self.__name__ = initialize_compiled(yaml_dict, project_root)
+        admit_controls(yaml_dict)
         self._manifest_cache: Manifest | None = None
 
     def params(self) -> dict[str, list[Any]]:
@@ -319,6 +322,7 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
 
     '''Build the declared search, requiring a literal seed for shuffled YAML grids.'''
 
+    admit_controls(yaml_dict)
     uel_cfg = _uel_config(yaml_dict)
     sfd_cfg: dict[str, Any] = yaml_dict.get('sfd') or {}
     strategy_cfg = uel_cfg.get('search_strategy', {})

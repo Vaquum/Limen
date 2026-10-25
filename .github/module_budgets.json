@@ -529,5 +529,7 @@
   "limen/experiment/_factorized_projection.py": 110,
   "limen/experiment/_holdout_composition.py": 220,
   "limen/experiment/_holdout_folds.py": 180,
-  "limen/experiment/_holdout_sources.py": 220
+  "limen/experiment/_holdout_sources.py": 220,
+  "limen/experiment/_boolean_controls.py": 35,
+  "limen/yaml/_boolean_spec.py": 50
 }
