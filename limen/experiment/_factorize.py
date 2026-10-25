@@ -16,16 +16,14 @@ import polars as pl
 
 from limen.experiment._factorized_admission import validate_candidate, validate_domain
 from limen.experiment._factorized_key import parameter_key
+from limen.experiment._factorized_replay import replay, validate_output
 from limen.experiment.errors import StrictModeError
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
 from limen.experiment._factorized_prep import FittedPreparation, supports_preparation
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment._grid_resume import validate_factorized_grid
-from limen.metrics.rule_based_metrics import rule_based_metrics
-from limen.sfd.reference_architecture import _backtest_evaluation
-from limen.sfd.reference_architecture.base import ReferenceModel
-from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_based
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
 
 _BACKTEST_FIELDS = ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
 _RESERVED = frozenset(('bar_type', 'feature_groups', 'use_calibration', 'use_threshold'))
@@ -103,9 +101,11 @@ class FactorizedRounds:
             _fail('context overrides a backtest-only parameter')
         self.domain = {key: list(values) for key, values in domain.items()} | {key: [value] for key, value in (context or {}).items()}
         for key in self.axes:
-            if key in _RESERVED or any(_references(value, key) for attr, value in vars(manifest).items()
-                                      if attr not in ('backtest_config', 'architecture_function', 'data_source_config')):
+            if key in _RESERVED:
                 _fail(f'backtest parameter {key} affects signal generation')
+            if any(_references(value, key) for attr, value in vars(manifest).items()
+                   if attr not in ('backtest_config', 'architecture_function', 'data_source_config')):
+                _fail(f'backtest parameter {key} is also consumed by the manifest')
             if manifest.data_source_config is not None and _references(manifest.data_source_config.params, key):
                 _fail(f'backtest parameter {key} is also consumed by the source')
         self.contract = validate_domain(manifest, self.domain, self.axes)
@@ -152,6 +152,7 @@ class FactorizedRounds:
                 for warning in caught:
                     warnings.warn(str(warning.message), warning.category, stacklevel=2)
                 raise
+            validate_output(self.contract, data, result)
             recorded = list(dict.fromkeys(str(w.message) for w in caught))
             if not isinstance(data.get('price_data_for_backtest'), pl.DataFrame) and type(self.manifest) is MLManifest:
                 _fail('missing snapshot test prices')
@@ -174,16 +175,27 @@ class FactorizedRounds:
                 for split in positions:
                     frame = cast(pl.DataFrame, data[split])
                     evidence[split] = frame.select(col for col in ('datetime', 'open', 'high', 'low', 'close') if col in frame.columns)
-            converged_warning = bool(convergence_warning(caught, True))
+            with warnings.catch_warnings(record=True) as economic:
+                warnings.simplefilter('always')
+                _ = replay(self.manifest, self.contract, result, copy.deepcopy(evidence), params.copy(), positions, self.record_execution)
+            scientific_warnings = list(caught)
+            for warning in economic:
+                match = next((item for item in scientific_warnings if item.category is warning.category and str(item.message) == str(warning.message)), None)
+                if match is not None:
+                    scientific_warnings.remove(match)
+            converged_warning = bool(convergence_warning(scientific_warnings, True))
             if self.preparation is not None and prep_key is not None:
                 if prep_key not in self.preparation.cache and len(self.preparation.cache) >= _CACHE_LIMIT:
-                    del self.preparation.cache[next(iter(self.preparation.cache))]
+                    oldest = next(iter(self.preparation.cache))
+                    del self.preparation.cache[oldest]
+                    del self.preparation.warning_cache[oldest]
                 self.preparation.cache[prep_key] = fitted
+                self.preparation.warning_cache[prep_key] = list(self.preparation.pending_warnings)
             if len(self.cache) >= _CACHE_LIMIT:
                 del self.cache[next(iter(self.cache))]
             derived = {name: value for name, value in params.items() if name not in self.domain}
-            self.cache[key] = _Cached(copy.deepcopy(evidence), copy.deepcopy({name: value for name, value in result.items() if name != '_model'}), recorded, positions, converged_warning, copy.deepcopy(derived))
-            return data, result, recorded, converged_warning
+            self.cache[key] = _Cached(copy.deepcopy(evidence), copy.deepcopy({name: value for name, value in result.items() if name != '_model'}), list(dict.fromkeys(str(w.message) for w in scientific_warnings)), positions, converged_warning, copy.deepcopy(derived))
+            return data, result, recorded, bool(convergence_warning(caught, True))
 
         self.cache[key] = entry
         data = copy.deepcopy(entry.data)
@@ -193,34 +205,8 @@ class FactorizedRounds:
         data['_alignment'] = copy.deepcopy(entry.data['_alignment'])
         data['_record_execution'] = self.record_execution
         data['_record_model_outputs'] = self.record_model_outputs
-        apply_costs = cast(Callable[..., None], vars(Manifest)['_apply_backtest_cost'])
-        apply_costs(self.manifest, data, params)
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
-            if self.contract.replay is not None:
-                result = self.contract.replay(copy.deepcopy(entry.result), data, params)
-            elif entry.positions is None:
-                predictions = np.asarray(entry.result['_preds'])
-                if self.contract.prediction_kind == 'continuous':
-                    predictions = (predictions > 0).astype(int)
-                compute = cast(Callable[[object, Mapping[str, object]], dict[str, float]], vars(_backtest_evaluation)['compute_backtest'])
-                metrics = compute(predictions, data)
-                result = copy.deepcopy(entry.result) | metrics
-            else:
-                rule = RuleBasedStrategy()
-                cost_args = cast(Callable[..., dict[str, object]], vars(ReferenceModel)['_cost_kwargs'])
-                costs = cost_args(rule, data)
-                run_split = cast(Callable[..., dict[str, float]], vars(RuleBasedStrategy)['_backtest_split'])
-                summaries: dict[str, dict[str, float]] = {}
-                for split in ('train', 'val', 'test'):
-                    if split == 'test' and self.record_execution:
-                        costs.update(_record_execution=True, _alignment=data['_alignment'])
-                    frame = data[split]
-                    if not isinstance(frame, pl.DataFrame):
-                        _fail('rule-based split must be a DataFrame')
-                    summaries[split] = run_split(rule, frame, entry.positions[split], costs)
-                summarize = cast(Callable[..., dict[str, object]], rule_based_metrics)
-                fresh = summarize(entry.positions, summaries)
-                result = copy.deepcopy(entry.result) | fresh
+            result = replay(self.manifest, self.contract, entry.result, data, params, entry.positions, self.record_execution)
         recorded = list(dict.fromkeys([*entry.warnings, *(str(w.message) for w in caught)]))
         return data, result, recorded, entry.convergence or bool(convergence_warning(caught, True))

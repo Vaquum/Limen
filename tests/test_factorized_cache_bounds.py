@@ -7,6 +7,7 @@ import pytest
 
 from limen.experiment import _factorize
 from limen.experiment._factorize import FactorizedRounds
+from limen.experiment._factorized_key import parameter_key
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.param_domain import ParamDomain
@@ -49,7 +50,7 @@ def test_cache_eviction_equivalence(tmp_path, monkeypatch):
 
     def capture(rounds, candidate):
         assert rounds.preparation is not None
-        signal_key = _key(candidate, sorted(set(candidate) - rounds.axes))
+        signal_key = parameter_key({key: value for key, value in candidate.items() if key not in rounds.axes})
         prep_key = _key(candidate, rounds.preparation.names)
         if signal_key in prediction_order:
             prediction_order.remove(signal_key)
