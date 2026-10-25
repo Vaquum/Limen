@@ -1077,6 +1077,27 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
             assert item['native'] == item['derived']
         else:
             assert any(len(group) > 1 for group in item['members'])
+    if bar_type == 'trade':
+        from limen.data.bars import trade_bars
+        future_test = raw.filter(pl.col('datetime').dt.epoch('ns') >= history.utc_day('2024-01-05'))
+        times = future_test['datetime'].dt.epoch('ns').to_list()
+        offsets = {instant: index for index, instant in enumerate(times)}
+        crossed = [instant for instant, count in zip(trade_bars(future_test, 100000)['datetime'].dt.epoch('ns'),
+            trade_bars(future_test, 100000)['bar_count'], strict=True) if instant < proof['cutoff_ns'] <= times[offsets[instant] + count - 1]]
+        assert crossed and not set(crossed) & {group[0] for group in formation['partitions'][-1]['members']}
+        form, options = manifest.bar_formation
+        def unretained(frame, **kwargs):
+            return form(frame, **kwargs).drop('bar_count')
+        manifest.set_bar_formation(unretained, **options)
+        from tests.test_factorized_preparation import _instrument
+        with source_operation(manifest), monkeypatch.context() as guarded:
+            counts = _instrument(guarded)
+            before = _artifact_state(directory)
+            with pytest.raises(ValueError, match='constituent counts'):
+                manifest.prepare_data(raw, params.copy())
+            assert _artifact_state(directory) == before
+            assert counts['target'] == counts['scaler'] == counts['model'] == 0
+        manifest.set_bar_formation(form, **options)
     with source_operation(manifest), research.operation(manifest, 'replay') as replay:
         replay.replay_witness = proof
         repeated = manifest.prepare_data(prefix, params.copy())
@@ -1097,3 +1118,36 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
         assert 1704412800001_000000 in funding['settlement_at'].to_list()
         assert frames[1]['settlement_at'].max() <= bound.cutoff_ns
         assert witnesses['execution']['clocks']['end_ns'][-1] == bound.cutoff_ns
+        if secondary == 'direct':
+            _independent_role_clocks(root, manifest.backtest_config, params, bound)
+
+
+def _independent_role_clocks(root, config, params, binding):
+    from dataclasses import replace
+    from zipfile import ZipFile
+    from limen.experiment._holdout_sources import _roles
+    from limen.experiment.manifest_core import DataSourceConfig
+
+    quarter = pl.read_parquet(_FIXTURE.parent / 'spot_15m_20250101_20250531.parquet').head(480)
+    starts = quarter['datetime'].dt.epoch('ns')
+    quarter = quarter.with_columns(starts.alias('start_ns'), (starts + 900_000_000_000).alias('end_ns'),
+        starts.alias('open_available_at_ns'), (starts + 900_000_000_000).alias('available_at_ns'))
+    quarter_path = root / 'quarter-execution.parquet'
+    quarter.write_parquet(quarter_path)
+    configured = replace(config, funding=None, execution_data_source=DataSourceConfig(config.execution_data_source.method, {'file_path_or_url': str(quarter_path)}))
+    current = replace(binding, cutoff_ns=history.utc_day('2025-01-05'))
+    frames, witness = _roles(configured, params, current, None)
+    assert (frames[0]['end_ns'] - frames[0]['start_ns']).unique().to_list() == [900_000_000_000]
+    assert witness['execution']['clocks']['end_ns'][-1] == current.cutoff_ns
+    archive = _FIXTURE.parent / 'binance_trades_btcusdt_2025-05-23_90s.zip'
+    with ZipFile(archive) as source, source.open(source.namelist()[0]) as stream:
+        trades = pl.read_csv(stream, has_header=False)
+    stamp, price = trades['column_5'] * 1000, trades['column_2']
+    points = pl.DataFrame({'row_id': trades['column_1'].cast(pl.String), 'start_ns': stamp, 'end_ns': stamp,
+        'open_available_at_ns': stamp, 'available_at_ns': stamp, **dict.fromkeys(('open', 'high', 'low', 'close'), price)})
+    point_path = root / 'point-execution.parquet'
+    points.write_parquet(point_path)
+    configured = replace(configured, execution_data_source=DataSourceConfig(config.execution_data_source.method, {'file_path_or_url': str(point_path)}))
+    frames, witness = _roles(configured, params, replace(current, cutoff_ns=history.utc_day('2025-05-24')), None)
+    assert frames[0].equals(points)
+    assert witness['execution']['clocks']['start_ns'] == witness['execution']['clocks']['end_ns'] == stamp.to_list()
