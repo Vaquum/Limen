@@ -445,6 +445,8 @@
   "limen/sfd/reference_architecture/direction_sizing.py": 330,
   "limen/experiment/_objective.py": 160,
   "limen/experiment/_objective_optimizer.py": 80,
+  "limen/experiment/_validation_decisions.py": 120,
+  "limen/experiment/_validation_calibration.py": 100,
   "limen/calibration/_objective_threshold.py": 50,
   "limen/experiment/_objective_run.py": 120,
   "limen/yaml/_objective_spec.py": 110,

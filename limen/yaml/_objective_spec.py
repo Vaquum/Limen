@@ -1,10 +1,11 @@
 from collections.abc import Mapping
-from typing import cast
+from typing import TypeVar, cast
 
 from limen.experiment._objective import ObjectiveConfig
-from limen.experiment.manifest_core import MLManifest
+from limen.experiment.manifest_core import MLManifest, RuleBasedManifest
 from limen.yaml.errors import YAMLError
 
+M = TypeVar('M', MLManifest, RuleBasedManifest)
 
 def _mapping(value: object) -> Mapping[str, object]:
     return cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
@@ -19,8 +20,6 @@ def _read_objective(yaml_dict: Mapping[str, object], errors: list[YAMLError]) ->
     if 'objective' not in manifest:
         return None
     path = 'sfd.manifest.objective'
-    if manifest.get('type') != 'ml':
-        errors.append(YAMLError(message='Objectives require an ML manifest', path=path))
     value = manifest['objective']
     if not isinstance(value, Mapping):
         errors.append(YAMLError(message='Objective must be a mapping with metric and direction', path=path))
@@ -48,7 +47,7 @@ def read_objective(yaml_dict: Mapping[str, object]) -> ObjectiveConfig | None:
     return objective
 
 
-def apply_objective(manifest: MLManifest, yaml_dict: Mapping[str, object]) -> MLManifest:
+def apply_objective(manifest: M, yaml_dict: Mapping[str, object]) -> M:
     objective = read_objective(yaml_dict)
     if objective is not None:
         _ = manifest.set_objective(metric=objective.metric, direction=objective.direction)

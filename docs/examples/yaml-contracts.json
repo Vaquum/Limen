@@ -110,7 +110,7 @@
       "symbol": "_FIELDS"
     },
     "sfd.manifest.objective": {
-      "sha256": "52ca9dba8bae46a3be21f07b0613a4c32c2c0f2f5c8e0e26b792d619a2a47b52",
+      "sha256": "c151d10d8ec78f7696930d8568c499f20144008276a4ad5b8a42b93eb169d3e5",
       "source": "limen/yaml/_objective_spec.py",
       "symbol": "_read_objective"
     },
@@ -533,6 +533,7 @@
         "backtest",
         "data_source",
         "indicators",
+        "objective",
         "reference_architecture",
         "required_columns",
         "split_dates",

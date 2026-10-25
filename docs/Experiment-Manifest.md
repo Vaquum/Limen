@@ -478,6 +478,8 @@ The final `n_folds * test_bars` source rows form consecutive test windows. Each 
 
 The existing train-to-validation ratio divides each pre-test pool; the default is `8:1`. A further `purge_bars` gap separates model training from validation. Choose a purge at least as long as the target's forward label horizon. Insufficient rows fail before fitting.
 
+Validation-return objectives accept compatible ML and rule-based manifests, including equivalent architecture wrappers. The objective scores aligned validation decisions under the declared event execution policy. A fitted predictor is called with fresh validation-only inputs, or an architecture supplies `_validation` with the ordered `row_ids`, `source_binding` and `prediction_mode` received in `data['_validation_context']`, plus its actual `predictions`. Explicit evidence is authoritative; malformed or stale evidence fails. Probabilities are required when active calibration or threshold selection consumes them. The effective calibration configuration is bound whether supplied by the manifest or the architecture call. Active calibration must fit the original ordered validation operands; threshold callbacks retain those original labels even when probability calibration is disabled. Scored decisions must use the resulting calibrated probabilities and selected threshold. Allocation scores its bound outer validation exposure batch.
+
 Both ML and rule-based manifests support walk-forward sweeps. Each fold prepares its own partitions and fits its configured target, scaler and model afresh. Probability calibration, threshold selection and the validation-return objective use only that fold's validation partition; their existing configuration and flags still control whether tuning runs. Test execution uses the fold's fitted model and retained test-row order. No fitted state carries from one fold to another.
 
 One trial consumes one permutation and reaches feedback only after its folds finish. Its numeric result values are the arithmetic means of finite fold values; these are the values existing reducers see. The individual fold results and test net-return track retain the evidence behind that aggregate. A mean of fold total returns is not a compounded return for the stitched test period.
@@ -1411,7 +1413,7 @@ The index follows the current validator, including its conditional rules. `Requi
 | `sfd.manifest.strategy.entry` | Required | `sfd.manifest.type = rule_based` | {"type": "str"} |
 | `sfd.manifest.indicators` | FuncList | `sfd.manifest.type = rule_based` | {} |
 | `sfd.manifest.strategy` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["conditions", "entry"], "severity": "warning"} |
-| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "severity": "warning"} |
+| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "objective", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "severity": "warning"} |
 | `uel.n_permutations` | Required | `always` | {"type": "int"} |
 | `uel.search_strategy.type` | OneOf | `always` | {"choices": ["grid", "random", "sobol"]} |
 | `uel.search_strategy` | NoUnknownKeys | `always` | {"known": ["seed", "shuffle", "type"], "severity": "warning"} |

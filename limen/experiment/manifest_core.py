@@ -4,10 +4,10 @@ import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
+from limen.experiment._prepare_trade_context import attach_outcomes, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
-from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
-from limen.experiment._objective import ObjectiveConfig, bind_optimizer as _bind_objective_optimizer, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
+from limen.experiment._prepare_trade_context import PreparedTradeContext, attach_trade_context as _attach_trade_context
+from limen.experiment._objective import ObjectiveConfig, run_model as _run_objective_model
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, validate_witness as _validate_witness
 from collections.abc import Mapping
 from limen.experiment._resolve_backtest_config import resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
@@ -21,7 +21,7 @@ from datetime import date
 from datetime import datetime
 from itertools import pairwise
 from collections.abc import Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:
@@ -797,14 +797,7 @@ class Manifest:
         Required parameters (no defaults) must be in round_params.
         '''
 
-        if self.allocation_config is not None:
-            self._apply_backtest_cost(data, round_params)
-            return _allocation_stage.run(self, data, round_params)
-        model_kwargs = self.resolve_model_kwargs(round_params)
-        self._apply_backtest_cost(data, round_params)
-        if self.architecture_function is None:
-            raise ValueError('Manifest run_model requires a configured architecture_function')
-        return _finish_trade_result(data, self.architecture_function(data, **model_kwargs))
+        return _run_objective_model(self, data, round_params)
 
 
 @dataclass
@@ -1127,50 +1120,7 @@ class MLManifest(Manifest):
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
 
-        if self.allocation_config is not None:
-            self._apply_backtest_cost(data, round_params)
-            return _allocation_stage.run(self, data, round_params)
-        model_kwargs = self.resolve_model_kwargs(round_params)
-        if self.architecture_function is None:
-            raise ValueError('MLManifest run_model requires a configured architecture_function')
-        if self.prediction_calibration_config is not None:
-            use_calibration = round_params.get('use_calibration', True)
-            use_threshold = round_params.get('use_threshold', True)
-            if use_calibration or use_threshold:
-                arch_sig = inspect.signature(self.architecture_function)
-                accepts_config = (
-                    'prediction_calibration_config' in arch_sig.parameters
-                    or any(
-                        p.kind == inspect.Parameter.VAR_KEYWORD
-                        for p in arch_sig.parameters.values()
-                    )
-                )
-                if not accepts_config:
-                    raise ValueError(
-                        'MLManifest Calibration is configured but the architecture function does not accept `prediction_calibration_config`. Add it as a named parameter or use **kwargs.'
-                    )
-                resolved = self.prediction_calibration_config.resolve(round_params)
-                config = CalibrationConfig(
-                    calibration_func=resolved.calibration_func if use_calibration else None,
-                    calibration_params=resolved.calibration_params,
-                    threshold_func=resolved.threshold_func if use_threshold else None,
-                    threshold_params=resolved.threshold_params,
-                )
-                model_kwargs['prediction_calibration_config'] = config
-        self._apply_backtest_cost(data, round_params)
-        resolve_component_kwargs(self.architecture_function, data, model_kwargs, round_params)
-        scorer = None
-        if self.objective is not None:
-            scorer = _prepare_objective(data, self.architecture_function, model_kwargs.get('prediction_calibration_config'))
-            config = model_kwargs.get('prediction_calibration_config')
-            if config is not None:
-                if not isinstance(config, CalibrationConfig):
-                    raise ValueError('Objective requires a manifest calibration configuration')
-                model_kwargs['prediction_calibration_config'] = replace(config, threshold_func=_bind_objective_optimizer(config, scorer, self.objective), threshold_params=_objective_threshold_params(config, scorer, self.objective))
-        result = self.architecture_function(data, **model_kwargs)
-        if scorer is not None and self.objective is not None:
-            result[self.objective.column] = _score_objective(data, result, scorer)
-        return _finish_trade_result(data, result)
+        return _run_objective_model(self, data, round_params)
 
     def sensor_input_prep(
             self,
@@ -1217,6 +1167,11 @@ class RuleBasedManifest(Manifest):
     '''Manifest for rule-based pipelines with predicate conditions and entry signals.'''
 
     strategy: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
+    objective: ObjectiveConfig | None = None
+
+    def set_objective(self, metric: str = 'backtest_total_return', direction: str = 'maximize') -> 'RuleBasedManifest':
+        self.objective = ObjectiveConfig(metric, direction)
+        return self
 
     def with_strategy(self, conditions: list[dict[str, Any]], entry: str) -> 'RuleBasedManifest':
 
@@ -1937,13 +1892,15 @@ def _run_prepare_setup(
 
 
 def _requires_fold_validation(manifest: Manifest, round_params: Mapping[str, object]) -> bool:
+    if getattr(manifest, 'objective', None) is not None:
+        return True
     if not isinstance(manifest, MLManifest):
         return False
     config = manifest.prediction_calibration_config
-    return manifest.objective is not None or (config is not None and (
+    return config is not None and (
         (config.calibration_func is not None and bool(round_params.get('use_calibration', True)))
         or (config.threshold_func is not None and bool(round_params.get('use_threshold', True)))
-    ))
+    )
 
 
 def _resolve_split(

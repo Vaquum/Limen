@@ -314,6 +314,11 @@
     "symbol": "RuleBasedManifest",
     "role": "signature"
   },
+  "limen.RuleBasedManifest.set_objective": {
+    "source": "limen/experiment/manifest_core.py",
+    "symbol": "RuleBasedManifest.set_objective",
+    "role": "signature"
+  },
   "limen.RuleBasedManifest.with_strategy": {
     "source": "limen/experiment/manifest_core.py",
     "symbol": "RuleBasedManifest.with_strategy",
@@ -1292,6 +1297,11 @@
   "limen.experiment.RuleBasedManifest": {
     "source": "limen/experiment/manifest_core.py",
     "symbol": "RuleBasedManifest",
+    "role": "signature"
+  },
+  "limen.experiment.RuleBasedManifest.set_objective": {
+    "source": "limen/experiment/manifest_core.py",
+    "symbol": "RuleBasedManifest.set_objective",
     "role": "signature"
   },
   "limen.experiment.RuleBasedManifest.with_strategy": {
