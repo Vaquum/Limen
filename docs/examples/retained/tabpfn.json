@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-23T09:34:55.388288+00:00",
-  "execution_checkout_head": "120b232ccbccf7c2759843028cb4c556727667cc",
+  "observed_at": "2026-10-25T07:00:50.549466+00:00",
+  "execution_checkout_head": "8c3cedcfc1d7d858808ec030d54172abb703dab2",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -97,7 +97,8 @@
     "experiment/_holdout_research.py": "2a26c0b4c280e4d5612226ce4bfb391d790f8eff3ca65a60431d408bc42e9b34",
     "experiment/_holdout_source.py": "211a0f6239ecba588e219c5595987d7f2b1ce6985ac0de32807b784ccf01dcc3",
     "experiment/_manifest_preparation.py": "4c804d2db5ea113ae6070a27b1a4ecd1f197b9c54508050824e6d268676f81f8",
-    "experiment/_objective.py": "f8d93367e0a3f34d92fe09b098cde1678bba70c47ba2091e83128f86b742303d",
+    "experiment/_objective.py": "434afd4d6f330d51ca6d917d52253f8937dbfbb86cfe84adc1f9b79ec4ac6624",
+    "experiment/_objective_optimizer.py": "36534b31e886e2adba72f6efe629f3a6a750875c086c5ea87307cd2cb0689c2b",
     "experiment/_objective_run.py": "201bd1cc7842783f062c8fabe22c688a6be980f97553d94f1dfae219f453a34a",
     "experiment/_parallel_commit.py": "dbff9aad51dab99e272c431d458a8c648e99993ba8b660d7448c14481484a0c3",
     "experiment/_parallel_resume.py": "347e176cca477c9c945792a944e2c85fb445f471cb7da4b1f175f495ffbf8ea2",
@@ -124,7 +125,7 @@
     "experiment/family_acceptance_report.py": "b1a15c0541433581a25cb5acc095a689f5f820a06f79539a0dc4f5ba93f7fa51",
     "experiment/feedback_controller.py": "4ddc526edc7cf2c39e42e7b34c7544f08c7aaf2f23fabbc2b0d6109001baa1e7",
     "experiment/holdout.py": "e6f6a90b16b47394e09749b94e2af30ddf3cd032e664db7eff8fe845665970d1",
-    "experiment/manifest_core.py": "2e34d953a3f670920537307ece0b8dbf5e3557ced7b85eadb04ed50af83de168",
+    "experiment/manifest_core.py": "f9dd21b8772fd5fc603f3b0c1be45dfbf2ae04cf64cbdec73ea7453b67b887e6",
     "experiment/msq.py": "6a19bc2728e31abfa8ada6e04ef958b1d3ffe61186ab11f67ece95ad92888fa7",
     "experiment/param_domain.py": "f0c5fb40f8e47f92a9cd00fae30c3daa8e440290ccad16d65789c3ebc0667cba",
     "experiment/param_search/__init__.py": "0428f114569749bd7564043cc36b781576cb0699092ed09504846c5975963a0a",
