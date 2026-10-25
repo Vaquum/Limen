@@ -108,11 +108,11 @@ def _classify_error(exc: Exception) -> str:
     msg = str(exc)
     lower = msg.lower()
     if 'sample' in lower and ('0 ' in lower or 'empty' in lower):
-        return f'Data too small for profiling — extend the date range in data_source. ({msg})'
+        return f'Data too small for profiling — check source coverage and configured split windows for enough usable rows after preparation. ({msg})'
     if 'class' in lower and ('one' in lower or 'least' in lower):
-        return f'Not enough class diversity in test data — try larger n_rows. ({msg})'
+        return f'Not enough class diversity in sampled data — review target/label settings and configured split windows so the affected split contains multiple classes. ({msg})'
     if 'nan' in lower or re.search(r'\binf\b', lower):
-        return f'Test data contains NaN or Inf values. ({msg})'
+        return f'Sampled data contains NaN or Inf values — check source values and preparation settings. ({msg})'
     return f'{type(exc).__name__}: {msg}'
 
 

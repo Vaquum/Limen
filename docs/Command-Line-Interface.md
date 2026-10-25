@@ -107,7 +107,27 @@ Exit behavior:
 
 ### `limen profile <yaml_file>`
 
-Validates and compiles the YAML, then reports parameter-space size and complexity. It also fetches the manifest's real data source and runs a covering-array sample of permutations to estimate per-permutation runtime and surface data-quality warnings (e.g. unexpected nulls). Strict mode is temporarily disabled during sampling so thin parameter combinations do not abort profiling.
+Validates and compiles the YAML, then reports parameter-space size and complexity.
+It loads the effective compiled `sfd.manifest.data_source` and attempts real
+preparation/model evaluation for a covering array. For a nonempty domain, the
+attempt count is the largest parameter-list length, independently of
+`uel.n_permutations`. Completed-sample timings cover preparation/evaluation and
+exclude source loading, although profiling may fetch remote data and fit models.
+
+Sampling follows the configured split windows and
+[holdout admission/cutoffs](Guarded-Holdout-Reference.md). `split_dates` supplies
+fetch limits only where the loader accepts them; file sources may load the whole
+file, and supported source parameter overrides remain effective. This does not
+add walk-forward profiling support. No experiment results CSV is written, but
+holdout research/exposure/failure history may be written. Strict mode is
+temporarily disabled during sampling and restored afterwards.
+
+Collected ordinary load/sample errors are reported and can exit `0`, including
+with zero completed samples. Validation, compilation, protection and unexpected
+errors exit `1`. YAML still rejects `test_data_source`; the native
+`Manifest.set_test_data_source` API remains available. For data-quality errors,
+check source coverage, configured split windows and target/preparation settings;
+row-limit parameters are not universal and can conflict with dated sources.
 
 ### `limen run <yaml_file> [<yaml_file> ...]`
 
