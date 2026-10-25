@@ -812,3 +812,28 @@ def test_protected_worker_parent_death(active, tmp_path, monkeypatch):
             os.kill(worker_pid, signal.SIGKILL)
         receiver.close()
         sender.close()
+
+
+def test_protected_fold_lineage(tmp_path, monkeypatch):
+    from limen.experiment._walk_forward_run import WalkForwardRun
+    from tests.test_factorized_preparation import _config, _params
+
+    root = _project(tmp_path / 'fold-project')
+    reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    config = _config()
+    body = config['sfd']['manifest']
+    body.pop('split_dates')
+    body['split_walk_forward'] = {'n_folds': 2, 'test_bars': 12, 'purge_bars': 1, 'embargo_bars': 1, 'anchored': True}
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    full = pl.read_parquet(_FIXTURE).head(192)
+    runner = WalkForwardRun(manifest, full, root / 'results', promotion=True)
+    assert runner.raw.height == 144
+    assert runner.promotion['selection_cutoff_ns'] == history.utc_day('2024-01-07')
+    with pytest.raises(ValueError, match='Holdout research refuses'):
+        UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root)
+    manifest.set_pre_split_data_selector(lambda _frame: full)
+    def preflight(*_args, **_kwargs):
+        raise AssertionError('A suffix-returning selector reached fold geometry')
+    monkeypatch.setattr(runner, '_preflight', preflight)
+    with research.operation(manifest, 'experiment'), pytest.raises(ValueError, match='outside the research prefix'):
+        runner.prepare(full, _params(config))

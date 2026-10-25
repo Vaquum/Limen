@@ -1097,9 +1097,9 @@ class UniversalExperimentLoop:
         '''Append one round's data to the JSONL file.'''
 
         if self._walk_forward is not None:
-            _storage.append_record(round_data_path, project_record(
+            _storage.append_record(round_data_path, project_record(_holdout.fold_trial(self,
                 {'round_id': round_id, '_round_index': round_index,
-                 'round_params': round_params, 'folds': alignment['folds'], **({'fold_promotion': alignment['fold_promotion']} if 'fold_promotion' in alignment else {})}, self._recording))
+                 'round_params': round_params, 'folds': alignment['folds'], **{key: alignment[key] for key in ('fold_promotion', 'holdout') if key in alignment}}), self._recording))
             return
 
         entry = {

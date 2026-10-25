@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import json
-import sys
 from collections.abc import Callable, Mapping
 from itertools import islice
 from pathlib import Path
@@ -13,7 +12,6 @@ import polars as pl
 from limen.data.historical_data import HistoricalData
 import limen.experiment._round_storage as _storage
 from limen.experiment._holdout_history import ProjectBinding, check_binding, research_record
-from limen.experiment._holdout_source import frame_evidence, record_geometry
 
 __all__: list[str] = []
 
@@ -51,23 +49,29 @@ def _parent(binding: ProjectBinding, identity: object) -> None:
         raise ValueError('Protected population requires original experiment parent history')
 
 
+def completed_history(binding: ProjectBinding, proof: Mapping[str, object]) -> None:
+    if not _same_header(proof, binding):
+        raise ValueError('Protected round binding/revision or occurrence changed')
+    record_id = proof.get('research_record_id')
+    if not isinstance(record_id, str):
+        raise ValueError('Protected round lacks an actual research history identity')
+    saved = research_record(binding, record_id)
+    if (saved['role'] != 'experiment' or saved['state'] != 'completed' or saved['revision'] != binding.revision
+            or saved['round_id'] != proof.get('round_id') or json.loads(str(saved['provenance_json'])) != dict(proof)):
+        raise ValueError('Protected round and completed research history disagree')
+
+
 def _record(binding: ProjectBinding, identity: str, value: object,
             source: Mapping[str, object] | None = None) -> Mapping[str, object]:
     proof = _mapping(value)
-    if not _same_header(proof, binding) or proof.get('round_id') != identity:
+    if proof.get('round_id') != identity:
         raise ValueError('Protected round binding/revision or occurrence changed')
     if not {'source', 'selected', 'splits', 'input_schema', 'model_schema'} <= proof.keys():
         raise ValueError('Protected round lacks source, membership or model-input evidence')
     recorded_source = _mapping(proof['source'])
     if source is not None and any(recorded_source.get(key) != source.get(key) for key in _SOURCE_FIELDS):
         raise ValueError('Protected checkpoint admitted source changed')
-    record_id = proof.get('research_record_id')
-    if not isinstance(record_id, str):
-        raise ValueError('Protected round lacks an actual research history identity')
-    saved = research_record(binding, record_id)
-    if (saved['role'] != 'experiment' or saved['state'] != 'completed' or saved['revision'] != binding.revision
-            or saved['round_id'] != identity or json.loads(str(saved['provenance_json'])) != dict(proof)):
-        raise ValueError('Protected round and completed research history disagree')
+    completed_history(binding, proof)
     _parent(binding, proof.get('experiment_record_id'))
     return proof
 
@@ -89,15 +93,8 @@ def _rows(directory: Path, count: int) -> list[dict[str, str | None]]:
 
 def validate_live(manifest: object, raw: pl.DataFrame, binding: ProjectBinding,
                   entry: Mapping[str, object]) -> None:
-    raw, source = frame_evidence(raw, binding)
-    proof = _record(binding, str(entry['round_id']), entry.get('holdout'), source)
-    module = sys.modules['limen.experiment.manifest_core']
-    resolve = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(module)['_resolve_params'])
-    split = cast(Callable[[object, pl.DataFrame], list[pl.DataFrame]], vars(module)['_resolve_split'])
-    selector = cast(tuple[Callable[..., pl.DataFrame], Mapping[str, object]] | None, getattr(manifest, 'pre_split_data_selector', None))
-    if selector is not None:
-        raw = selector[0](raw, **resolve(selector[1], _mapping(entry['round_params'])))
-    record_geometry({'splits': {}}, proof, raw, dict(zip(('train', 'validation', 'test'), split(manifest, raw), strict=True)), cast(int, binding.interval_seconds))
+    from limen.experiment._holdout_folds import live
+    live(manifest, raw, binding, entry)
 
 
 def _population(directory: Path, frontier: int, binding: ProjectBinding, source: Mapping[str, object] | None = None,

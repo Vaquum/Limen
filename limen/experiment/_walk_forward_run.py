@@ -1,6 +1,6 @@
 import limen.experiment._round_storage as _storage
 import limen.experiment._fold_evidence as _promotion
-import limen.experiment._holdout_folds as _holdout_folds
+from limen.experiment import _holdout_folds
 import copy
 import json
 import math
@@ -97,7 +97,7 @@ def _fold_record(fold: int, data: Mapping[str, object], result: Mapping[str, obj
             'first_test_datetime': _iso_date(alignment['first_test_datetime']),
             'last_test_datetime': _iso_date(alignment['last_test_datetime']),
         },
-        **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding') if key in alignment},
+        **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout') if key in alignment},
     }
     if record_execution:
         record.update(execution=alignment.get('execution'), market=alignment.get('market'))
@@ -127,9 +127,7 @@ class WalkForwardRun:
     @_holdout_folds.construction
     def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path, *, promotion: bool | dict[str, object] = False) -> None:
         super().__init__()
-        if not isinstance(manifest.split_walk_forward, WalkForwardConfig):
-            raise ValueError('split_walk_forward requires its manifest configuration')
-        self.manifest, self.raw, self.config = manifest, raw, manifest.split_walk_forward
+        self.manifest, self.raw, self.config = manifest, raw, cast(WalkForwardConfig, manifest.split_walk_forward)
         self.promotion = _promotion.start(manifest, raw, promotion)
         if manifest.pre_split_data_selector is None:
             self._preflight(raw, require_validation=getattr(manifest, 'objective', None) is not None)
@@ -154,7 +152,7 @@ class WalkForwardRun:
         if not isinstance(raw, pl.DataFrame):
             raise ValueError('split_walk_forward requires current prepared source rows')
         records: list[dict[str, object]] = []
-        data['_alignment'] = {'folds': records, **({'fold_promotion': data['_fold_trial']} if '_fold_trial' in data else {})}
+        data['_alignment'] = {'folds': records, **({'fold_promotion': data['_fold_trial']} if '_fold_trial' in data else {}), **({'holdout': data['_fold_holdout']} if '_fold_holdout' in data else {})}
         for fold in range(self.config.n_folds):
             manifest = copy.deepcopy(self.manifest)
             vars(manifest)['_walk_forward_fold'] = fold

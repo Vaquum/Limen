@@ -373,6 +373,11 @@ def bind_round(manifest: object, provenance: Mapping[str, object], round_id: str
     return value
 
 
+def fold_trial(host: object, record: dict[str, object]) -> dict[str, object]:
+    from limen.experiment._holdout_folds import trial_record
+    return trial_record(host, record)
+
+
 _Y = TypeVar('_Y', bound=Mapping[str, object])
 
 
@@ -393,18 +398,8 @@ def cached_manifest(host: object, builder: Callable[[_Y], _T]) -> _T:
 def prepare_walk_forward(host: object, raw: pl.DataFrame, round_params: Mapping[str, object] | None,
                          resolve_params: Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]],
                          requires_validation: Callable[..., bool]) -> dict[str, object]:
-    manifest = getattr(host, 'manifest', None)
-    reject_modes(manifest)
-    raw = admit(manifest, raw)
-    params = dict(round_params or {})
-    selector = getattr(manifest, 'pre_split_data_selector', None)
-    if selector is not None:
-        func, base = cast(tuple[Callable[..., pl.DataFrame], Mapping[str, object]], selector)
-        raw = func(raw, **resolve_params(base, params))
-    raw = selected_input(manifest, raw)
-    preflight = cast(Callable[..., None], getattr(host, '_preflight', None))
-    preflight(raw, require_validation=requires_validation(manifest, params))
-    return {'_walk_forward_params': params, '_walk_forward_raw': raw}
+    from limen.experiment._holdout_folds import prepare
+    return prepare(host, raw, round_params, resolve_params, requires_validation)
 
 
 def selected_input(manifest: object, raw: pl.DataFrame) -> pl.DataFrame:
