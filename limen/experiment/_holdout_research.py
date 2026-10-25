@@ -15,7 +15,7 @@ import sys
 import polars as pl
 
 import limen.experiment._holdout_checkpoint as _checkpoint_proof
-from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
+from limen.experiment._holdout_history import HoldoutEvidenceError, ProjectBinding, admission, bind, check_binding, finish_research, start_research
 from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec, source_workflow_active
 from limen.experiment._resolve_trade_policy import holdout_structural
 
@@ -24,8 +24,6 @@ class ResearchManifest(SourceManifest, Protocol):
     def split_dates(self) -> tuple[object, ...] | None: ...
     @property
     def split_walk_forward(self) -> object | None: ...
-    @property
-    def bar_formation(self) -> object | None: ...
     @property
     def test_data_source_config(self) -> object | None: ...
     @property
@@ -62,40 +60,32 @@ def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding
     binding = bind(*hints)
     previous = binding_of(manifest)
     if previous is not None and previous != binding:
-        raise ValueError('Holdout manifest binding/revision changed; construct a new manifest')
+        raise HoldoutEvidenceError('Holdout manifest binding/revision changed; construct a new manifest')
     if binding is not None:
         vars(manifest)['_holdout_binding'] = binding
         vars(manifest)['_holdout_interval_seconds'] = binding.interval_seconds
     return binding
 
 
-def reject_modes(manifest: object, *, workers: object = 1, factorize: object = False,
-                 resume: object = False, callbacks: tuple[object, ...] = (), test_mode: bool = False,
-                 profile: bool = False, walk_forward: object = False, sources: bool | None = None) -> None:
+def reject_modes(manifest: object, *, callbacks: tuple[object, ...] = (), test_mode: bool = False, walk_forward: object = False) -> None:
     binding = binding_of(manifest)
     if binding is None or binding.cutoff_ns is None:
         return
-    core = vars(sys.modules['limen.experiment.manifest_core'])
-    if type(manifest) not in (core['MLManifest'], core['RuleBasedManifest']) and not source_workflow_active.get():
-        raise ValueError('Holdout research requires a built-in manifest')
     model = cast(ResearchManifest, manifest)
-    if (workers != 1 or bool(factorize) or bool(resume) or profile or any(value is not None for value in callbacks)
-            or bool(walk_forward) or (model.bar_formation is not None and not (source_workflow_active.get() if sources is None else sources))
-            or (test_mode and model.test_data_source_config is not None)
-            or (getattr(model, 'data_dict_extension', None) is not None and not source_workflow_active.get())):
-        raise ValueError('Holdout research refuses profile, resume, parallel/factorized/walk-forward, alternate test source and callbacks')
+    if bool(walk_forward) or any(value is not None for value in callbacks) or (test_mode and model.test_data_source_config is not None):
+        raise HoldoutEvidenceError('Holdout research refuses unselected direct folds, run overrides and alternate test sources')
     if any(name in vars(model) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model', 'compute_test_bars', 'fetch_data')):
-        raise ValueError('Holdout research refuses replaced manifest methods')
-    holdout_structural(model, sources=source_workflow_active.get() if sources is None else sources)
+        raise HoldoutEvidenceError('Holdout research refuses replaced manifest methods')
+    holdout_structural(model, sources=True)
     if model.split_dates is not None:
         for value in model.split_dates:
             if not isinstance(value, (date, datetime)):
-                raise ValueError('Holdout split_dates must be resolved UTC dates')
+                raise HoldoutEvidenceError('Holdout split_dates must be resolved UTC dates')
             dt = value if isinstance(value, datetime) else datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             if int(dt.timestamp()) * 1_000_000_000 > binding.cutoff_ns:
-                raise ValueError('Holdout split_dates extends beyond reserved research cutoff')
+                raise HoldoutEvidenceError('Holdout split_dates extends beyond reserved research cutoff')
     _ = source_spec(model, binding)
 
 
@@ -111,33 +101,39 @@ def _base(op: _Operation) -> dict[str, object]:
 
 
 @contextmanager
-def operation(manifest: object, role: str) -> Iterator[_Operation | None]:
-    binding = binding_of(manifest)
-    with admission(binding.root) if binding is not None else nullcontext():
-        if binding is not None:
-            check_binding(binding)
-        if binding is None or binding.cutoff_ns is None:
-            yield None
-            return
-        reject_modes(manifest)
-        parent = _CURRENT.get()
-        parent_id = parent.record_id if parent is not None else None
-        if role == 'trainer':
-            parent_id = cast(str | None, getattr(manifest, '_holdout_experiment_record', None))
-        op = _Operation(manifest, binding, start_research(binding, role), role, parent_id)
-        if parent is not None and parent.manifest is manifest:
-            op.replay_witness = parent.replay_witness
-        op.provenance = _base(op)
-        token = _CURRENT.set(op)
-        try:
-            yield op
-        except Exception as exc:
-            finish_research(binding, op.record_id, op.provenance, error=f'{type(exc).__name__}: {exc}')
-            raise
-        else:
-            finish_research(binding, op.record_id, op.provenance)
-        finally:
-            _CURRENT.reset(token)
+def operation(manifest: object, role: str, *, purpose: str | None = None) -> Iterator[_Operation | None]:
+    source_token = source_workflow_active.set(True)
+    try:
+        binding = binding_of(manifest)
+        with admission(binding.root) if binding is not None else nullcontext():
+            if binding is not None:
+                check_binding(binding)
+            if binding is None or binding.cutoff_ns is None:
+                yield None
+                return
+            reject_modes(manifest)
+            parent = _CURRENT.get()
+            parent_id = parent.record_id if parent is not None else None
+            if role == 'trainer':
+                parent_id = cast(str | None, getattr(manifest, '_holdout_experiment_record', None))
+            op = _Operation(manifest, binding, start_research(binding, role), role, parent_id)
+            if parent is not None and parent.manifest is manifest:
+                op.replay_witness = parent.replay_witness
+            op.provenance = _base(op)
+            if purpose is not None or (parent is not None and 'purpose' in parent.provenance):
+                op.provenance['purpose'] = purpose if purpose is not None else cast(_Operation, parent).provenance['purpose']
+            token = _CURRENT.set(op)
+            try:
+                yield op
+            except Exception as exc:
+                finish_research(binding, op.record_id, op.provenance, error=f'{type(exc).__name__}: {exc}')
+                raise
+            else:
+                finish_research(binding, op.record_id, op.provenance)
+            finally:
+                _CURRENT.reset(token)
+    finally:
+        source_workflow_active.reset(source_token)
 
 
 def fetch(manifest: ResearchManifest, resolve: Callable[[], pl.DataFrame]) -> pl.DataFrame:
@@ -236,13 +232,11 @@ def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, tes
         if binding is not None:
             vars(host)['_holdout_binding'] = binding
         if binding is not None and binding.cutoff_ns is not None:
-            raise ValueError('Holdout research refuses custom-function SFDs')
+            raise HoldoutEvidenceError('Holdout research refuses custom-function SFDs')
         if data is None:
             raise ValueError('UniversalExperimentLoop data parameter required for custom SFDs using custom functions approach')
         return None, data, cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'prep', None)), cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'model', None))
-    reference = cast(Mapping[str, object], getattr(sfd, '_yaml', {}))
-    config = cast(Mapping[str, object], reference.get('uel', {}))
-    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None, sources=False)
+    reject_modes(manifest, test_mode=test_mode)
     if manifest.architecture_function is None:
         raise ValueError('UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.')
     with operation(manifest, 'experiment'):
@@ -267,16 +261,13 @@ def run_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_
                 if binding is not None:
                     check_binding(binding)
                     if binding.cutoff_ns is not None:
-                        raise ValueError('Holdout research refuses custom-function SFDs')
+                        raise HoldoutEvidenceError('Holdout research refuses custom-function SFDs')
                 return func(host, *args, **kwargs)
         if binding_of(manifest) is None:
             return func(host, *args, **kwargs)
-        values = inspect.signature(func).bind(host, *args, **kwargs)
-        values.apply_defaults()
-        call = cast(Mapping[str, object], values.arguments)
+        call = cast(Mapping[str, object], inspect.signature(func).bind(host, *args, **kwargs).arguments)
         with operation(manifest, 'experiment'):
-            reject_modes(manifest, workers=call.get('workers') or getattr(host, '_workers', 1), factorize=call.get('factorize'), resume=call.get('resume'),
-                         callbacks=(*[call.get(name) for name in ('params', 'prep', 'model')], getattr(host, '_intra_callback', None)), walk_forward=getattr(manifest, 'split_walk_forward', None) is not None, sources=False)
+            reject_modes(manifest, callbacks=tuple(call.get(name) for name in ('params', 'prep', 'model')))
             binding = binding_of(manifest)
             if binding is not None and binding.cutoff_ns is not None:
                 attrs = cast(dict[str, object], vars(host))
@@ -372,6 +363,7 @@ def bind_round(manifest: object, provenance: Mapping[str, object], round_id: str
     if binding is None or binding.cutoff_ns is None:
         raise ValueError('Round provenance requires active holdout binding')
     value = copy.deepcopy(dict(provenance))
+    value['workflow'] = dict(cast(Mapping[str, object], value.get('workflow', {})), publication={'version': 1, 'preparation_record_id': value['research_record_id']})
     value['round_id'] = round_id
     value['research_record_id'] = start_research(binding, 'experiment')
     finish_research(binding, str(value['research_record_id']), value)
@@ -413,5 +405,14 @@ def selected_input(manifest: object, raw: pl.DataFrame) -> pl.DataFrame:
         return raw
     admitted = admit_frame(raw, interval=binding.interval_seconds, lower_ns=None, upper_ns=binding.cutoff_ns)
     if admitted.height != raw.height:
-        raise ValueError('Holdout selector returned observations outside the research prefix')
+        raise HoldoutEvidenceError('Holdout selector returned observations outside the research prefix')
     return admitted
+
+
+def profile_failure(manifest: object, error: Exception, params: Mapping[str, object] | None) -> None:
+    if isinstance(error, HoldoutEvidenceError):
+        raise error
+    if (op := _CURRENT.get()) is not None and op.manifest is manifest:
+        identity = start_research(op.binding, 'experiment')
+        proof = dict(op.provenance, research_record_id=identity, experiment_record_id=op.record_id, workflow={'version': 1, 'kind': 'profile_failure', 'phase': 'load' if params is None else 'sample', 'parameters': repr(params)})
+        finish_research(op.binding, identity, proof, error=f'{type(error).__name__}: {error}')

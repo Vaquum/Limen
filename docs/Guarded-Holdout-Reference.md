@@ -16,21 +16,22 @@ Each change advances the project revision. Reconstruct existing loops, Trainers 
 
 ## Supported research
 
-Use ordinary serial MLManifest or RuleBasedManifest preparation. Native callers may pass `project_root=root` to UniversalExperimentLoop or Trainer; CompiledSFD also accepts it. CLI run/resume/profile discovers the root from the YAML or experiment location even when invoked from elsewhere. Conflicting explicit, experiment, compiled and current-directory roots are errors. Binding is private metadata and does not change canonical YAML identity.
+Use MLManifest or RuleBasedManifest preparation directly or through CompiledSFD, UniversalExperimentLoop and CLI run/resume/profile. Explicit project roots take precedence over the current directory; contradictory explicit, experiment or compiled roots are errors. Without an explicit root, the current directory supplies discovery. Binding is private metadata and does not change canonical YAML identity.
+
+Protected research supports independently valid saved resume, factorized caches, parallel workers and walk-forward runs. Parallel execution still requires per-round preparation, one native thread per worker and `post_processing=False`; factorized parallel execution remains unsupported. Saved checkpoints and every committed occurrence must match genuine project history. Selected fold refits require qualified fold recording; ordinary row replay remains unavailable for folds. Workers retain the coordinator's authority even outside the project directory, and a surviving worker holds its lease after coordinator loss until it exits.
 
 While a reservation is active, the workflow refuses:
 
-- parallel, factorized, resumed or walk-forward execution and profiling;
-- custom SFD functions, replaced prep/model methods or callbacks;
-- alternate test sources, formed/dollar/event bars, funding execution and alternate execution sources;
+- custom SFD functions, replaced prep/model methods or run-time prep/model/parameter overrides;
+- alternate test sources and unselected direct fold preparation;
 - source row limits, source/interval search parameters, unsupported file formats and resampling;
 - split dates extending beyond the research cutoff.
 
-Pinned event economics are admitted for a single exact binary Sensor with a cash_spot or linear_perpetual product on the same native source and interval, without funding, auxiliary sources, barriers, declared intervals or non-binary modes. Research refuses rule-based event declarations, prepared partitions crossing the reserved cutoff on actual availability, and per-round economics outside the allowlist.
+Research admits effective bar formation and declared execution/funding sources only with their native constituent, clock, availability and consumption evidence. Dormant formation does not alter native bars. Compatible feature extensions and search callbacks preserve ordered row/label carriers, actual model schema and admitted observations. Research still refuses unsupported rule-based event declarations, dynamic barriers, non-binary event modes and prepared partitions crossing the cutoff on actual availability. These research compositions do not widen the separate final-assessment contract below.
 
 Without active reservations, ordinary numerical paths and supported modes remain available. A discovered Git project uses an admission lease even before first reservation, preventing first-reservation creation from racing an already-running operation. No protected provenance is added to ordinary zero-active artifacts.
 
-Compiled profiling holds the lease through loading, every sample evaluation and cleanup, including failed or interrupted calls. Active reservations still refuse profiling before data work and remain unused and withdrawable.
+Compiled profiling holds the lease through loading, every sample evaluation and cleanup, including failed or interrupted calls. Active profiling records experiment exposure with `purpose=profile` and durable failed-sample evidence; ordinary diagnostic errors retain their existing result semantics. Protection errors escape immediately. Profile output does not become a selected model artifact.
 
 Supported source declarations are local Parquet or CSV via HistoricalData.get_any_file or unchanged default hosted get_spot_klines native datasets at 60, 900, 1800, 3600, 7200 or 14400 seconds. CSV datetimes follow the ordinary loader: naive ISO stamps are taken as UTC, recorded offsets are converted, and unparseable stamps are rejected with the other native-bar checks. Hosted defaults have a provider-native contract. Local files and supplied frames have caller-declared native support; an evenly spaced grid alone cannot prove their venue origin or intrabar completeness.
 
@@ -39,6 +40,8 @@ Research preserves naturally missing whole native intervals and records their ga
 ## Provenance
 
 Guarded metadata and round records retain project UUID/revision, record IDs, source identity/digest, materialized/admitted/selected bounds and counts, selector parameters and actual split geometry. ML preparation records ordered feature names/types before scaler/PCA and at model input. Trainer records the actual refit separately and carries that record in private fitted metadata on its Sensor. Rule-based records identify the absence of a fitted model schema. Legacy artifacts and file-only Log views do not acquire protected-history claims.
+
+Top-level protection evidence remains schema version 1. Separately versioned `workflow` evidence retains formation, source roles, consumption and original preparation identity across publication, cache reuse, worker occurrences and selected fold/Trainer refits. Operation UUIDs identify actual work and are checked against completed history; they are not interchangeable with another valid record from the same project.
 
 Log replay verifies the bound revision and admitted geometry; it refuses a changed population rather than silently shortening retained returns. Ordinary Sensor inference is not clipped by research reservations.
 

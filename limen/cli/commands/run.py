@@ -71,7 +71,7 @@ def run_experiment(yaml_path: Path,
                 yaml_reference=dict(yaml_dict),
             )
             from limen.experiment._holdout_research import reject_modes
-            reject_modes(uel.manifest, workers=effective_workers, factorize=uel_cfg.get('factorize', False))
+            reject_modes(uel.manifest)
             uel.check_parallel_admission(effective_workers, prep_each_round,
                                          factorize=uel_cfg.get('factorize', False))
             uel.check_fresh_directory()

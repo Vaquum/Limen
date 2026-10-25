@@ -11,7 +11,7 @@ from typing import Concatenate, ParamSpec, Protocol, TypeVar, cast
 
 import polars as pl
 
-from limen.experiment._holdout_history import ProjectBinding, research_record
+from limen.experiment._holdout_history import HoldoutEvidenceError, ProjectBinding, research_record
 from limen.experiment._holdout_source import bounds, frame_evidence, record_geometry
 from limen.experiment._walk_forward_split import WalkForwardConfig
 __all__: list[str] = []
@@ -59,7 +59,7 @@ checkpoint = cast(_Checkpoint, import_module('limen.experiment._holdout_checkpoi
 
 def _mapping(value: object) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
-        raise ValueError('Protected fold lacks recorded workflow evidence')
+        raise HoldoutEvidenceError('Protected fold lacks recorded workflow evidence')
     return cast(Mapping[str, object], value)
 
 
@@ -109,14 +109,14 @@ def trial_record(host: object, record: dict[str, object]) -> dict[str, object]:
     checkpoint.completed_history(binding, proof)
     parent = research.metadata(manifest)
     if parent is None or cast(Callable[[ProjectBinding, object, str], str], vars(checkpoint)['_parent'])(binding, proof['experiment_record_id'], str(record['round_id'])) != parent['research_record_id']:
-        raise ValueError('Protected fold trial lacks its current coordinator')
+        raise HoldoutEvidenceError('Protected fold trial lacks its current coordinator')
     records = cast(list[dict[str, object]], record['folds'])
     for fold, item in enumerate(records):
         prepared = _mapping(item.get('holdout'))
         checkpoint.completed_history(binding, prepared)
         if cast(Callable[[ProjectBinding, object, str], str], vars(checkpoint)['_parent'])(binding, prepared['experiment_record_id'], str(record['round_id'])) != parent['research_record_id']:
-            raise ValueError('Protected fold preparation belongs to another trial operation')
-        item['holdout'] = research.bind_round(manifest, dict(prepared, workflow={'version': 1, 'kind': 'fold', 'fold': fold,
+            raise HoldoutEvidenceError('Protected fold preparation belongs to another trial operation')
+        item['holdout'] = research.bind_round(manifest, dict(prepared, workflow={**_mapping(prepared.get('workflow', {})), 'version': 1, 'kind': 'fold', 'fold': fold,
             'preparation_record_id': prepared['research_record_id'], 'native': copy.deepcopy(item['fold_promotion'])}), str(record['round_id']))
     metadata: dict[str, object] = {}
     native.add_metadata(metadata, state['_walk_forward'], cast(int, state['_workers']))
@@ -145,34 +145,33 @@ def live(manifest: object, raw: pl.DataFrame, binding: ProjectBinding, entry: Ma
         return
     flow = _mapping(proof['workflow'])
     if flow.get('version') != 1 or flow.get('kind') != 'walk_forward':
-        raise ValueError('Unsupported protected fold workflow')
+        raise HoldoutEvidenceError('Unsupported protected fold workflow')
     campaign, trial = _mapping(flow['campaign']), _mapping(flow['trial'])
     interval = cast(int, _mapping(campaign['source'])['interval_ns']) / 1_000_000_000
     if native.source(raw, interval) != campaign['source'] or native.source(selected, interval) != trial['selected_source']:
-        raise ValueError('Protected fold source or selected population changed')
+        raise HoldoutEvidenceError('Protected fold source or selected population changed')
     config = cast(_Manifest, manifest).split_walk_forward
     if config is None:
-        raise ValueError('Protected fold configuration is missing')
+        raise HoldoutEvidenceError('Protected fold configuration is missing')
     metadata = {'manifest_id': flow['manifest_id'], 'recording': flow['recording'], 'record_model_outputs': flow['record_model_outputs'],
         'split_walk_forward': config.as_dict(), 'walk_forward_validation_ratio': list(cast(_Manifest, manifest).split_config[:2]), 'fold_promotion': campaign}
     if not isinstance(entry.get('folds'), list) or any(not isinstance(item, Mapping) for item in cast(list[object], entry['folds'])):
-        raise ValueError('Protected fold records are missing or malformed')
+        raise HoldoutEvidenceError('Protected fold records are missing or malformed')
     records = cast(list[Mapping[str, object]], entry['folds'])
     if flow['trial'] != entry['fold_promotion'] or flow['folds'] != [_mapping(item.get('holdout'))['research_record_id'] for item in records]:
-        raise ValueError('Protected fold trial or occurrence history changed')
+        raise HoldoutEvidenceError('Protected fold trial or occurrence history changed')
     for fold, item in enumerate(records):
         _ = native.read_fold_context(metadata, entry, fold)
         saved = _mapping(item.get('holdout'))
         checkpoint.completed_history(binding, saved)
         folded = _mapping(saved.get('workflow'))
-        if saved['round_id'] != entry['round_id'] or folded != {'version': 1, 'kind': 'fold', 'fold': fold,
+        if saved['round_id'] != entry['round_id'] or {key: folded.get(key) for key in ('version', 'kind', 'fold', 'preparation_record_id', 'native')} != {'version': 1, 'kind': 'fold', 'fold': fold,
                 'preparation_record_id': folded.get('preparation_record_id'), 'native': item['fold_promotion']}:
-            raise ValueError('Protected fold membership or identity changed')
+            raise HoldoutEvidenceError('Protected fold membership or identity changed')
         original = _mapping(json.loads(str(research_record(binding, cast(str, folded['preparation_record_id']))['provenance_json'])))
         checkpoint.completed_history(binding, original)
-        excluded = ('research_record_id', 'round_id', 'workflow')
-        if {key: value for key, value in original.items() if key not in excluded} != {key: value for key, value in saved.items() if key not in excluded}:
-            raise ValueError('Protected fold publication differs from its actual preparation')
+        if {key: value for key, value in original.items() if key not in ('research_record_id', 'round_id', 'workflow')} != {key: value for key, value in saved.items() if key not in ('research_record_id', 'round_id', 'workflow')} or any(folded.get(key) != value for key, value in _mapping(original.get('workflow', {})).items() if key != 'kind'):
+            raise HoldoutEvidenceError('Protected fold publication differs from its actual preparation')
         copied = copy.deepcopy(manifest)
         vars(copied)['_walk_forward_fold'] = fold
         record_geometry({'splits': {}}, saved, selected, dict(zip(('train', 'validation', 'test'), split(copied, selected), strict=True)), cast(int, binding.interval_seconds))
@@ -189,11 +188,11 @@ def trainer(manifest: _Manifest, entry: Mapping[str, object], fold: int) -> Iter
     _ = checkpoint.validate_trainer_round(binding, entry['round_id'], proof)
     workflow = _mapping(proof.get('workflow'))
     if workflow.get('version') != 1 or workflow.get('kind') != 'fold' or workflow.get('fold') != fold or workflow.get('native') != record['fold_promotion']:
-        raise ValueError('Protected Trainer selected fold history changed')
+        raise HoldoutEvidenceError('Protected Trainer selected fold history changed')
     vars(manifest)['_holdout_round_id'], vars(manifest)['_holdout_experiment_record'] = entry['round_id'], proof['research_record_id']
     with research.operation(manifest, 'trainer') as op:
         if op is None:
-            raise ValueError('Protected fold Trainer lacks its research operation')
+            raise HoldoutEvidenceError('Protected fold Trainer lacks its research operation')
         op.replay_witness = proof
         yield
 
@@ -204,6 +203,6 @@ def restore_entry(host: object, entry: dict[str, object]) -> dict[str, object]:
     binding = research.binding_of(manifest)
     if binding is not None and binding.cutoff_ns is not None:
         if research.metadata(manifest) is None:
-            raise ValueError('Protected fold restore requires its held research operation')
+            raise HoldoutEvidenceError('Protected fold restore requires its held research operation')
         live(manifest, cast(pl.DataFrame, state['raw']), binding, entry)
     return entry

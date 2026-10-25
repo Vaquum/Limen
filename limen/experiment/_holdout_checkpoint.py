@@ -169,7 +169,7 @@ def validate_trainer(binding: ProjectBinding | None, metadata: Mapping[str, obje
         raise HoldoutEvidenceError('Protected Trainer requires original saved project/population evidence')
     if 'holdout_binding' in metadata and metadata['holdout_binding'] != binding_header(binding):
         raise HoldoutEvidenceError('Protected Trainer metadata binding/revision changed')
-    _parent(binding, cast(Mapping[str, object], saved).get('research_record_id'))
+    _ = _parent(binding, cast(Mapping[str, object], saved).get('research_record_id'))
     for identity, entry in rounds.items():
         record = _mapping(entry)
         _ = _record(binding, identity, record.get('holdout'), source)

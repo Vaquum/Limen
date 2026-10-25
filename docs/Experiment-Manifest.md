@@ -318,7 +318,7 @@ When `test_mode=True` and a test data source is configured, `fetch_test_data()` 
 That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source.
 To keep local runs bounded, configure `set_test_data_source()` with explicit `kline_size` and `row_count_limit`.
 
-Direct protected `run_model()` calls require the same Manifest instance and its completed preparation, current reservation revision, pipeline and consumed inputs. The research lease remains held through model evaluation. Altered or foreign preparations fail before the architecture runs. The private composition prerequisites also verify useful extension features against ordered row and label carriers after the extension; public extension and hook activation remains guarded until the complete workflow is connected.
+Direct protected `run_model()` calls require the same Manifest instance and its completed preparation, current reservation revision, pipeline and consumed inputs. The research lease remains held through model evaluation. Altered or foreign preparations fail before the architecture runs. Feature extensions must preserve ordered row and label carriers and declare the actual consumed feature schema. Search hooks retain the same admitted source and revision; protection failures propagate through feedback handling. The [guarded holdout reference](Guarded-Holdout-Reference.md) describes the connected research modes.
 
 ## Pipeline Configuration
 

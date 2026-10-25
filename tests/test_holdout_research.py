@@ -8,7 +8,6 @@ import subprocess
 import sys
 from types import SimpleNamespace
 from uuid import uuid4
-from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -259,7 +258,7 @@ def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
             process.join()
     assert process.exitcode == 0
     new = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root)
-    for kwargs in ({'workers': 2}, {'factorize': True}, {'resume': True}, {'prep': lambda *_: {}}, {'model': lambda *_: {}}):
+    for kwargs in ({'prep': lambda *_: {}}, {'model': lambda *_: {}}):
         with pytest.raises(ValueError, match='refuses'):
             new.run('unsupported', n_permutations=1, progress_bar=False, **kwargs)
     new.data = pl.read_parquet(_FIXTURE).head(168)
@@ -274,15 +273,13 @@ def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
     # A file-location hint binds even when CLI is launched outside the project.
     monkeypatch.chdir(tmp_path)
     config['uel']['workers'] = 2
-    with patch('limen.experiment._holdout_source._read_any_file') as loader:
-        assert run_profile(root / 'research.yaml') is False
-        assert 'Holdout research refuses profile' in capsys.readouterr().out
-        with pytest.raises(ValueError, match='Holdout research refuses profile'):
-            profile(CompiledSFD(config, project_root=root))
-        (root / 'research.yaml').write_text(json.dumps(config))
-        assert run_experiment(root / 'research.yaml', progress_bar=False) is False
-        assert 'Holdout research refuses' in capsys.readouterr().out
-        loader.assert_not_called()
+    config['sfd']['params']['n_jobs'] = [1]
+    assert run_profile(root / 'research.yaml') is True
+    measured = profile(CompiledSFD(config, project_root=root))
+    assert measured.sample_permutations_completed > 0 and not measured.errors
+    (root / 'research.yaml').write_text(json.dumps(config))
+    assert run_experiment(root / 'research.yaml', results_base=root, progress_bar=False) is True
+    assert 'Experiment complete' in capsys.readouterr().out
     other = _project(tmp_path / 'other')
     with pytest.raises(ValueError, match='root hints disagree'):
         UniversalExperimentLoop(sfd=CompiledSFD(_configuration(other), project_root=other), project_root=root)

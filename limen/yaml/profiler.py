@@ -135,12 +135,8 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
 
     '''
 
-    params: dict[str, list[Any]] = {}
-    cardinalities: dict[str, int] = {}
-    for k, v in compiled_sfd.params().items():
-        lst = list(v)
-        params[k] = lst
-        cardinalities[k] = len(lst)
+    params: dict[str, list[Any]] = {key: list(values) for key, values in compiled_sfd.params().items()}
+    cardinalities: dict[str, int] = {key: len(values) for key, values in params.items()}
     total = math.prod(cardinalities.values())
 
     result = ProfileResult(
@@ -150,15 +146,15 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     )
 
     manifest = compiled_sfd.manifest()
-    from limen.experiment._holdout_research import bind_manifest, binding_of, operation, reject_modes
+    from limen.experiment._holdout_research import bind_manifest, binding_of, operation, profile_failure
     if binding_of(manifest) is None:
         _ = bind_manifest(manifest)
-    reject_modes(manifest, profile=True)
 
-    with operation(manifest, 'experiment'):
+    with operation(manifest, 'experiment', purpose='profile'):
         try:
             raw_data = manifest.fetch_data()
         except Exception as exc:  # noqa: BLE001
+            profile_failure(manifest, exc, None)
             result.errors.append(f'Failed to load data: {type(exc).__name__}: {exc}')
             return result
 
@@ -188,6 +184,7 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
                         _: Any = manifest.run_model(data_dict, round_params)
                         elapsed_times.append(time.perf_counter() - t0)
                     except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
+                        profile_failure(manifest, exc, round_params)
                         result.errors.append(_classify_error(exc))
         finally:
             manifest_logger.removeHandler(log_capture)
