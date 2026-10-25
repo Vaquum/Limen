@@ -651,6 +651,20 @@ def _protected_rejected_worker(config, snapshot, authority, cwd, occurrence):
         return evaluate_round(occurrence)
 
 
+def _protected_strict_worker(config, snapshot, authority, cwd, occurrence):
+    from unittest.mock import patch
+    from limen.experiment._parallel_worker import evaluate_round
+    from limen.experiment.errors import StrictModeError
+    from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+    _protected_worker_init(config, snapshot, authority, cwd)
+    original = LightGBMBinary.train
+    def train(*args, **kwargs):
+        original(*args, **kwargs)
+        raise StrictModeError('Recorded worker failure control after genuine fitting')
+    with patch.object(LightGBMBinary, 'train', train):
+        return evaluate_round(occurrence)
+
+
 @pytest.mark.parametrize('cwd_mode', ['outside', 'foreign'])
 def test_protected_worker_handoff(cwd_mode, tmp_path):
     from concurrent.futures import ProcessPoolExecutor
@@ -700,6 +714,8 @@ def test_protected_worker_handoff(cwd_mode, tmp_path):
             ):
                 with pytest.raises(RuntimeError, match=r'revision|coordinator|source'):
                     pool.submit(_protected_rejected_worker, config, snapshot, refused, str(cwd), occurrence).result(timeout=40)
+            failed_occurrence = occurrence | {'_id': identity + '-failed', '_round_index': 1}
+            failed = pool.submit(_protected_strict_worker, config, snapshot, authority, str(cwd), failed_occurrence).result(timeout=40)
         _numeric_equal({key: value for key, value in expected.items() if not key.startswith('_')},
                        {key: value for key, value in payload.results.items() if not key.startswith('_')})
         assert payload.results['_preds'].tolist() == expected['_preds'].tolist()
@@ -726,6 +742,13 @@ def test_protected_worker_handoff(cwd_mode, tmp_path):
         with pytest.raises(ValueError, match='occurrence'):
             commit.commit(occurrence | {'_id': 'foreign-round', '_round_index': 1}, payload)
         assert _artifact_state(directory) == prefix
+        assert not failed.succeeded
+        failure_proof = failed.alignment['holdout_failure']
+        assert history.research_record(authority[0], failure_proof['research_record_id'])['state'] == 'failed'
+        retained = (directory / 'round_data.jsonl').read_bytes()
+        commit.commit(failed_occurrence, failed)
+        assert host.experiment_log.height == 2 and len(commit.failed_round_params) == 1
+        assert (directory / 'round_data.jsonl').read_bytes() == retained
     row = json.loads((directory / 'round_data.jsonl').read_text())
     assert row['round_id'] == identity
     assert row['holdout']['research_record_id'] != proof['research_record_id']
