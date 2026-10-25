@@ -1174,3 +1174,57 @@ def test_protected_native_fold_refusal_preserves_withdrawal(tmp_path):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
         assert db.execute('SELECT COUNT(*) FROM research').fetchone()[0] == 0
     withdraw_holdout(root, reservation)
+
+
+@pytest.mark.parametrize('partial', [False, True])
+def test_protected_extension_and_hook_lineage(partial, tmp_path, monkeypatch):
+    from limen.experiment.feedback_controller import FeedbackController
+    from limen.experiment._holdout_history import HoldoutEvidenceError
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.experiment.msq import MSQ
+    from limen.log.log import Log
+    from tests.test_factorized_preparation import _instrument
+
+    root = _project(tmp_path / 'feedback-project')
+    config = _configuration(root)
+    reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    compiled = CompiledSFD(config, project_root=root)
+    directory = root / 'results'
+    loop = UniversalExperimentLoop(sfd=compiled, project_root=root, experiment_dir=directory,
+        yaml_reference=config, search_strategy=build_search_strategy(config))
+    loop.run('hook-lineage', n_permutations=1, progress_bar=False, post_processing=True)
+    retained = Log(uel_object=loop)
+    domain = ParamDomain({'C': [1.0, 2.0]})
+    strategy = GridStrategy(domain)
+    queue = MSQ(strategy, domain)
+    audit_path = root / 'feedback-audit.jsonl'
+    def successful(log, mutable):
+        assert log._get_test_data_with_all_cols(0).height > 0
+        mutable.remove_is('C', 2.0)
+    with research.operation(loop.manifest, 'experiment'):
+        applied = FeedbackController(intra_callback=successful, audit_log_path=audit_path).trigger(retained, queue, strategy, 1)
+    assert len(applied) == 1 and domain.values_for('C') == [1.0]
+    assert next(queue)['C'] == 1.0
+    domain = ParamDomain({'C': [1.0, 2.0]})
+    strategy = GridStrategy(domain)
+    queue = MSQ(strategy, domain)
+    retained.data = retained.data.slice(1)
+    def failing(log, mutable):
+        if partial:
+            mutable.remove_is('C', 2.0)
+        log._get_test_data_with_all_cols(0)
+    controller = FeedbackController(intra_callback=failing, audit_log_path=audit_path)
+    before = _artifact_state(directory)
+    with monkeypatch.context() as guarded:
+        counts = _instrument(guarded)
+        with pytest.raises(HoldoutEvidenceError, match='replay admitted source changed'), research.operation(loop.manifest, 'experiment') as operation:
+            controller.trigger(retained, queue, strategy, 2)
+        assert counts['target'] == counts['scaler'] == counts['model'] == 0
+    assert _artifact_state(directory) == before
+    assert history.research_record(history.bind(root), operation.record_id)['state'] == 'failed'
+    audit = [json.loads(line) for line in audit_path.read_text().splitlines()]
+    assert audit[-1]['errors'][0]['source'] == 'intra_callback'
+    assert 'HoldoutEvidenceError' in audit[-1]['errors'][0]['traceback']
+    assert len(audit[-1]['interventions']) == int(partial)
+    assert len(queue.intervention_log) == int(partial)

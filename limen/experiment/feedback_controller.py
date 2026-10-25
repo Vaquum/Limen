@@ -1,6 +1,5 @@
 import json
 import logging
-import traceback
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -18,9 +17,7 @@ import limen.experiment._holdout_composition as _protected
 logger = logging.getLogger(__name__)
 
 
-def _error_entry(source: str, error: Exception) -> dict[str, str]:
-    _protected.propagate(error)
-    return {'source': source, 'error': str(error), 'traceback': traceback.format_exc()}
+_error_entry = _protected.error_entry
 
 
 _SOURCE_ERRORS = (
@@ -208,7 +205,7 @@ class FeedbackController:
                         self._apply_intervention(msq, intervention)
             all_interventions.extend(interventions)
         except _SOURCE_ERRORS as e:
-            _protected.feedback_failure(self, e, name, msq, all_interventions, errors, current_round, before)
+            _protected.feedback_failure(self._write_audit_entry, e, name, msq, all_interventions, errors, current_round, msq.intervention_log[before:])
             logger.warning('%s failed: %s', name, e)
             errors.append(_error_entry(name, e))
 

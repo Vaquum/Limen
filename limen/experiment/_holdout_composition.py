@@ -31,13 +31,16 @@ def propagate(error: Exception) -> None:
         raise error
 
 
-def feedback_failure(controller: object, error: Exception, name: str, msq: object,
-                     interventions: list[dict[str, object]], errors: list[dict[str, str]], current_round: int, before: int) -> None:
+def error_entry(source: str, error: Exception) -> dict[str, str]:
+    propagate(error)
+    return {'source': source, 'error': str(error), 'traceback': traceback.format_exc()}
+
+
+def feedback_failure(write: Callable[..., None], error: Exception, name: str, msq: object,
+                     interventions: list[dict[str, object]], errors: list[dict[str, str]], current_round: int, partial: list[dict[str, object]]) -> None:
     if not isinstance(error, HoldoutEvidenceError):
         return
-    partial = [dict(entry, source=name) for entry in cast(list[dict[str, object]], getattr(msq, 'intervention_log'))[before:]]
-    entries = [*interventions, *partial]
-    write = cast(Callable[..., None], getattr(controller, '_write_audit_entry'))
+    entries = [*interventions, *[dict(entry, source=name) for entry in partial]]
     write(current_round, [item for item in entries if item.get('action') != 'suggest'],
           [*errors, {'source': name, 'error': str(error), 'traceback': traceback.format_exc()}], msq,
           suggestions=[item for item in entries if item.get('action') == 'suggest'])
