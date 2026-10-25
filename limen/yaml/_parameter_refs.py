@@ -17,7 +17,7 @@ def _collect(value: object, path: str, found: dict[str, str], *, embedded: bool)
     if isinstance(value, str):
         for match in _REFERENCE.finditer(value):
             if embedded or match.group(0) == value:
-                found.setdefault(match.group(1), path)
+                _ = found.setdefault(match.group(1), path)
     elif isinstance(value, Mapping):
         for key, item in cast(Mapping[str, object], value).items():
             _collect(item, f'{path}.{key}', found, embedded=embedded)

@@ -984,7 +984,8 @@ class ParamCoverage:
                         continue
                     if param.kind == inspect.Parameter.VAR_KEYWORD:
                         open_signature = True
-                    arch_params.add(name)
+                    else:
+                        arch_params.add(name)
             except (TypeError, ValueError):
                 open_signature = True
 

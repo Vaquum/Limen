@@ -10,6 +10,11 @@
       "source": "limen/yaml/_assessment_spec.py",
       "symbol": "holdout_spec"
     },
+    "sfd.manifest": {
+      "sha256": "210ffb101a2b9b47197c98b4241f60b5c668055e17c7b2f31bfee78a2d2a54ae",
+      "source": "limen/yaml/_parameter_refs.py",
+      "symbol": "lookup_references"
+    },
     "sfd.manifest.acceptance": {
       "sha256": "b5051d8f5249da538f9f7d6c426d95fbaff977704898ebff8c18976ee0314cc5",
       "source": "limen/experiment/_acceptance_settings.py",
@@ -145,6 +150,11 @@
       "sha256": "b57f584fbedd713560a6e164324aad50eaa540c5367d9259267651946d60fc0a",
       "source": "limen/yaml/rules.py",
       "symbol": "ConditionsList"
+    },
+    "sfd.params": {
+      "sha256": "9c216780eab58e212046df3f3507cc74026e78b8a80e46627d24bb653a7e2947",
+      "source": "limen/yaml/rules.py",
+      "symbol": "ParamCoverage"
     },
     "uel.recording": {
       "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d",

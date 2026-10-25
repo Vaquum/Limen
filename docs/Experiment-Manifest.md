@@ -25,6 +25,23 @@ Mappings used as YAML keys are rejected during parsing, with the key's line and
 column in the parse error. Manifest fields use named keys; nested mappings remain
 available as values.
 
+Every `{name}` used as a round-parameter lookup must have a candidate list in
+`sfd.params`, including lookups in inactive transforms. Architecture defaults and
+implicit controls such as `feature_groups` or `auto_pca` do not declare a lookup.
+For example, an indicator period of `{C}` requires `sfd.params.C`; declaring it
+also overrides the model's `C` setting. Use a distinct name when those settings
+should vary independently. Missing declarations fail validation at the consumer's
+field before data loading or execution. Unknown and `**kwargs` architecture
+signatures suppress only unused-parameter warnings; declaration and `include_if`
+checks still apply.
+
+Literal source paths, transform group names and build-time `params_override`
+values retain their literal meaning. Native transform parameters preserve exact
+parameter-name lookup precedence and underscore-prefixed literals. Direct Python
+Manifest/UEL calls may still supply values through `context_params`; a declared
+YAML experiment must be complete without that external context. The existing
+identifier-reference grammar is unchanged.
+
 This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the YAML supplies every execution choice:
 
 <!-- example: manifest-selection source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->
@@ -1428,6 +1445,8 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `sfd.manifest` | Actual round-parameter lookup locations; literal fields keep their native meaning. | [lookup_references](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_parameter_refs.py) |
+| `sfd.params` | Forward declarations and Boolean `include_if` domains; unused warnings require a known closed architecture signature. | [ParamCoverage](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
 | `sfd.manifest.split_walk_forward` | `n_folds`: `int`, required; `test_bars`: `int`, required; `purge_bars`: `int`, required; `embargo_bars`: `int`, required; `anchored`: `bool`, required | [WalkForwardConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_walk_forward_split.py) |
 | `sfd.manifest.backtest.product` | `kind`: `Literal['cash_spot', 'linear_perpetual']`, required; `instrument`: `str`, required; `base_currency`: `str`, required; `quote_currency`: `str`, required; `quantity_step`: `float \| str`, required; `min_notional`: `float \| str`, required; `initial_margin_fraction`: `float \| str`, default `1.0`; `maintenance_margin_fraction`: `float \| str`, default `0.0` | [ProductConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
 | `sfd.manifest.backtest.funding` | `adapter`: `FundingAdapter`, default `funding_adapter`; `adapter_version`: `str`, default `ADAPTER_VERSION`; `preset`: `str \| None`, default `None`; `params`: `dict[str, object]`, default `field(default_factory=dict[str, object])`; `data_source`: `SourceConfig \| None`, default `None` | [FundingConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
