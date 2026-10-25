@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T13:26:56.236987+00:00",
-  "execution_checkout_head": "7b026c4775d44ada7967a74140c98e56433b2db6",
+  "observed_at": "2026-10-25T17:11:32.296885+00:00",
+  "execution_checkout_head": "712354ef062ec89c1339381154cf660d8fa89b44",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -45,7 +45,7 @@
     "cli/commands/new.py": "d6d8db0154ab1e5e2ca4a08bc842e1bbec3d77e1c72df80bbe58416feb412b4f",
     "cli/commands/profile.py": "aaf7add55e599c33871ec3d19a4986468f1bab5dd5840251e882c03c8365749d",
     "cli/commands/reindex.py": "4ac839506e36ae597661cc7a680f6a0cdfb5702c918d9ba756badf9357dade33",
-    "cli/commands/resume.py": "56c7e10a7151815950fabd88195839bbaed63f94dd877ffc25dd4bfdaf0f0544",
+    "cli/commands/resume.py": "706c988e2add557aab6a910e07ac9c41f4500856789c9153bf8830f5a34ea207",
     "cli/commands/run.py": "237c7cb93507c58cbf88a6f23a277b6c05300ef5c1d428e05f7c77c6431d528b",
     "cli/commands/validate.py": "8bd94801a0311e91321c6bfc98c190e1c0037651243ced7210e9f74c058c0408",
     "cli/git_utils.py": "e8fe61990930832ada420152afb06a31e1091c9dc1b834a88a981701d6b7884a",
@@ -503,6 +503,7 @@
     "yaml/_objective_spec.py": "16932a3cefd7d60347560baeb1733fd4862569cbb51bcfdf9ed7292050ae5467",
     "yaml/_parser_yaml.py": "6a0813bead7e69136d3ea635884cd024e81d0d8e6b8ea41190d6c7eda791659a",
     "yaml/_recording_spec.py": "2bce42e979d2ae59f633f418b60c526d09609269243a4c1493d6c8b2be954ad3",
+    "yaml/_schema_version.py": "0ce83b5905094c3250e81dd2512a15598fec8cbcbf42fd0d96e9512142a939f9",
     "yaml/_temporal_spec.py": "25a2be761c47bca3a7f79e4dbd9d557c94b60e2fc64605a91e0805327db83cc5",
     "yaml/compiler.py": "1a4674841d281a307410baf31277c5243216a5687e63ddfe8880d3114d947a90",
     "yaml/config.py": "55c80a4704450766c1015602b1d97e83298f8907dfaef092938717cf7e0fb4f3",
@@ -510,10 +511,10 @@
     "yaml/parser.py": "2fa2c1ab9192ce75779cd8844f204faee29731e1e3d4ac53318fd688a4451ed2",
     "yaml/profiler.py": "155ca2669b56e0372c8f14171d50a9962dc84619295fc37b54a2666009c85abf",
     "yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
-    "yaml/rules.py": "05992129a3285633fac17bd7498c8c69036220326e3316c4cbbc9cafcee4bb01",
+    "yaml/rules.py": "254ba64c35fe8c58813a40c9f1b5158e1b117de248957044cf65bd7141d47f2f",
     "yaml/schema.py": "c5f89d84d5c07bde0da6d4fe3e7c60368c51e825eca68a0256c6644caa64eed1",
     "yaml/store.py": "6f7c1e4b645d3fdf38758f6d80ad9ad8b909441386be3cb2864360b56891098c",
-    "yaml/validator.py": "5576d5a4c13a0cb4a2c757e9da1152b6a1af0ac7af2c404671c6636edc37941c"
+    "yaml/validator.py": "8e7fa00d83527ed0d09b597ebec27e49c50680caa9e714186041e0f48986b0a3"
   },
   "sources": {
     "compiled-research/tabpfn.yaml": "9ee486a940ad9da6f86d161cebfbf17c1d84d1d7333e31acc2fd9f7fe402254a",
