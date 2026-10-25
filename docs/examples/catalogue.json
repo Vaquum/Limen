@@ -1946,6 +1946,15 @@
           "reference_architecture",
           "type"
         ],
+        "MANIFEST_OPTIONAL_SHARED": [
+          "allocation",
+          "backtest",
+          "indicators",
+          "objective",
+          "required_columns",
+          "split_dates",
+          "split_walk_forward"
+        ],
         "ML_MANIFEST_REQUIRED": [
           "target"
         ],
@@ -1958,7 +1967,6 @@
           "feature_shims",
           "features",
           "metrics_params",
-          "objective",
           "params_override",
           "pca_compression",
           "pre_split_data_selector",
@@ -2115,14 +2123,6 @@
         ],
         "HOLDOUT_OPTIONAL": [
           "evaluation_target"
-        ],
-        "MANIFEST_OPTIONAL_SHARED": [
-          "allocation",
-          "backtest",
-          "indicators",
-          "required_columns",
-          "split_dates",
-          "split_walk_forward"
         ]
       }
     }
