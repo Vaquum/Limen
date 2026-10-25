@@ -611,7 +611,7 @@ def test_rejects_ambiguous_experiment_id_resolution():
 # Architecture detection
 # ---------------------------------------------------------------------------
 
-def test_rejects_mixed_architecture_selection():
+def test_mixed_architecture_selection_requires_binding():
 
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
@@ -622,11 +622,9 @@ def test_rejects_mixed_architecture_selection():
             {round_ids[0]: 'logreg_v1', round_ids[1]: 'tabpfn_v1'},
         )
 
-        try:
-            Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
-            assert False, 'Expected ValueError'
-        except ValueError as e:
-            assert 'same architecture' in str(e)
+        cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
+        assert cohort.architecture_id.startswith('mixed-binary-v1:')
+        assert cohort.supports_probabilities is cohort.aggregation_mode is cohort.cohort_id is None
 
 
 def test_sets_probability_mode_for_probability_capable_architecture():

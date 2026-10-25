@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import limen.experiment._round_storage as _storage
+import json
 
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -9,6 +10,19 @@ from typing import Generic, Protocol, TypeVar, cast
 from limen.experiment import manifest_core
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.config import is_mapping
+from limen.yaml.errors import ResolutionError
+from limen.yaml.resolver import resolve
+
+
+def architecture_identity(architectures: set[str]) -> str:
+    return next(iter(architectures)) if len(architectures) == 1 else 'mixed-binary-v1:' + json.dumps(sorted(architectures), separators=(',', ':'))
+
+
+def same_architecture(actual: str, expected: str) -> bool:
+    try:
+        return actual.strip().lower() == expected.strip().lower() or (actual.startswith('limen.') and expected.startswith('limen.') and resolve(actual) is resolve(expected))
+    except ResolutionError as exc:
+        raise ValueError('Cohort bound architecture cannot be resolved') from exc
 
 __all__ = ['RoundSources']
 
@@ -50,6 +64,7 @@ class RoundSources(Generic[Source]):
         self.member_sources: dict[tuple[str, str], Source] = {}
         self.source_metadata: dict[Path, Mapping[str, object]] = {}
         self._architecture = architecture
+        self._architectures: dict[tuple[str, str], str] = {}
         signatures: list[object] = []
         architectures: set[str] = set()
         for path, ids in grouped.items():
@@ -89,14 +104,14 @@ class RoundSources(Generic[Source]):
                     raise ValueError(f'Cohort member {key} in source {path}: incompatible data source or effective bar formation.')
                 signatures.append(signature)
                 self.member_sources[key] = source
-            architectures.add(source.architecture_id)
-            if len(architectures) != 1:
-                raise ValueError(f'Cohort source {path}: all members must share the same architecture.')
+                self._architectures[key] = architecture(entries[pid], metadata)
+                architectures.add(self._architectures[key])
             self.sources[path] = source
             self.source_metadata[path] = metadata
 
         self.member_ids = [(cast(str, self.sources[path].manifest_id), pid) for path, pid in normalized]
-        self.architecture_id = next(iter(architectures))
+        self.architectures = [self._architectures[key] for key in self.member_ids]
+        self.architecture_id = architecture_identity(architectures)
         manifest_ids = {mid for mid, _ in self.member_ids}
         self.manifest_id = next(iter(manifest_ids)) if len(manifest_ids) == 1 else None
 
@@ -122,7 +137,8 @@ class RoundSources(Generic[Source]):
             params = getattr(member, 'round_params', None)
             if not is_mapping(params):
                 raise ValueError(f'Cohort member {key}: round_params are required for architecture binding.')
-            if self._architecture({'round_params': params}, source.metadata).strip().lower() != self.architecture_id.strip().lower():
+            metadata = {'yaml_reference': getattr(member, '_yaml_reference', None)} if self.architecture_id.startswith('mixed-binary-v1:') else source.metadata
+            if not same_architecture(self._architecture({'round_params': params}, metadata), self._architectures[key]):
                 raise ValueError(f'Cohort member {key}: bound architecture must match its source.')
             bound[key] = member
         missing = [key for key in self.member_ids if key not in bound]

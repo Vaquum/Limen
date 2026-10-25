@@ -3,10 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 import json
+import math
+from numbers import Real
 from pathlib import Path
 from typing import Protocol, TypeVar, cast
 
-from limen.cohort._round_sources import RoundSource, RoundSources
+from limen.cohort._round_sources import RoundSource, RoundSources, architecture_identity, same_architecture
 from limen.experiment import manifest_core
 from limen.experiment import _round_storage
 from limen.experiment._fold_evidence import model_witness, read_fold_context
@@ -23,6 +25,7 @@ MemberId = tuple[str, str] | tuple[str, str, int, str]
 Selection = tuple[Path, str, int | None]
 Architecture = Callable[[Mapping[str, object], Mapping[str, object]], str]
 Source = TypeVar('Source', bound=RoundSource)
+Bar = TypeVar('Bar')
 Load = Callable[[Path], Mapping[str, Mapping[str, object]]]
 resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(manifest_core)['_resolve_params'])
 
@@ -30,6 +33,12 @@ resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dic
 class Owner(Protocol):
     supports_probabilities: bool | None
     aggregation_mode: str | None
+
+    @property
+    def architecture_id(self) -> str: ...
+
+    @property
+    def member_ids(self) -> Sequence[tuple[object, ...]]: ...
 
 
 @dataclass
@@ -108,14 +117,37 @@ def _binary(value: object) -> bool:
     return cast(bool, output['probabilities'])
 
 
-def bind_native_output(owner: Owner, members: Sequence[object], default: bool) -> None:
+def bind_native_output(owner: Owner, members: Sequence[object], default: bool, architectures: Sequence[str] = ()) -> None:
     probabilities = default
+    if owner.architecture_id.startswith('mixed-binary-v1:'):
+        promises = [_binary(model_witness(getattr(member, '_model', None))) for member in members]
+        policy = tuple(sorted(zip(owner.member_ids, architectures, promises, strict=True), key=lambda row: json.dumps(row[0])))
+        vars(owner)['_mixed_policy'] = policy
+        owner.supports_probabilities = all(promises)
+        owner.aggregation_mode = 'probability_weighted' if all(promises) else 'majority_vote'
+        return
     declarations = [cast(object, getattr(type(cast(object, getattr(member, '_model', None))), 'inference_output', None)) for member in members]
     for value in (False, True):
         if declarations and all(isinstance(declaration, tuple) and len(cast(tuple[object, ...], declaration)) == _PAIR and cast(tuple[object, ...], declaration)[0] == 'binary' and cast(tuple[object, ...], declaration)[1] is value for declaration in declarations):
             probabilities = value
     owner.supports_probabilities = probabilities
     owner.aggregation_mode = 'probability_weighted' if probabilities else 'majority_vote'
+
+
+def mixed_outputs(owner: Owner, bars: Sequence[Bar]) -> list[Bar]:
+    policy = cast(tuple[tuple[tuple[object, ...], str, bool], ...], vars(owner)['_mixed_policy'])
+    promises = {row[0]: row[2] for row in policy}
+    result: list[Bar] = []
+    for member_id, bar in sorted(zip(owner.member_ids, bars, strict=True), key=lambda item: json.dumps(item[0])):
+        if getattr(bar, 'reason', None) == 'sensor-error':
+            continue
+        decision, probability = getattr(bar, 'prediction', None), getattr(bar, 'probability', None)
+        if isinstance(decision, bool) or not isinstance(decision, Real) or not math.isfinite(float(decision)) or decision not in (0, 1):
+            raise ValueError(f'Cohort member {member_id}: mixed binary decisions must be finite numeric 0 or 1')
+        if promises[member_id] and (isinstance(probability, bool) or not isinstance(probability, Real) or not math.isfinite(float(probability)) or not 0 <= float(probability) <= 1):
+            raise ValueError(f'Cohort member {member_id}: promised probability must be finite and in [0, 1]')
+        result.append(bar)
+    return result
 
 
 def _compile(path: Path, metadata: Mapping[str, object]) -> Manifest:
@@ -147,6 +179,7 @@ class FoldSources:
         self.member_ids: list[MemberId] = []
         self._selected: dict[Key, dict[str, object] | None] = {}
         self._member_sources: dict[Key, _Source] = {}
+        self._architectures: dict[Key, str] = {}
         signatures: list[object] = []
         campaigns: list[object] = []
         architectures: set[str] = set()
@@ -186,6 +219,7 @@ class FoldSources:
                 key = (mid, pid) if fold is None else (mid, pid, fold)
                 self._add(key, context, source)
                 architecture_id = self._architecture(entry, metadata)
+                self._architectures[key] = architecture_id
                 architectures.add(architecture_id)
                 source.architecture_id = architecture_id
                 signature = self._signature(manifest, params)
@@ -200,9 +234,7 @@ class FoldSources:
                         raise ValueError(f'Cohort member {key}: incompatible fold campaign source or split declaration')
                     campaigns.append(signature)
             self.sources[path], self.source_metadata[path] = source, metadata
-        if len(architectures) != 1:
-            raise ValueError('Cohort sources must share the same architecture')
-        self.architecture_id = next(iter(architectures))
+        self.architecture_id = architecture_identity(architectures)
         for path, pid, fold in selections:
             mid = self.sources[path].manifest_id
             context = self._selected[(mid, pid) if fold is None else (mid, pid, fold)]
@@ -234,7 +266,7 @@ class FoldSources:
             formation = (formation[0], resolve_params(formation[1], params))
         else:
             formation = None
-        return (source.method, {key: value for key, value in source.params.items() if key not in ('start_date_limit', 'end_date_limit')}, manifest.architecture_function, bar_type, formation)
+        return (source.method, {key: value for key, value in source.params.items() if key not in ('start_date_limit', 'end_date_limit')}, bar_type, formation)
 
     def bind(self, members: list[object]) -> list[object]:
         if len(members) != len(self.member_ids):
@@ -254,7 +286,8 @@ class FoldSources:
         for key, member in bound.items():
             source, context = self._member_sources[key], self._selected[key]
             params = getattr(member, 'round_params', None)
-            if not is_mapping(params) or self._architecture({'round_params': params}, source.metadata).strip().lower() != self.architecture_id.strip().lower():
+            metadata = {'yaml_reference': getattr(member, '_yaml_reference', None)} if self.architecture_id.startswith('mixed-binary-v1:') else source.metadata
+            if not is_mapping(params) or not same_architecture(self._architecture({'round_params': params}, metadata), self._architectures[key]):
                 raise ValueError(f'Cohort member {key}: bound architecture must match its source')
             try:
                 native = model_witness(getattr(member, '_model', None))
@@ -265,9 +298,10 @@ class FoldSources:
                 witness = cast(Mapping[str, object], context['fold_witness'])
                 if type(getattr(member, 'n_folds', None)) is not int or getattr(member, 'n_folds', None) != witness['n_folds'] or getattr(member, 'provenance_digest', None) != context['provenance_digest'] or native != witness['inference_model']:
                     raise ValueError(f'Cohort selected evidence mismatch for member {key}')
-        self._owner.supports_probabilities = all(probabilities)
-        self._owner.aggregation_mode = 'probability_weighted' if all(probabilities) else 'majority_vote'
-        return [bound[cast(Key, member[:_TRIPLE] if len(member) > _PAIR else member)] for member in self.member_ids]
+        keys = [cast(Key, member[:_TRIPLE] if len(member) > _PAIR else member) for member in self.member_ids]
+        ordered = [bound[key] for key in keys]
+        bind_native_output(self._owner, ordered, all(probabilities), [self._architectures[key] for key in keys])
+        return ordered
 
     def identity(self, aggregation_mode: str) -> dict[str, object]:
         rows = [['ordinary', *member] if len(member) == _PAIR else ['fold', *member] for member in self.member_ids]
