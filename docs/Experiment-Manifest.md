@@ -133,11 +133,40 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
-| `output_path` | str | `{name}_{datetime}` | output-directory template; `{name}` and `{datetime}` are substituted, and it is ignored for committed-manifest URI runs |
+| `output_path` | str | `{name}_{datetime}` | relative output-directory template; see [output destinations](#output-destinations); ignored for committed-manifest URI runs |
 
 NOTE: `search_strategy.seed` seeds random sampling, Sobol sampling or a grid with `shuffle: true`. An unshuffled grid keeps its declared enumeration order. The traversal seed does not seed models. Sobol always uses scrambling and rejects additional strategy fields; see [Sobol's mapping and resume contract](Advanced-Search.md#seeded-sobol-sampling).
 
 `pruning_strategies` declares reducers that fire every `feedback_interval` rounds during a run — see [Reducers And Feedback](Reducers-And-Feedback.md) for the reducer catalog, YAML syntax, and tuning.
+
+### Output destinations
+
+For direct YAML runs, `uel.output_path` is relative to `results/dev` in development
+and `results` in production, beneath the invocation's current working directory.
+`{name}` and `{datetime}` are substituted without rewriting the saved template.
+The expanded path must be relative and resolve to a strict descendant of that
+mode directory. Absolute paths, escapes through parent components or existing
+symlinks, and paths naming the mode directory itself are rejected before
+compilation or project writes, including with `--dry-run`.
+
+Nested paths, contained parent components and aliases within the mode directory
+remain valid. Both the mode root and destination are resolved, so a configured
+symlinked results root is supported; execution uses the checked canonical path.
+This checks the existing filesystem layout, not concurrent filesystem mutation.
+Static `limen validate` cannot establish this filesystem-context containment.
+
+Relocate direct-run output through the invocation's working directory or a
+symlinked results root. Python callers may pass an explicit `results_base` to
+`run_experiment`; its `results[/dev]` directory becomes the authorized mode root.
+The YAML file's location does not change cwd-relative output or source paths.
+
+Committed-manifest URI runs ignore the template and keep the project-root
+`results[/dev]/<id8>/<timestamp>` layout, including from a project subdirectory.
+Invoking the stored YAML by file path uses direct-YAML admission instead.
+Explicit `--resume` uses the selected saved directory, including relocated runs
+whose legacy YAML contains an absolute template. The copied YAML, metadata and
+manifest identity retain the declared template. Occupied-run refusal still
+precedes YAML copying.
 
 ### Parallel rounds
 

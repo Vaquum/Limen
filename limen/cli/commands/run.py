@@ -9,6 +9,7 @@ import click
 
 from limen.cli.commands._export_results import export_results
 from limen.cli.commands._load_yaml import load_and_validate
+from limen.cli.commands._results_dir import admit_output
 from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
@@ -34,25 +35,25 @@ def run_experiment(yaml_path: Path,
         if not valid:
             return False
 
-        if dry_run:
-            try:
+        uel_cfg = yaml_dict.get('uel', {})
+        experiment_name: str = yaml_dict['metadata']['name']
+        test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
+        try:
+            results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
+            if dry_run:
                 _ = CompiledSFD(yaml_dict, project_root=yaml_path.parent).manifest()
-            except Exception as exc:  # noqa: BLE001
-                click.secho(f'  ✗ Compilation failed: {exc}', fg='red')
-                return False
+        except Exception as exc:  # noqa: BLE001
+            click.secho(f'  ✗ Compilation failed: {exc}', fg='red')
+            return False
+        if dry_run:
             click.echo('  Dry run — skipping execution')
             return True
 
-        uel_cfg = yaml_dict.get('uel', {})
-
-        experiment_name: str = yaml_dict['metadata']['name']
         n_permutations: int = uel_cfg.get('n_permutations', 10000)
         prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
-        test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
         effective_workers = uel_cfg.get('workers', 1) if workers is None else workers
         feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))
         checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
-        results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
 
         try:
             from limen.cli.assessment import require_reservation
@@ -128,4 +129,4 @@ def _build_results_dir(uel_cfg: dict[str, Any],
         return prefix / manifest_id[:8] / timestamp
 
     template: str = uel_cfg.get('output_path', '{name}_{datetime}')
-    return prefix / template.replace('{name}', experiment_name).replace('{datetime}', timestamp)
+    return admit_output(prefix, template.replace('{name}', experiment_name).replace('{datetime}', timestamp))
