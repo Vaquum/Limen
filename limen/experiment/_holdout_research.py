@@ -213,6 +213,8 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
                 data = cast(dict[str, object], result)
                 if getattr(manifest, 'strategy', None) is not None:
                     op.provenance['schema_reason'] = 'rule-based-no-fitted-model'
+                if op.role == 'trainer' and op.replay_witness is not None and 'workflow' in op.replay_witness:
+                    op.provenance['workflow'] = copy.deepcopy(op.replay_witness['workflow'])
                 provenance = copy.deepcopy(op.provenance)
                 alignment = cast(dict[str, object], data['_alignment'])
                 alignment['holdout'] = provenance
@@ -300,6 +302,8 @@ def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root:
     manifest = cast(ResearchManifest, attrs['_manifest'])
     binding = bind_manifest(manifest, project_root, cast(Path, attrs['_experiment_dir']))
     _checkpoint_proof.validate_trainer(binding, cast(Mapping[str, object], attrs['_metadata']), cast(Mapping[str, object], attrs['_round_data']))
+    if binding is not None and binding.cutoff_ns is not None and manifest.split_walk_forward is not None:
+        cast(Callable[[object, Mapping[str, object]], None], vars(sys.modules['limen.inference._fold_trainer'])['restore_ratio'])(manifest, cast(Mapping[str, object], attrs['_metadata']))
     if data is None and binding is not None and binding.cutoff_ns is not None and (source := _checkpoint_proof.trainer_source(manifest, cast(Mapping[str, object], attrs['_round_data']))):
         reference = copy.deepcopy(cast(dict[str, object], attrs['_yaml_reference']))
         cast(dict[str, object], cast(Mapping[str, object], reference['sfd'])['manifest'])['data_source'] = source
@@ -344,6 +348,9 @@ def replay_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenat
     def guarded(host: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         manifest = getattr(host, 'manifest', None)
         if manifest is None:
+            return func(host, *args, **kwargs)
+        folds = getattr(host, 'fold_results', None)
+        if isinstance(folds, pl.DataFrame) and not folds.is_empty():
             return func(host, *args, **kwargs)
         with operation(manifest, 'replay') as op:
             attrs = cast(dict[str, object], vars(host))

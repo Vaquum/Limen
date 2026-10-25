@@ -1,6 +1,6 @@
 import limen.experiment._round_storage as _storage
 import limen.experiment._fold_evidence as _promotion
-from limen.experiment import _holdout_folds
+import limen.experiment._holdout_folds as _protection
 import copy
 import json
 import math
@@ -124,7 +124,7 @@ def _average(records: list[dict[str, object]]) -> dict[str, object]:
 
 
 class WalkForwardRun:
-    @_holdout_folds.construction
+    @_protection.construction
     def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path, *, promotion: bool | dict[str, object] = False) -> None:
         super().__init__()
         self.manifest, self.raw, self.config = manifest, raw, cast(WalkForwardConfig, manifest.split_walk_forward)
@@ -210,7 +210,7 @@ class WalkForwardRun:
                         raise ValueError('Cannot resume split_walk_forward with incomplete aligned predictions')
                 if not isinstance(entry.get('round_id'), str):
                     raise ValueError('Cannot resume split_walk_forward without recorded trial identity')
-                entries.append(entry)
+                entries.append(_protection.restore_entry(self, entry))
         if expected is not None and [(entry['_round_index'], entry['round_id']) for entry in entries] != expected:
             raise ValueError('Cannot resume split_walk_forward: recorded folds differ from successful trial results')
         for entry in entries:

@@ -814,26 +814,138 @@ def test_protected_worker_parent_death(active, tmp_path, monkeypatch):
         sender.close()
 
 
-def test_protected_fold_lineage(tmp_path, monkeypatch):
+@pytest.mark.parametrize('population', ['full', 'gapped_selected_prefix'])
+def test_protected_fold_lineage(population, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from time import perf_counter
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
     from limen.experiment._walk_forward_run import WalkForwardRun
+    from limen.log.log import Log
+    from tests.test_factorize_equivalence import _numeric_equal
     from tests.test_factorized_preparation import _config, _params
 
     root = _project(tmp_path / 'fold-project')
-    reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    reservation = reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
     config = _config()
     body = config['sfd']['manifest']
     body.pop('split_dates')
     body['split_walk_forward'] = {'n_folds': 2, 'test_bars': 12, 'purge_bars': 1, 'embargo_bars': 1, 'anchored': True}
-    manifest = CompiledSFD(config, project_root=root).manifest()
-    full = pl.read_parquet(_FIXTURE).head(192)
+    if population == 'gapped_selected_prefix':
+        body['pre_split_data_selector'] = {'func': 'limen.data.utils.random_slice', 'params': {'rows': 96, 'safe_range_low': 0., 'safe_range_high': 0.9, 'seed': 42}}
+    compiled = CompiledSFD(config, project_root=root)
+    manifest = compiled.manifest()
+    market = pl.read_parquet(_FIXTURE).head(192)
+    if population == 'gapped_selected_prefix':
+        manifest.set_split_config(4, 1, 2)
+    full = market
+    if population == 'gapped_selected_prefix':
+        full = full.head(132).filter(pl.col('datetime') != full['datetime'][50])
     runner = WalkForwardRun(manifest, full, root / 'results', promotion=True)
-    assert runner.raw.height == 144
-    assert runner.promotion['selection_cutoff_ns'] == history.utc_day('2024-01-07')
+    if population == 'full':
+        assert runner.raw.height == 144
+        assert runner.promotion['selection_cutoff_ns'] == history.utc_day('2024-01-07')
+    else:
+        assert runner.raw.height == 131
+        assert runner.promotion['selection_cutoff_ns'] < history.utc_day('2024-01-07')
     with pytest.raises(ValueError, match='Holdout research refuses'):
         UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root)
-    manifest.set_pre_split_data_selector(lambda _frame: full)
+    params = _params(config)
+    control = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / 'ordinary-fold')).manifest()
+    if population == 'gapped_selected_prefix':
+        control.set_split_config(4, 1, 2)
+    ordinary = WalkForwardRun(control, runner.raw.clone(), tmp_path / 'control-output', promotion=True)
+    baseline_data = ordinary.prepare(runner.raw.clone(), params)
+    baseline_data.update(_record_execution=True, _record_model_outputs=True)
+    baseline = ordinary.evaluate(baseline_data, params.copy())
+    directory = root / 'results'
+    directory.mkdir()
+    path = directory / 'round_data.jsonl.gz'
+    strategy = GridStrategy(ParamDomain(config['sfd']['params']))
+    identity = strategy.compute_param_hash(params)
+    writer = SimpleNamespace(manifest=manifest, _walk_forward=runner, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+        _yaml_reference=config, _record_execution=True, _record_model_outputs=True, _workers=1, _factorize=False,
+        _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_limen_version=UniversalExperimentLoop._get_limen_version)
+    with pytest.raises(RuntimeError, match='interruption control'), research.operation(manifest, 'experiment') as campaign:
+        UniversalExperimentLoop._write_metadata(writer, directory)
+        started = perf_counter()
+        data = runner.prepare(full, params.copy())
+        data.update(_record_execution=True, _record_model_outputs=True)
+        result = runner.evaluate(data, params.copy())
+        elapsed = perf_counter() - started
+        _numeric_equal(baseline, result)
+        runner.accept(identity, data)
+        UniversalExperimentLoop._append_round_data(writer, path, identity, params, [], data['_alignment'], round_index=0)
+        pl.DataFrame([params | result | {'id': identity, '_round_index': 0, 'strict_mode_error': None, 'execution_time': elapsed}]).write_csv(directory / 'results.csv')
+        runner.finish()
+        raise RuntimeError('interruption control after a genuinely committed trial')
+    assert history.research_record(history.bind(root), campaign.record_id)['state'] == 'failed'
+    with _round_storage.open_text(path) as stream:
+        records = [json.loads(line) for line in stream]
+    assert len(records) == 1
+    recorded = records[0]
+    assert len(recorded['holdout']['workflow']['folds']) == 2
+    if population == 'gapped_selected_prefix':
+        proof = recorded['holdout']
+        assert proof['source']['admitted']['last_close_ns'] < proof['cutoff_ns']
+        assert proof['selected']['last_close_ns'] < proof['source']['admitted']['last_close_ns']
+        assert proof['selected']['gaps']
+    selected_fold = recorded['folds'][0]['holdout']
+    sensor = Trainer(directory, data=runner.raw, project_root=root).train([identity], fold=0)[0]
+    fitted = sensor._fitted_params['_holdout']
+    assert fitted['experiment_record_id'] == selected_fold['research_record_id']
+    assert fitted['workflow']['fold'] == 0 and fitted['round_id'] == identity
+    assert history.research_record(history.bind(root), fitted['research_record_id'])['state'] == 'completed'
+    restored_manifest = CompiledSFD(config, project_root=root).manifest()
+    if population == 'gapped_selected_prefix':
+        restored_manifest.set_split_config(4, 1, 2)
+    restored = WalkForwardRun(restored_manifest, runner.raw, directory, promotion=True)
+    with research.operation(restored_manifest, 'experiment'):
+        assert restored.restore(path, None, [(0, identity)]) == 1
+    captured = Log(uel_object=SimpleNamespace(experiment_log=pl.read_csv(directory / 'results.csv'), fold_results=restored.results, manifest=manifest, data=runner.raw,
+        _alignment=[data['_alignment']], round_params=[params]))
+    assert captured.experiment_backtest_results()[['id', 'fold']].to_dict('records') == [{'id': identity, 'fold': 0}, {'id': identity, 'fold': 1}]
+    with pytest.raises(ValueError, match='fold-specific test set'):
+        captured.permutation_prediction_performance(0)
+    invalid = Trainer(directory, data=runner.raw, project_root=root)
+    original_records = copy.deepcopy(invalid._round_data)
+    with monkeypatch.context() as guarded:
+        from tests.test_factorized_preparation import _instrument
+        counts = _instrument(guarded)
+        for fold, foreign in ((None, None), (0, None), (0, recorded['folds'][1]['holdout'])):
+            invalid._round_data = copy.deepcopy(original_records)
+            trial = invalid._round_data[identity]
+            destination = trial if fold is None else trial['folds'][fold]
+            destination['holdout'] = foreign
+            before = _artifact_state(directory)
+            with pytest.raises(ValueError, match=r'fold|workflow|history|population'):
+                invalid.train([identity], fold=0)
+            assert _artifact_state(directory) == before
+        assert counts == {'target': 0, 'scaler': 0, 'model': 0, 'prepare': 0}
+    invalid._round_data = original_records
+    invalid._data = runner.raw.slice(1)
+    before = _artifact_state(directory)
+    with pytest.raises(ValueError, match='source'):
+        invalid.train([identity], fold=0)
+    assert _artifact_state(directory) == before
+    bad_directory = root / 'bad-restore'
+    bad_directory.mkdir()
+    (bad_directory / 'metadata.json').write_bytes((directory / 'metadata.json').read_bytes())
+    broken = copy.deepcopy(recorded)
+    broken['folds'][0].pop('holdout')
+    bad_path = bad_directory / 'round_data.jsonl.gz'
+    _round_storage.append_record(bad_path, broken)
+    rejected = WalkForwardRun(restored_manifest, runner.raw, bad_directory, promotion=True)
+    before = _artifact_state(bad_directory)
+    with research.operation(restored_manifest, 'experiment'), pytest.raises(ValueError, match='fold'):
+        rejected.restore(bad_path, None, [(0, identity)])
+    assert _artifact_state(bad_directory) == before and rejected.results.is_empty()
+    manifest.set_pre_split_data_selector(lambda _frame: market)
     def preflight(*_args, **_kwargs):
         raise AssertionError('A suffix-returning selector reached fold geometry')
     monkeypatch.setattr(runner, '_preflight', preflight)
     with research.operation(manifest, 'experiment'), pytest.raises(ValueError, match='outside the research prefix'):
         runner.prepare(full, _params(config))
+    release_holdout(root, reservation)
+    with pytest.raises(ValueError, match='revision changed'):
+        invalid.train([identity], fold=0)
