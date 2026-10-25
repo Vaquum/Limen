@@ -199,6 +199,8 @@ class UniversalExperimentLoop:
 
         '''Run manifest/custom rounds; MSQ owns sampling; manifests require prep_each_round=True.'''
 
+        if self._search_strategy is not None and (overrides := [name for name, value in (('params', params), ('prep', prep), ('model', model)) if value is not None]):
+            raise ValueError(f'MSQ runs reject run overrides {overrides}; configure custom functions on the SFD')
         if params is not None and self._search_strategy is None:
             self.params = params()
         domains = self._search_strategy.domain.params if self._search_strategy is not None else self.params
