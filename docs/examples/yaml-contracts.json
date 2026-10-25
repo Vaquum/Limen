@@ -146,6 +146,11 @@
       "source": "limen/yaml/rules.py",
       "symbol": "ConditionsList"
     },
+    "uel.output_path": {
+      "sha256": "047d83f057f1bb74ff52544cb6ae36bcae71207a95714c961d26aafbd3cafd7d",
+      "source": "limen/cli/commands/_results_dir.py",
+      "symbol": "admit_output"
+    },
     "uel.recording": {
       "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d",
       "source": "limen/experiment/_recording.py",
