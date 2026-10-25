@@ -452,7 +452,7 @@ class Manifest:
         '''
 
         sc = (train, val, test)
-        if not all(isinstance(v, int) and not isinstance(v, bool) for v in sc):
+        if not all(isinstance(v, int) and not isinstance(v, bool) for v in cast(tuple[object, ...], sc)):
             raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
         if any(v < 0 for v in sc):
             raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")

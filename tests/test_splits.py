@@ -342,9 +342,7 @@ def test_with_params_override_split_config_clears_split_dates() -> None:
     `with_params_override(split_config=...)` must clear any
     previously-pinned `split_dates` so the ratio override actually
     takes effect downstream. Without this, `_resolve_split` would
-    keep using `split_dates` and the override would silently no-op
-    (e.g. `Trainer.train_sensors` passing `(1, 0, 0)` to retrain
-    sensors on the full data set).
+    keep using `split_dates` and a caller-owned ratio override would silently no-op.
     '''
     base = MLManifest().set_split_dates(
         datetime(2024, 1, 1), datetime(2024, 7, 1),
