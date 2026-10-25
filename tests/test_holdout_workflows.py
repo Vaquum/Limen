@@ -1129,8 +1129,9 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
 def _independent_role_clocks(root, config, params, binding):
     from dataclasses import replace
     from zipfile import ZipFile
-    from limen.experiment._holdout_sources import _roles
+    from limen.experiment._holdout_sources import _identity, _roles
     from limen.experiment.manifest_core import DataSourceConfig
+    from limen.data import HistoricalData
 
     quarter = pl.read_parquet(_FIXTURE.parent / 'spot_15m_20250101_20250531.parquet').head(480)
     starts = quarter['datetime'].dt.epoch('ns')
@@ -1140,6 +1141,8 @@ def _independent_role_clocks(root, config, params, binding):
     quarter.write_parquet(quarter_path)
     configured = replace(config, funding=None, execution_data_source=DataSourceConfig(config.execution_data_source.method, {'file_path_or_url': str(quarter_path)}))
     current = replace(binding, cutoff_ns=history.utc_day('2025-01-05'))
+    native_identity = _identity(DataSourceConfig(HistoricalData.get_spot_klines, {'kline_size': 900}), params, current)
+    assert native_identity['declaration']['kline_size'] == 900
     frames, witness = _roles(configured, params, current, None)
     assert (frames[0]['end_ns'] - frames[0]['start_ns']).unique().to_list() == [900_000_000_000]
     assert witness['execution']['clocks']['end_ns'][-1] == current.cutoff_ns

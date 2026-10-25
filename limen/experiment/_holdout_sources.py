@@ -4,7 +4,7 @@ import copy
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from hashlib import sha256
 from importlib import import_module
 from pathlib import Path
@@ -60,7 +60,8 @@ class _Source:
 
 def _identity(config: SourceConfig, params: Mapping[str, object], binding: ProjectBinding) -> dict[str, object]:
     source = _Source(_Config(config.method, cast(Mapping[str, object], resolve_json(config.params, params))))
-    kind, identity, _ = source_spec(source, binding)
+    interval = source_interval(source.data_source_config)
+    kind, identity, _ = source_spec(source, replace(binding, interval_seconds=interval) if type(interval) is int else binding)
     return {'kind': kind, 'method': f'{config.method.__module__}.{config.method.__qualname__}', 'declaration': identity,
             'content_sha256': sha256(Path(cast(str, identity['file_path_or_url'])).read_bytes()).hexdigest() if kind == 'local_file' else None}
 
@@ -94,7 +95,7 @@ def _roles(config: BacktestConfig | None, params: Mapping[str, object], binding:
         if frozen is not None and (not isinstance(frozen[index], pl.DataFrame) or not materialized.equals(cast(pl.DataFrame, frozen[index]))):
             raise ValueError('Protected frozen source differs from its current declared content')
         if role == 'execution':
-            materialized = normalize_observations(materialized, interval_seconds=source_interval(declared))
+            materialized = normalize_observations(materialized, interval_seconds=resolve_json(source_interval(declared), params))
             times = {name: _ns(materialized, name) for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns')}
             if ((times['end_ns'] < times['start_ns']) | (times['available_at_ns'] < times['end_ns'])
                     | (times['open_available_at_ns'] < times['start_ns']) | (times['open_available_at_ns'] > times['available_at_ns'])).any() or (times['start_ns'].diff().drop_nulls() < 0).any():
