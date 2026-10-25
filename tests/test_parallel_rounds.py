@@ -417,20 +417,20 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
 
     config = parallel_config()
     config['uel']['workers'] = 4
-    config['uel']['output_path'] = str(tmp_path / 'cli')
+    config['uel']['output_path'] = 'cli'
     assert validate(config).valid
     yaml_path = tmp_path / 'campaign.yaml'
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
         loop_factory.return_value.interrupted = False
-        assert run_experiment(yaml_path, progress_bar=False, workers=2)
+        assert run_experiment(yaml_path, results_base=tmp_path, progress_bar=False, workers=2)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 2
         assert loop_factory.return_value.check_parallel_admission.call_args.args == (2, True)
-    config['uel']['output_path'] = str(tmp_path / 'yaml')
+    config['uel']['output_path'] = 'yaml'
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
         loop_factory.return_value.interrupted = False
-        assert run_experiment(yaml_path, progress_bar=False)
+        assert run_experiment(yaml_path, results_base=tmp_path, progress_bar=False)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 4
     without_workers = dict(config)
     without_workers['uel'] = {key: value for key, value in config['uel'].items() if key != 'workers'}

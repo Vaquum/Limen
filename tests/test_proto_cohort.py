@@ -138,10 +138,10 @@ def _run_real_experiment(experiment_dir: Path,
     try:
         with TemporaryDirectory() as tmpdir, patch('click.echo'), patch('click.secho'):
             yaml_path = Path(tmpdir) / 'exp.yaml'
-            yaml_text = _minimal_yaml_cli_contract_text(experiment_dir)
+            yaml_text = _minimal_yaml_cli_contract_text(experiment_dir.name)
             yaml_text = yaml_text.replace('n_permutations: 2', f'n_permutations: {n_permutations}')
             yaml_path.write_text(yaml_text)
-            run_experiment(yaml_path)
+            assert run_experiment(yaml_path, results_base=experiment_dir.parents[2])
     finally:
         DataSourceResolver.resolve = staticmethod(original)
 
@@ -273,7 +273,7 @@ def _make_post_training_data(n: int = 50) -> pl.DataFrame:
     })
 
 
-def _minimal_yaml_cli_contract_text(output_path: Path) -> str:
+def _minimal_yaml_cli_contract_text(output_path: str) -> str:
 
     return _COHORT_CONTRACT_YAML.replace(
         'output_format: csv',
@@ -317,7 +317,7 @@ def test_rejects_missing_experiment_log_path():
 def test_defaults_to_all_permutations_when_not_provided():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         expected_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         cohort = Cohort(experiment_log_path=str(exp_dir))
@@ -328,7 +328,7 @@ def test_defaults_to_all_permutations_when_not_provided():
 def test_rejects_empty_permutation_ids():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         _run_real_experiment(exp_dir)
 
         try:
@@ -341,7 +341,7 @@ def test_rejects_empty_permutation_ids():
 def test_rejects_duplicate_permutation_ids():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         _run_real_experiment(exp_dir)
 
         try:
@@ -354,7 +354,7 @@ def test_rejects_duplicate_permutation_ids():
 def test_rejects_unknown_permutation_ids():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         _run_real_experiment(exp_dir)
 
         try:
@@ -367,7 +367,7 @@ def test_rejects_unknown_permutation_ids():
 def test_accepts_string_permutation_ids():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
@@ -595,8 +595,8 @@ def test_rejects_ambiguous_experiment_id_resolution():
     with TemporaryDirectory(dir='.') as tmp1, TemporaryDirectory(dir='.') as tmp2:
         exp_name = 'dup-exp-id'
 
-        exp_dir_1 = Path(tmp1) / exp_name
-        exp_dir_2 = Path(tmp2) / exp_name
+        exp_dir_1 = Path(tmp1) / 'results/dev' / exp_name
+        exp_dir_2 = Path(tmp2) / 'results/dev' / exp_name
         _run_real_experiment(exp_dir_1, n_permutations=1)
         _run_real_experiment(exp_dir_2, n_permutations=1)
 
@@ -614,7 +614,7 @@ def test_rejects_ambiguous_experiment_id_resolution():
 def test_mixed_architecture_selection_requires_binding():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         _patch_round_architecture(
@@ -630,7 +630,7 @@ def test_mixed_architecture_selection_requires_binding():
 def test_sets_probability_mode_for_probability_capable_architecture():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -642,7 +642,7 @@ def test_sets_probability_mode_for_probability_capable_architecture():
 def test_sets_fallback_mode_for_non_probability_architecture():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         _patch_round_architecture(exp_dir, {round_ids[0]: 'xgboost_regressor'})
@@ -660,7 +660,7 @@ def test_sets_fallback_mode_for_non_probability_architecture():
 def test_set_members_rejects_count_mismatch():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
@@ -676,7 +676,7 @@ def test_set_members_rejects_count_mismatch():
 def test_set_members_rejects_missing_permutation_id_binding():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -696,7 +696,7 @@ def test_set_members_rejects_missing_permutation_id_binding():
 def test_set_members_rejects_manifest_id_mismatch():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
@@ -721,7 +721,7 @@ def test_set_members_rejects_manifest_id_mismatch():
 def test_cohort_id_computed_after_set_members():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -738,7 +738,7 @@ def test_cohort_id_computed_after_set_members():
 def test_cohort_id_is_stable_across_calls():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -781,7 +781,7 @@ def test_cohort_id_includes_architecture_and_aggregation_mode():
 def test_manifest_id_set_from_metadata_at_construction():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -798,7 +798,7 @@ def test_manifest_id_set_from_metadata_at_construction():
 def test_manifest_id_consistent_across_members():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=2)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=round_ids)
@@ -820,8 +820,8 @@ def test_yaml_reference_lineage_stripped_from_metadata():
     try:
         with TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            exp_dir = root / 'results' / 'test_exp'
-            yaml_text = _minimal_yaml_cli_contract_text(exp_dir)
+            exp_dir = root / 'results/dev' / 'test_exp'
+            yaml_text = _minimal_yaml_cli_contract_text(exp_dir.name)
             # Inject a lineage block (as commit_manifest would)
             yaml_with_lineage = yaml_text + dedent('''\
                 lineage:
@@ -831,7 +831,7 @@ def test_yaml_reference_lineage_stripped_from_metadata():
             yaml_path = root / 'exp.yaml'
             yaml_path.write_text(yaml_with_lineage)
             with patch('click.echo'), patch('click.secho'):
-                run_experiment(yaml_path)
+                assert run_experiment(yaml_path, results_base=root)
 
             with (exp_dir / 'metadata.json').open('r') as f:
                 metadata = json.load(f)
@@ -861,10 +861,10 @@ def test_yaml_cli_artifact_cohort_predict_returns_bar_prediction():
         with TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             yaml_path = root / 'exp.yaml'
-            exp_dir = root / 'results' / 'test_exp'
-            yaml_path.write_text(_minimal_yaml_cli_contract_text(exp_dir))
+            exp_dir = root / 'results/dev' / 'test_exp'
+            yaml_path.write_text(_minimal_yaml_cli_contract_text(exp_dir.name))
 
-            assert run_experiment(yaml_path) is True
+            assert run_experiment(yaml_path, results_base=root) is True
 
             with (exp_dir / 'metadata.json').open('r') as f:
                 metadata = json.load(f)
@@ -904,7 +904,7 @@ def test_yaml_cli_artifact_cohort_predict_returns_bar_prediction():
 def test_predict_requires_members():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -920,7 +920,7 @@ def test_predict_requires_members():
 def test_predict_all_requires_members():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -936,7 +936,7 @@ def test_predict_all_requires_members():
 def test_predict_all_returns_one_entry_per_bar():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -954,7 +954,7 @@ def test_predict_all_returns_one_entry_per_bar():
 def test_predict_all_valid_bars_match_sensor():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])
@@ -1066,7 +1066,7 @@ def test_probability_weighted_majority_vote_fallback_returns_none_probability():
 def test_member_failure_propagates():
 
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
         round_ids = _run_real_experiment(exp_dir, n_permutations=1)
 
         cohort = Cohort(experiment_log_path=str(exp_dir), permutation_ids=[round_ids[0]])

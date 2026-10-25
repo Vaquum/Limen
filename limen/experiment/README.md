@@ -57,6 +57,7 @@ experiment/
 ├── _allocation.py
 ├── _allocation_folds.py
 ├── _backtest_provenance.py
+├── _boolean_controls.py
 ├── _column_shims.py
 ├── _dynamic_barriers.py
 ├── _factorize.py
@@ -99,6 +100,7 @@ experiment/
 ├── _prepare_backtest_data.py
 ├── _prepare_trade_context.py
 ├── _recording.py
+├── _required_columns.py
 ├── _resolve_backtest_config.py
 ├── _resolve_trade_policy.py
 ├── _result_fields.py

@@ -15,6 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      artifact_attempt: ${{ steps.artifact_identity.outputs.attempt }}
+      runtime_sha256: ${{ steps.artifact_identity.outputs.runtime_sha256 }}
+      coverage_sha256: ${{ steps.artifact_identity.outputs.coverage_sha256 }}
 
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
@@ -70,18 +74,31 @@ jobs:
             --budget tests/runtime_budget.json \
             --summary-file "$GITHUB_STEP_SUMMARY"
 
+      - name: Record validation artifact identity
+        id: artifact_identity
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          echo "attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+          for artifact in runtime:test_runtime_profile.json coverage:coverage.db; do
+            file="coverage-artifacts/${artifact#*:}"
+            if [ -f "$file" ]; then
+              echo "${artifact%%:*}_sha256=$(sha256sum "$file" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
       - name: Upload coverage artifact
         if: ${{ always() && hashFiles('coverage-artifacts/coverage.db') != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: coverage-data
+          name: coverage-data-attempt-${{ github.run_attempt }}
           path: coverage-artifacts/coverage.db
 
       - name: Upload runtime artifact
         if: ${{ always() && hashFiles('coverage-artifacts/test_runtime_profile.json') != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: test-runtime-profile
+          name: test-runtime-profile-attempt-${{ github.run_attempt }}
           path: coverage-artifacts/test_runtime_profile.json
 
   pr_checks_runtime:
@@ -102,12 +119,28 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Require runtime artifact identity
+        if: ${{ needs.pr_checks_tests.result == 'success' }}
+        env:
+          ARTIFACT_ATTEMPT: ${{ needs.pr_checks_tests.outputs.artifact_attempt }}
+          EXPECTED_SHA256: ${{ needs.pr_checks_tests.outputs.runtime_sha256 }}
+        run: |
+          set -euo pipefail
+          test -n "$ARTIFACT_ATTEMPT"
+          test -n "$EXPECTED_SHA256"
+
       - name: Download runtime artifact
         if: ${{ needs.pr_checks_tests.result == 'success' }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: test-runtime-profile
+          name: test-runtime-profile-attempt-${{ needs.pr_checks_tests.outputs.artifact_attempt }}
           path: coverage-artifacts
+
+      - name: Verify runtime artifact identity
+        if: ${{ needs.pr_checks_tests.result == 'success' }}
+        env:
+          EXPECTED_SHA256: ${{ needs.pr_checks_tests.outputs.runtime_sha256 }}
+        run: printf '%s  %s\n' "$EXPECTED_SHA256" coverage-artifacts/test_runtime_profile.json | sha256sum -c -
 
       - name: Skip runtime enforcement after upstream failure
         if: ${{ needs.pr_checks_tests.result != 'success' }}
@@ -147,11 +180,25 @@ jobs:
       - name: Install coverage
         run: pip install --require-hashes -r requirements/ci/coverage-tools.txt
 
+      - name: Require coverage artifact identity
+        env:
+          ARTIFACT_ATTEMPT: ${{ needs.pr_checks_tests.outputs.artifact_attempt }}
+          EXPECTED_SHA256: ${{ needs.pr_checks_tests.outputs.coverage_sha256 }}
+        run: |
+          set -euo pipefail
+          test -n "$ARTIFACT_ATTEMPT"
+          test -n "$EXPECTED_SHA256"
+
       - name: Download coverage artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: coverage-data
+          name: coverage-data-attempt-${{ needs.pr_checks_tests.outputs.artifact_attempt }}
           path: coverage-artifacts
+
+      - name: Verify coverage artifact identity
+        env:
+          EXPECTED_SHA256: ${{ needs.pr_checks_tests.outputs.coverage_sha256 }}
+        run: printf '%s  %s\n' "$EXPECTED_SHA256" coverage-artifacts/coverage.db | sha256sum -c -
 
       - name: Restore coverage data
         run: mv coverage-artifacts/coverage.db .coverage
@@ -175,16 +222,22 @@ jobs:
           persist-credentials: false
 
       - name: Download coverage artifact
+        if: ${{ needs.pr_checks_tests.outputs.artifact_attempt != '' && needs.pr_checks_tests.outputs.coverage_sha256 != '' }}
         continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: coverage-data
+          name: coverage-data-attempt-${{ needs.pr_checks_tests.outputs.artifact_attempt }}
           path: coverage-artifacts
 
       - name: Check coverage artifact presence
         id: coverage_artifact
+        env:
+          EXPECTED_SHA256: ${{ needs.pr_checks_tests.outputs.coverage_sha256 }}
         run: |
+          set -euo pipefail
           if [ -f coverage-artifacts/coverage.db ]; then
+            test -n "$EXPECTED_SHA256"
+            printf '%s  %s\n' "$EXPECTED_SHA256" coverage-artifacts/coverage.db | sha256sum -c -
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
