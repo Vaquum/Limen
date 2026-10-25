@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+import inspect
+from itertools import product
+from types import CodeType, FunctionType
+from typing import cast
+
+from limen.experiment._factorized_contract import ReuseContract
+from limen.experiment._factorized_key import parameter_key
+from limen.experiment._factorized_native import contract_for
+from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest, make_fitted_scaler
+from limen.scalers import SCALER_REGISTRY
+import limen.experiment.manifest_core as core
+
+_resolve = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(core)['_resolve_params'])
+_include = cast(Callable[[object, dict[str, object]], bool], vars(core)['_should_include_transform'])
+
+
+def _effective(component: object, arguments: Mapping[str, object], *, skip: int = 1) -> dict[str, object]:
+    return {name: parameter.default for name, parameter in list(inspect.signature(cast(Callable[..., object], component)).parameters.items())[skip:]
+            if parameter.default is not inspect.Parameter.empty} | dict(arguments)
+
+
+def _stage(path: str, component: object, arguments: Mapping[str, object], axes: frozenset[str]) -> ReuseContract:
+    declaration = contract_for(component)
+    if declaration is None:
+        raise ValueError(f'factorize stage {path}: missing deterministic reuse declaration')
+    effective = _effective(component, arguments)
+    consumed = set(effective) if declaration.consumes is None else {name.split('.')[0] for name in declaration.consumes}
+    if axes.intersection(consumed):
+        raise ValueError(f'factorize stage {path}: consumes an economic parameter')
+    if set(declaration.parameter_keys) - set(effective):
+        raise ValueError(f'factorize stage {path}: missing required declared parameters')
+    try:
+        declaration.validate(effective)
+    except ValueError as exc:
+        raise ValueError(f'factorize stage {path}: {exc}') from exc
+    return declaration
+
+
+def _scaler(manifest: MLManifest, params: dict[str, object], axes: frozenset[str]) -> None:
+    if manifest.scaler is None:
+        return
+    computations, transform, settings = manifest.scaler
+    if len(computations) != 1 or transform is not vars(core)['_apply_fitted_transform']:
+        raise ValueError('factorize stage scaler: unknown factory adaptation')
+    name, factory, dynamic = computations[0]
+    reference = make_fitted_scaler(name, object)[0][0][1]
+    if not isinstance(factory, FunctionType) or not isinstance(reference, FunctionType) or settings != {'fitted_transform': name}:
+        raise ValueError('factorize stage scaler: unknown factory adaptation')
+    arguments = _resolve(dynamic, params)
+    if factory.__code__ is reference.__code__:
+        signature = inspect.signature(factory).parameters
+        component, fixed = signature['_cls'].default, signature['_p'].default
+    else:
+        codes = [value for value in MLManifest.set_scaler_from_params.__code__.co_consts if isinstance(value, CodeType)]
+        if factory.__code__ not in codes:
+            raise ValueError('factorize stage scaler: undeclared custom factory')
+        state = inspect.getclosurevars(factory).nonlocals
+        component = SCALER_REGISTRY[str(arguments.pop('scaler_type'))]
+        fixed = state['_static']
+    _stage('scaler', component, {**cast(dict[str, object], fixed), **arguments}, axes)
+
+
+def validate_candidate(manifest: Manifest, params: dict[str, object], axes: frozenset[str]) -> ReuseContract:
+    if manifest.split_walk_forward is not None or manifest.allocation_config is not None or getattr(manifest, 'objective', None) is not None:
+        raise ValueError('factorize requires independent snapshot execution without folds, allocation or objective')
+    if manifest.resolve_trade_policy(params) is not None:
+        raise ValueError('factorize requires snapshot execution, not event execution')
+    function = manifest.architecture_function
+    declaration = _stage('architecture', function, manifest.resolve_model_kwargs(params), axes)
+    if declaration.prediction_kind is None and declaration.replay is None:
+        raise ValueError('factorize stage architecture: declare prediction kind or economic replay')
+    for index, entry in enumerate(manifest.feature_transforms):
+        if _include(entry, params):
+            _stage(f'transforms[{index}]', entry.func, _resolve(entry.params, params), axes)
+    for name in ('pre_split_data_selector', 'bar_formation'):
+        step = getattr(manifest, name)
+        if step is not None and (name != 'bar_formation' or params.get('bar_type', 'base') != 'base'):
+            component, arguments = step
+            _stage(name, component, _resolve(arguments, params), axes)
+    target = manifest.target_class_config
+    if target is not None:
+        _stage('target', target.target_class, {**_resolve(target.fit_params, params), **_resolve(target.transform_params, params)}, axes)
+    if isinstance(manifest, MLManifest):
+        _scaler(manifest, params, axes)
+        config = manifest.prediction_calibration_config
+        if config is not None:
+            config = config.resolve(params)
+            for name, component, arguments, active in (
+                ('calibration', config.calibration_func, config.calibration_params, params.get('use_calibration', True)),
+                ('threshold', config.threshold_func, config.threshold_params, params.get('use_threshold', True)),
+            ):
+                if component is not None and active:
+                    _stage(name, component, arguments, axes)
+        if manifest.data_dict_extension is not None:
+            _stage('data_dict_extension', manifest.data_dict_extension, params, axes)
+    elif not isinstance(manifest, RuleBasedManifest) or manifest.strategy is None or target is not None:
+        raise ValueError('factorize requires a configured ML or rule-based manifest')
+    return declaration
+
+
+def validate_domain(manifest: Manifest, domain: Mapping[str, list[object]], axes: frozenset[str]) -> ReuseContract:
+    for key, values in domain.items():
+        for value in values:
+            _ = parameter_key({key: value})
+    names = [name for name in domain if name not in axes]
+    base = {name: values[0] for name, values in domain.items()}
+    declaration: ReuseContract | None = None
+    for values in product(*(domain[name] for name in names)):
+        declaration = validate_candidate(manifest, base | dict(zip(names, values, strict=True)), axes)
+    assert declaration is not None
+    return declaration

@@ -1,3 +1,4 @@
+from limen.experiment._factorized_contract import ReuseContract, declare_reuse
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.manifest_core import CalibrationConfig
 from limen.experiment.manifest_core import MLManifest
@@ -14,6 +15,8 @@ __all__ = [
     'MLManifest',
     'Manifest',
     'RandomStrategy',
+    'ReuseContract',
+    'declare_reuse',
     'RuleBasedManifest',
     'UniversalExperimentLoop',
 ]
