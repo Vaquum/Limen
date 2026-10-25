@@ -14,6 +14,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+import limen.experiment._holdout_composition as _composition
 from limen.experiment._factorized_admission import validate_candidate, validate_domain
 from limen.experiment._factorized_key import parameter_key
 from limen.experiment._factorized_replay import replay, validate_output
@@ -113,7 +114,7 @@ class FactorizedRounds:
         self.intervention_path = intervention_path
         self._check_interventions()
         self.manifest = manifest
-        self.data = data.clone()
+        self.data, self._source = _composition.snapshot(manifest, data)
         self.prep, self.model = prep, model
         self.record_execution, self.record_model_outputs = record_execution, record_model_outputs
         self.cache: dict[str, _Cached] = {}
@@ -129,7 +130,7 @@ class FactorizedRounds:
             _fail('candidate is outside the preflight domain')
         _ = validate_candidate(self.manifest, params, self.axes)
         key = parameter_key({k: v for k, v in params.items() if k not in self.axes})
-        entry = self.cache.pop(key, None)
+        entry = _composition.signal_cache(self.manifest, self.data, self._source, self.cache, key)
         if entry is None:
             prep_key: str | None = None
             fitted: dict[str, object] = {}
@@ -188,9 +189,9 @@ class FactorizedRounds:
             if self.preparation is not None and prep_key is not None:
                 if prep_key not in self.preparation.cache and len(self.preparation.cache) >= _CACHE_LIMIT:
                     oldest = next(iter(self.preparation.cache))
-                    del self.preparation.cache[oldest]
                     del self.preparation.warning_cache[oldest]
-                self.preparation.cache[prep_key] = fitted
+                    _composition.evict_fitted(self.preparation.cache, self.preparation.proofs)
+                _composition.remember_fitted(self.preparation, prep_key, fitted, data, self.data)
                 self.preparation.warning_cache[prep_key] = list(self.preparation.pending_warnings)
             if len(self.cache) >= _CACHE_LIMIT:
                 del self.cache[next(iter(self.cache))]
@@ -210,4 +211,4 @@ class FactorizedRounds:
             warnings.simplefilter('always')
             result = replay(self.manifest, self.contract, entry.result, data, params, entry.positions, self.record_execution)
         recorded = list(dict.fromkeys([*entry.warnings, *(str(w.message) for w in caught)]))
-        return data, result, recorded, entry.convergence or bool(convergence_warning(caught, True))
+        return _composition.signal_result(self.manifest, self.data, data, result, recorded, entry.convergence, caught)

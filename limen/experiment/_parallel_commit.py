@@ -9,12 +9,14 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen.experiment._objective_run import finalize_objective_result
+import limen.experiment._holdout_composition as _protection
 from limen.experiment._objective_run import objective_frame
 from limen.experiment._objective_run import run_objective
 from limen.experiment._objective_run import validate_objective_header
 from limen.experiment._parallel_worker import RoundPayload
 from limen.experiment._result_fields import validate_result
 from limen.experiment._walk_forward_run import WalkForwardRun
+from limen.experiment._holdout_history import research_record
 from limen.experiment.manifest_core import Manifest
 
 __all__ = ['ParallelCommit', 'context_parameter_keys', 'failed_parameters']
@@ -24,6 +26,29 @@ class _AppendRoundData(Protocol):
     def __call__(self, path: Path, identity: str, parameters: dict[str, object],
                  predictions: object, alignment: dict[str, object],
                  *, round_index: int) -> None: ...
+
+
+def _verify_worker(manifest: object, raw: pl.DataFrame, payload: RoundPayload, identity: str) -> None:
+    authority = _protection.worker_authority(manifest)
+    if authority is None or authority[0].cutoff_ns is None:
+        if {'holdout', 'holdout_failure'} & payload.alignment.keys():
+            raise ValueError('Unprotected worker returned protected evidence')
+        return
+    proof = payload.alignment.get('holdout' if payload.succeeded else 'holdout_failure')
+    if not isinstance(proof, Mapping):
+        raise ValueError('Protected worker lacks recorded protection evidence')
+    proof = cast(Mapping[str, object], proof)
+    _protection.check(manifest, raw, proof, state='completed' if payload.succeeded else 'failed')
+    if proof['round_id'] != identity:
+        raise ValueError('Protected worker occurrence changed')
+    if not payload.succeeded:
+        if proof['experiment_record_id'] != authority[2]:
+            raise ValueError('Protected failed worker coordinator history changed')
+        return
+    parent = research_record(authority[0], cast(str, proof['experiment_record_id']))
+    if (parent['state'] != 'completed' or parent['role'] != 'experiment' or parent['round_id'] != identity
+            or json.loads(str(parent['provenance_json']))['experiment_record_id'] != authority[2]):
+        raise ValueError('Protected worker occurrence or coordinator history changed')
 
 
 def context_parameter_keys(metadata: Mapping[str, object]) -> list[str]:
@@ -106,6 +131,7 @@ class ParallelCommit:
         index, identity = round_params['_round_index'], round_params['_id']
         if not isinstance(index, int) or isinstance(index, bool) or not isinstance(identity, str):
             raise ValueError('Parallel occurrence requires an integer index and string identity')
+        _verify_worker(self.manifest, cast(pl.DataFrame, vars(self.host)['data']), payload, identity)
         parameters = round_params | {key: value for key, value in payload.parameters.items() if not key.startswith('_')}
         validate_result(parameters, payload.results, succeeded=payload.succeeded)
         row = dict(payload.results)

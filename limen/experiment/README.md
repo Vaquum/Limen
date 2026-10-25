@@ -78,6 +78,7 @@ experiment/
 ├── _holdout_assessment.py
 ├── _holdout_attempts.py
 ├── _holdout_checkpoint.py
+├── _holdout_composition.py
 ├── _holdout_events.py
 ├── _holdout_freeze.py
 ├── _holdout_history.py

@@ -526,5 +526,6 @@
   "limen/experiment/_factorized_admission.py": 220,
   "limen/experiment/_factorized_key.py": 100,
   "limen/experiment/_factorized_replay.py": 100,
-  "limen/experiment/_factorized_projection.py": 110
+  "limen/experiment/_factorized_projection.py": 110,
+  "limen/experiment/_holdout_composition.py": 220
 }

@@ -512,3 +512,326 @@ def _checkpoint_boundaries(loop, config, checkpoint, metadata, monkeypatch, reta
     assert sensors[0]._fitted_params['_holdout']['research_record_id'] != sensors[0]._fitted_params['_holdout']['experiment_record_id']
     assert _artifact_state(directory) == before
     (directory / 'metadata.json').write_bytes(metadata_bytes)
+
+
+@pytest.mark.parametrize('kind', ['ml', 'rule'])
+def test_protected_factorized_provenance(kind, tmp_path, monkeypatch):
+    from itertools import product
+    from types import SimpleNamespace
+    import numpy as np
+    from limen.experiment import UniversalExperimentLoop
+    from limen.experiment import _holdout_research as research
+    from limen.experiment._factorize import FactorizedRounds
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+    from tests.test_factorize_equivalence import _numeric_equal
+    from tests.test_factorized_preparation import _config, _instrument
+    from tests.test_holdout_research import _project
+
+    config = _config()
+    if kind == 'rule':
+        body = config['sfd']['manifest']
+        body.update(type='rule_based', indicators=[], features=[],
+                    reference_architecture='limen.sfd.reference_architecture.rule_based.rule_based',
+                    strategy={'conditions': [{'id': 'up', 'type': 'relative', 'column': 'close',
+                                             'operator': '>', 'other_column': 'open'}], 'entry': 'up'})
+        for name in ('target', 'scaler'):
+            body.pop(name)
+        config['sfd']['params'] = {'fee': [4., 9.]}
+    root = _project(tmp_path / 'protected')
+    reservation = reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    raw = manifest.fetch_data()
+    domain = config['sfd']['params']
+    candidates = [dict(zip(domain, values, strict=True)) for values in product(*domain.values())]
+    control = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / 'ordinary')).manifest()
+    expected = []
+    for params in candidates:
+        prepared = control.prepare_data(raw.clone(), params.copy())
+        prepared.update(_record_execution=True, _record_model_outputs=True)
+        expected.append((prepared, control.run_model(prepared, params.copy())))
+    counts = _instrument(monkeypatch)
+    rule_fits = []
+    original = RuleBasedStrategy.train
+    def train(*args, **kwargs):
+        rule_fits.append(True)
+        return original(*args, **kwargs)
+    monkeypatch.setattr(RuleBasedStrategy, 'train', train)
+    strategy = GridStrategy(ParamDomain(domain))
+    rounds = FactorizedRounds(manifest=manifest, strategy=strategy, domain=domain, pruning=False,
+        callback=False, context=None, prep=manifest.prepare_data, model=manifest.run_model,
+        data=raw, record_execution=True, record_model_outputs=True)
+    directory = root / 'results'
+    directory.mkdir()
+    path = directory / 'round_data.jsonl'
+    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=None,
+        _yaml_reference=config, _record_execution=True, _record_model_outputs=True)
+    preparations, values = [], []
+    for index, params in enumerate(candidates):
+        with research.operation(manifest, 'experiment'):
+            data, result, _, _ = rounds.evaluate(params.copy())
+            baseline_data, baseline_result = expected[index]
+            _numeric_equal({name: value for name, value in baseline_result.items() if not name.startswith('_')},
+                           {name: value for name, value in result.items() if not name.startswith('_')})
+            np.testing.assert_array_equal(result['_preds'], baseline_result['_preds'])
+            if kind == 'ml':
+                np.testing.assert_array_equal(data['_alignment']['model_outputs']['probs'], baseline_data['_alignment']['model_outputs']['probs'])
+                if 'x_train' in data:
+                    for split in ('train', 'val', 'test'):
+                        np.testing.assert_array_equal(data['x_' + split], baseline_data['x_' + split])
+                        np.testing.assert_array_equal(data['y_' + split], baseline_data['y_' + split])
+                    preparations.append(data['_alignment']['holdout'])
+            UniversalExperimentLoop._append_round_data(writer, path, strategy.compute_param_hash(params),
+                params, result['_preds'], data['_alignment'], round_index=index)
+            values.append(result['backtest_pnl_per_bar_bps'] if kind == 'ml' else result['pnl_per_bar_bps_test'])
+    assert len(set(values)) > 1
+    if kind == 'ml':
+        assert counts == {'target': 1, 'scaler': 1, 'model': 2, 'prepare': 2}
+        assert preparations[1]['reuse'] == {'kind': 'fitted',
+            'source_preparation_record_id': preparations[0]['research_record_id']}
+    else:
+        assert len(rule_fits) == 1
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    assert len({row['round_id'] for row in rows}) == len(candidates)
+    assert len({row['holdout']['research_record_id'] for row in rows}) == len(candidates)
+    binding = history.bind(root)
+    for row in rows:
+        proof = row['holdout']
+        record = history.research_record(binding, proof['research_record_id'])
+        assert record['state'] == 'completed' and record['round_id'] == row['round_id']
+        assert json.loads(record['provenance_json']) == proof
+        if 'reuse' in proof:
+            source = history.research_record(binding, proof['reuse']['source_preparation_record_id'])
+            assert source['state'] == 'completed'
+    retained = path.read_bytes()
+    original_counts = counts.copy()
+    with research.operation(manifest, 'experiment'):
+        if rounds.preparation is not None:
+            with pytest.raises(ValueError, match='source population changed'):
+                rounds.preparation.prepare(raw.slice(1), candidates[0].copy(), rounds.prep)
+        rounds.data = raw.slice(1)
+        with pytest.raises(ValueError, match='source population changed'):
+            rounds.evaluate(candidates[0].copy())
+        rounds.data = raw
+    saved_binding = vars(manifest).pop('_holdout_binding')
+    try:
+        if rounds.preparation is not None:
+            with pytest.raises(ValueError, match='cannot become unprotected'):
+                rounds.preparation.prepare(raw, candidates[0].copy(), rounds.prep)
+        with pytest.raises(ValueError, match='binding changed'):
+            rounds.evaluate(candidates[0].copy())
+    finally:
+        vars(manifest)['_holdout_binding'] = saved_binding
+    release_holdout(root, reservation)
+    if rounds.preparation is not None:
+        with pytest.raises(ValueError, match='revision changed'):
+            rounds.preparation.prepare(raw, candidates[0].copy(), rounds.prep)
+    with pytest.raises(ValueError, match='revision changed'):
+        rounds.evaluate(candidates[0].copy())
+    assert counts == original_counts
+    assert path.read_bytes() == retained
+
+
+def _protected_worker_init(config, snapshot, authority, cwd):
+    import os
+    from limen.experiment._parallel_worker import worker_init
+    os.chdir(cwd)
+    worker_init(config, snapshot, True, True, authority=authority)
+
+
+def _protected_rejected_worker(config, snapshot, authority, cwd, occurrence):
+    from unittest.mock import patch
+    from limen.experiment import MLManifest
+    from limen.experiment._parallel_worker import evaluate_round
+    _protected_worker_init(config, snapshot, authority, cwd)
+    def prepare(*_args, **_kwargs):
+        raise AssertionError('Invalid worker authority reached preparation')
+    with patch.object(MLManifest, 'prepare_data', prepare):
+        return evaluate_round(occurrence)
+
+
+def _protected_strict_worker(config, snapshot, authority, cwd, occurrence):
+    from unittest.mock import patch
+    from limen.experiment._parallel_worker import evaluate_round
+    from limen.experiment.errors import StrictModeError
+    from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+    _protected_worker_init(config, snapshot, authority, cwd)
+    original = LightGBMBinary.train
+    def train(*args, **kwargs):
+        original(*args, **kwargs)
+        raise StrictModeError('Recorded worker failure control after genuine fitting')
+    with patch.object(LightGBMBinary, 'train', train):
+        return evaluate_round(occurrence)
+
+
+@pytest.mark.parametrize('cwd_mode', ['outside', 'foreign'])
+def test_protected_worker_handoff(cwd_mode, tmp_path):
+    from concurrent.futures import ProcessPoolExecutor
+    from dataclasses import replace
+    from functools import partial
+    from types import SimpleNamespace
+    from limen.experiment import _holdout_composition as protection
+    from limen.experiment._parallel_commit import ParallelCommit
+    from limen.experiment._parallel_sources import snapshot_sources
+    from limen.experiment._parallel_worker import evaluate_round, startup_limits
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from tests.test_factorized_preparation import _config, _params
+    from tests.test_factorize_equivalence import _numeric_equal
+
+    config = _config()
+    root = _project(tmp_path / 'protected-worker')
+    reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    raw = manifest.fetch_data()
+    cwd = _project(tmp_path / 'foreign') if cwd_mode == 'foreign' else tmp_path
+    control = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / 'control')).manifest()
+    params = _params(config)
+    original = control.prepare_data(raw.clone(), params.copy())
+    original.update(_record_execution=True, _record_model_outputs=True)
+    expected = control.run_model(original, params.copy())
+    identity = GridStrategy(ParamDomain(config['sfd']['params'])).compute_param_hash(params)
+    occurrence = params | {'_round_index': 0, '_id': identity}
+    directory = root / 'results'
+    directory.mkdir()
+    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=None,
+        _yaml_reference=config, _record_execution=True, _record_model_outputs=True)
+    host = SimpleNamespace(manifest=manifest, data=raw, params=params, _walk_forward=None,
+        _append_round_data=partial(UniversalExperimentLoop._append_round_data, writer), experiment_log=None)
+    with research.operation(manifest, 'experiment') as operation:
+        authority = protection.worker_authority(manifest)
+        with startup_limits(), snapshot_sources(raw, None, None, tmp_path) as snapshot, ProcessPoolExecutor(
+                max_workers=1, mp_context=multiprocessing.get_context('spawn'), initializer=_protected_worker_init,
+                initargs=(config, snapshot, authority, str(cwd))) as pool:
+            payload = pool.submit(evaluate_round, occurrence).result(timeout=40)
+            binding, source, parent_id = authority
+            for refused in (
+                (replace(binding, root=tmp_path), source, parent_id),
+                (replace(binding, revision=binding.revision + 1), source, parent_id),
+                (binding, source | {'admitted_sha256': '0' * 64}, parent_id),
+                (binding, source, None),
+            ):
+                with pytest.raises(RuntimeError, match=r'revision|coordinator|source'):
+                    pool.submit(_protected_rejected_worker, config, snapshot, refused, str(cwd), occurrence).result(timeout=40)
+            failed_occurrence = occurrence | {'_id': identity + '-failed', '_round_index': 1}
+            failed = pool.submit(_protected_strict_worker, config, snapshot, authority, str(cwd), failed_occurrence).result(timeout=40)
+        _numeric_equal({key: value for key, value in expected.items() if not key.startswith('_')},
+                       {key: value for key, value in payload.results.items() if not key.startswith('_')})
+        assert payload.results['_preds'].tolist() == expected['_preds'].tolist()
+        assert payload.alignment['model_outputs'] == original['_alignment']['model_outputs']
+        proof = payload.alignment['holdout']
+        assert proof['project_id'] == authority[0].project_id
+        parent = history.research_record(authority[0], proof['experiment_record_id'])
+        assert parent['state'] == 'completed'
+        assert json.loads(parent['provenance_json'])['experiment_record_id'] == operation.record_id
+        commit = ParallelCommit(host, directory / 'results.csv', directory / 'round_data.jsonl', [])
+        invalid = [
+            {key: value for key, value in payload.alignment.items() if key != 'holdout'},
+            payload.alignment | {'holdout': proof | {'project_id': history.bind(_project(tmp_path / 'other')).project_id}},
+            payload.alignment | {'holdout': proof | {'round_id': 'foreign-round'}},
+        ]
+        for alignment in invalid:
+            before = _artifact_state(directory)
+            with pytest.raises(ValueError, match=r'holdout|protection|Factorized|history'):
+                commit.commit(occurrence, replace(payload, alignment=alignment,
+                    results=payload.results | {'must_not_extend_header': 1.}))
+            assert _artifact_state(directory) == before
+        commit.commit(occurrence, payload)
+        prefix = _artifact_state(directory)
+        with pytest.raises(ValueError, match='occurrence'):
+            commit.commit(occurrence | {'_id': 'foreign-round', '_round_index': 1}, payload)
+        assert _artifact_state(directory) == prefix
+        assert not failed.succeeded
+        failure_proof = failed.alignment['holdout_failure']
+        assert history.research_record(authority[0], failure_proof['research_record_id'])['state'] == 'failed'
+        retained = (directory / 'round_data.jsonl').read_bytes()
+        commit.commit(failed_occurrence, failed)
+        assert host.experiment_log.height == 2 and len(commit.failed_round_params) == 1
+        assert (directory / 'round_data.jsonl').read_bytes() == retained
+    row = json.loads((directory / 'round_data.jsonl').read_text())
+    assert row['round_id'] == identity
+    assert row['holdout']['research_record_id'] != proof['research_record_id']
+
+
+def _protected_orphan_worker(config, snapshot, authority, pipe):
+    import os
+    from unittest.mock import patch
+    from limen.experiment._parallel_worker import worker_init, evaluate_round
+    from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+    from tests.test_factorized_preparation import _params
+
+    worker_init(config, snapshot, False, False, authority=authority)
+    original = LightGBMBinary.train
+    def train(*args, **kwargs):
+        result = original(*args, **kwargs)
+        pipe.send(('model', os.getpid()))
+        assert pipe.recv() == 'finish'
+        return result
+    with patch.object(LightGBMBinary, 'train', train):
+        evaluate_round(_params(config) | {'_id': 'orphan', '_round_index': 0})
+
+
+def _protected_worker_coordinator(root, config, pipe):
+    from pathlib import Path
+    from limen.experiment import _holdout_composition as protection
+    from limen.experiment._parallel_sources import snapshot_sources
+    from limen.experiment._parallel_worker import startup_limits
+
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    raw = manifest.fetch_data()
+    with research.operation(manifest, 'experiment'), startup_limits(), snapshot_sources(raw, None, None, Path(root)) as snapshot:
+        worker = multiprocessing.get_context('spawn').Process(target=_protected_orphan_worker,
+            args=(config, snapshot, protection.worker_authority(manifest), pipe))
+        worker.start()
+        pipe.send(('worker', worker.pid))
+        worker.join()
+
+
+@pytest.mark.parametrize('active', [True, False])
+def test_protected_worker_parent_death(active, tmp_path, monkeypatch):
+    import os
+    import signal
+    from tests.test_factorized_preparation import _config
+
+    root = _project(tmp_path / 'orphan-project')
+    if active:
+        reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    context = multiprocessing.get_context('spawn')
+    receiver, sender = context.Pipe()
+    coordinator = context.Process(target=_protected_worker_coordinator, args=(str(root), _config(), sender))
+    worker_pid = None
+    coordinator.start()
+    try:
+        for _ in range(2):
+            assert receiver.poll(40), 'The spawned worker did not reach real model evaluation'
+            state, pid = receiver.recv()
+            worker_pid = pid
+            if state == 'model':
+                break
+        assert state == 'model'
+        coordinator.kill()
+        coordinator.join(10)
+        assert not coordinator.is_alive()
+        monkeypatch.setattr(history, '_BUSY_TIMEOUT_SECONDS', 0.15)
+        start, end = ('2024-01-09', '2024-01-10') if active else ('2024-01-07', '2024-01-09')
+        with pytest.raises(sqlite3.OperationalError, match='locked'):
+            reserve_holdout(root, start, end, interval_seconds=3600)
+        os.kill(worker_pid, signal.SIGKILL)
+        worker_pid = None
+        assert reserve_holdout(root, start, end, interval_seconds=3600)
+        assert not (root / 'results').exists()
+        with history.connection(root / 'manifests/holdout.sqlite3') as db:
+            rows = db.execute('SELECT state FROM research').fetchall()
+        if active:
+            assert sum(row['state'] == 'started' for row in rows) >= 2
+        else:
+            assert not rows
+    finally:
+        if coordinator.is_alive():
+            coordinator.kill()
+            coordinator.join(10)
+        if worker_pid is not None:
+            os.kill(worker_pid, signal.SIGKILL)
+        receiver.close()
+        sender.close()

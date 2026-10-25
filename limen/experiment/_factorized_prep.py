@@ -11,6 +11,7 @@ from typing import cast
 
 import polars as pl
 
+import limen.experiment._holdout_composition as _composition
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment._factorized_admission import supports_preparation
 from limen.scalers.robust_scaler import RobustScaler
@@ -27,20 +28,18 @@ class FittedPreparation:
         self.manifest = manifest
         if manifest.architecture_function is None:
             raise ValueError('Fitted preparation requires an architecture')
-        consumers = [value for attr, value in vars(manifest).items()
-                     if attr not in ('backtest_config', 'architecture_function', 'architecture_params')]
+        consumers = [value for attr, value in vars(manifest).items() if attr not in ('backtest_config', 'architecture_function', 'architecture_params')]
         self.names = frozenset(name for name in domain if name not in axes and (
             name not in inspect.signature(manifest.architecture_function).parameters or any(references(value, name) for value in consumers)))
         self.cache: dict[str, dict[str, object]] = {}
+        self.proofs: dict[str, dict[str, object]] = {}
         self.warning_cache: dict[str, list[warnings.WarningMessage]] = {}
         self.pending_warnings: list[warnings.WarningMessage] = []
 
     def prepare(self, raw: pl.DataFrame, params: dict[str, object],
                 prep: Callable[..., dict[str, object]]) -> tuple[dict[str, object], str, dict[str, object]]:
         key = json.dumps({name: params[name] for name in self.names}, sort_keys=True, default=str)
-        saved = self.cache.pop(key, None)
-        if saved is not None:
-            self.cache[key] = saved
+        saved = _composition.prepared_cache(self.cache, self.proofs, self.manifest, raw, key)
         prepare_fitted = cast(Callable[..., dict[str, object]], vars(MLManifest)['_prepare_data_with_fitted'])
         caught: list[warnings.WarningMessage] = []
         try:
@@ -55,7 +54,8 @@ class FittedPreparation:
         artifacts = data.get('_fitted_params')
         if not isinstance(artifacts, dict):
             raise ValueError('Factorized preparation requires fitted artifact evidence')
-        fitted = cast(dict[str, object], artifacts)
+        fitted = _composition.fitted_artifacts(self.manifest, data, cast(dict[str, object], artifacts),
+                                                self.proofs.get(key) if saved is not None else None)
         if any(type(value) not in (RobustScaler, NextReturnTarget, QuantileBinaryTarget)
                for value in fitted.values()):
             raise ValueError('Factorized preparation contains an unsupported fitted artifact')
