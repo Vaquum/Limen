@@ -25,6 +25,7 @@ Does **not** own inference reconstruction (`limen.inference`), model architectur
 | `Manifest`, `MLManifest`, `RuleBasedManifest`, `CalibrationConfig` | Declarative experiment pipelines and calibration configuration | Exported at the package root |
 | `UniversalExperimentLoop` | Run an SFD across parameter permutations | Exported at the package root |
 | `GridStrategy`, `RandomStrategy`, `STRATEGY_REGISTRY` | Built-in advanced-search strategy surface | Exported at the package root |
+| `ReuseContract`, `declare_reuse` | Declare deterministic snapshot reuse | See [reuse declarations](../../docs/Universal-Experiment-Loop.md#reuse-declarations) |
 
 ## Adjacent modules
 

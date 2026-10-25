@@ -189,7 +189,7 @@ def test_research_promotion_and_factorize_reject(tmp_path):
     from limen.inference import Trainer, Sensor
     from limen.experiment._parallel_rounds import begin_run
     from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
-    from limen.experiment._factorize import _check_manifest
+    from limen.experiment._factorized_admission import validate_domain
 
     config = _yaml()
     (tmp_path / 'metadata.json').write_text(json.dumps({'yaml_reference': config}))
@@ -205,7 +205,7 @@ def test_research_promotion_and_factorize_reject(tmp_path):
         with pytest.raises(ValueError, match='fresh serial'):
             begin_run(host, workers, True, resume, False, False, None, (None, None, None))
     with pytest.raises(ValueError, match=r'event|snapshot'):
-        _check_manifest(manifest, {'risk_span': [6]}, frozenset())
+        _ = validate_domain(manifest, {'risk_span': [6]}, frozenset())
 
 
 def test_generic_interval_metadata_survives_promotion():
