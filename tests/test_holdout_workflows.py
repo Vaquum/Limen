@@ -1337,7 +1337,7 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
             if kind == 'ml':
                 assert 'recorded_squared' in prepared['x_train'].columns
                 assert proof['model_schema'][-1]['name'] == 'recorded_squared'
-            for bad in ('foreign', 'matrix', 'prediction', 'pipeline', 'missing', 'carrier', 'round'):
+            for bad in ('foreign', 'matrix', 'prediction', 'strategy', 'pipeline', 'missing', 'carrier', 'round'):
                 copied = copy.deepcopy(prepared)
                 owner = protected
                 if bad == 'foreign':
@@ -1346,6 +1346,11 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
                     copied['train' if kind == 'rule' else 'x_train'] = copied['train' if kind == 'rule' else 'x_train'].reverse()
                 elif bad == 'prediction':
                     copied['x_test'] = copied['x_test'][::-1] if kind == 'rule' else copied['x_test'].reverse()
+                elif bad == 'strategy':
+                    if kind == 'rule':
+                        copied['strategy'] = dict(copied['strategy'], entry='unprepared-rule')
+                    else:
+                        copied['_feature_names'] = copied['_feature_names'][::-1]
                 elif bad == 'pipeline':
                     owner = copy.deepcopy(protected)
                     owner.set_split_config(4, 1, 2)

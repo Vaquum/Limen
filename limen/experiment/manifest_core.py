@@ -2017,12 +2017,15 @@ def capture_model_inputs(data: Mapping[str, object]) -> dict[str, object]:
                 frame.columns = columns[1:-1] if name.startswith('x_') else columns[-1:]
             result[name] = witness(frame)
     result['feature_names'] = copy.deepcopy(data.get('_feature_names'))
+    result['strategy'] = copy.deepcopy(data.get('strategy'))
     alignment = cast(Mapping[str, object], data.get('_alignment', {}))
     result['alignment'] = {key: repr(alignment[key]) for key in ('missing_datetimes', 'first_test_datetime', 'last_test_datetime', 'test_datetimes') if key in alignment}
-    inputs = data.get('_trade_inputs')
-    if isinstance(inputs, TradeInputs):
-        result['execution'] = {'observations': witness(inputs.observations), 'funding': None if inputs.funding_events is None else witness(inputs.funding_events),
-            'signals': witness(inputs.signals.drop('target', strict=False)), 'start': inputs.partition_start_ns, 'end': inputs.partition_end_ns, 'sources': repr(inputs.sources)}
+    context = data.get('_trade_context')
+    partitions = (*context.partitions, data.get('_trade_inputs')) if isinstance(context, PreparedTradeContext) else (data.get('_trade_inputs'),)
+    result['execution'] = [{'observations': witness(inputs.observations), 'funding': None if inputs.funding_events is None else witness(inputs.funding_events),
+        'signals': witness(inputs.signals.drop('target', strict=False)), 'equity': inputs.initial_equity, 'start': inputs.partition_start_ns, 'end': inputs.partition_end_ns, 'sources': repr(inputs.sources)} for inputs in partitions if isinstance(inputs, TradeInputs)]
+    labels = data.get('_trade_labels')
+    result['trade_labels'] = None if not isinstance(labels, OutcomeLabels) else {'rows': witness(labels.rows), 'contract_digest': labels.contract_digest}
     return result
 
 
