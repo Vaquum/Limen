@@ -106,6 +106,24 @@ def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
             assert 'continue-on-error' not in step, (name, step.get('name'))
 
 
+def test_validation_artifacts_follow_the_producer_attempt():
+    jobs = _workflow(TESTS_WORKFLOW)['jobs']
+    producer = jobs['pr_checks_tests']
+    assert producer['outputs']['artifact_attempt'] == '${{ steps.artifact_identity.outputs.attempt }}'
+    for kind, prefix in (('runtime', 'test-runtime-profile'), ('coverage', 'coverage-data')):
+        upload = _step(producer['steps'], f'Upload {kind} artifact')
+        assert upload['with']['name'] == prefix + '-attempt-${{ github.run_attempt }}'
+        assert 'overwrite' not in upload['with']
+    for job, kind, prefix in (('pr_checks_runtime', 'runtime', 'test-runtime-profile'),
+                              ('pr_checks_coverage', 'coverage', 'coverage-data'),
+                              ('publish_coverage_pr_comment', 'coverage', 'coverage-data')):
+        download = _step(jobs[job]['steps'], f'Download {kind} artifact')
+        assert download['with'] == {
+            'name': prefix + '-attempt-${{ needs.pr_checks_tests.outputs.artifact_attempt }}',
+            'path': 'coverage-artifacts',
+        }
+
+
 @pytest.mark.parametrize(('mutation', 'reason'), [
     ('suite_selection', 'covered step changed'),
     ('backend_override', 'covered step changed'),
