@@ -6,7 +6,7 @@ from limen.backtest.trade_contract import TradeInputs, TradePolicy
 from limen.experiment._holdout_history import HoldoutEvidenceError
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import attach_outcomes, sensor_decisions, target_context
+from limen.experiment._prepare_trade_context import admit_formation, attach_outcomes, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, attach_trade_context as _attach_trade_context
 from limen.experiment._objective import ObjectiveConfig
@@ -1379,6 +1379,8 @@ def _process_bars(
 
     if manifest.bar_formation and round_params.get('bar_type', 'base') != 'base':
         func, base_params = manifest.bar_formation
+        if manifest.resolve_trade_policy(round_params) is not None:
+            admit_formation(func)
         resolved = _resolve_params(base_params, round_params)
         bar_data = data.pipe(func, **resolved)
         all_datetimes = bar_data['datetime'].to_list()
