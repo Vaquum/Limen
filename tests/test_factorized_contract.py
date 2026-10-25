@@ -149,7 +149,7 @@ def test_factorized_replay_does_not_copy_fitted_models(tmp_path):
         config = _configuration('ridge')
         manifest = build_manifest(config).with_reference_architecture(locked_model)
         domain = config['sfd']['params']
-        sfd = SimpleNamespace(__name__='recorded_locked_ridge', params=lambda: domain, manifest=lambda: manifest)
+        sfd = SimpleNamespace(__name__='recorded_locked_ridge', params=lambda _domain=domain: _domain, manifest=lambda _manifest=manifest: _manifest)
         loop = UniversalExperimentLoop(sfd=sfd, data=_bars(), experiment_dir=tmp_path / str(enabled),
             search_strategy=GridStrategy(ParamDomain(domain)), checkpoint_interval=1)
         calls.clear()
