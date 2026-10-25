@@ -10,6 +10,14 @@ from limen.experiment.reducer.filter_types import FILTER_SAMPLE, SAMPLE_HASH_RUL
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
 
+def _permutation_cap(value: object) -> int | None:
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+        raise ValueError(f'MSQ n_permutations must be a positive non-bool int or None; got {value!r}')
+    return value
+
+
 class FilterExhaustedError(Exception):
 
     '''Raised when filters reject too many consecutive combinations.'''
@@ -55,7 +63,7 @@ class MSQ:
             )
         self._strategy = strategy
         self._domain = domain
-        self._n_permutations = n_permutations
+        self._n_permutations = _permutation_cap(n_permutations)
         self._priority_queue: deque[dict[str, Any]] = deque()
         self._custom_filters: list[Callable[[dict[str, Any]], bool]] = []
         self._named_filters: dict[str, Callable[[dict[str, Any]], bool]] = {}
@@ -441,10 +449,11 @@ class MSQ:
             if key not in state:
                 raise ValueError(f"Invalid MSQ state: missing required key '{key}'.")
 
+        cap = _permutation_cap(state.get('n_permutations'))
         restored_filters, descriptors, custom_count, lost_named = restore_filters(state)
 
         self._yielded_count = state['yielded_count']
-        self._n_permutations = state.get('n_permutations')
+        self._n_permutations = cap
         self._trim_budget = state['trim_budget']
         self._priority_queue = deque(state['priority_queue'])
         self._custom_filters = []

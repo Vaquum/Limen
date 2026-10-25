@@ -6,6 +6,9 @@ from pathlib import Path
 
 # Open parameter mappings delegate to the named callable's argument contract.
 NESTED = {
+    'sfd.manifest.strict_mode': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
+    'sfd.params.use_calibration[]': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
+    'sfd.params.use_threshold[]': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
     'sfd.manifest.split_walk_forward': ('limen/experiment/_walk_forward_split.py', 'WalkForwardConfig'),
     'sfd.manifest.backtest.product': ('limen/experiment/_resolve_trade_policy.py', 'ProductConfig'),
     'sfd.manifest.backtest.funding': ('limen/experiment/_resolve_trade_policy.py', 'FundingConfig'),
