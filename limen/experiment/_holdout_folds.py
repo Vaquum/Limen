@@ -108,13 +108,13 @@ def trial_record(host: object, record: dict[str, object]) -> dict[str, object]:
     proof = _mapping(record.get('holdout'))
     checkpoint.completed_history(binding, proof)
     parent = research.metadata(manifest)
-    if parent is None or proof['experiment_record_id'] != parent['research_record_id']:
+    if parent is None or cast(Callable[[ProjectBinding, object, str], str], vars(checkpoint)['_parent'])(binding, proof['experiment_record_id'], str(record['round_id'])) != parent['research_record_id']:
         raise ValueError('Protected fold trial lacks its current coordinator')
     records = cast(list[dict[str, object]], record['folds'])
     for fold, item in enumerate(records):
         prepared = _mapping(item.get('holdout'))
         checkpoint.completed_history(binding, prepared)
-        if prepared['experiment_record_id'] != parent['research_record_id']:
+        if cast(Callable[[ProjectBinding, object, str], str], vars(checkpoint)['_parent'])(binding, prepared['experiment_record_id'], str(record['round_id'])) != parent['research_record_id']:
             raise ValueError('Protected fold preparation belongs to another trial operation')
         item['holdout'] = research.bind_round(manifest, dict(prepared, workflow={'version': 1, 'kind': 'fold', 'fold': fold,
             'preparation_record_id': prepared['research_record_id'], 'native': copy.deepcopy(item['fold_promotion'])}), str(record['round_id']))
