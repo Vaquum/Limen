@@ -336,7 +336,7 @@ class WarnIfPresent:
 
 class SchemaVersion:
 
-    '''schema_version must be a string; warn if it differs from current_version.'''
+    '''Require the exact supported manifest schema version.'''
 
     def __init__(self, current_version: str) -> None:
         super().__init__()
@@ -346,7 +346,7 @@ class SchemaVersion:
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
-              warnings: list[YAMLError]) -> None:
+              _warnings: list[YAMLError]) -> None:
 
         version = yaml_dict.get('schema_version')
         if not isinstance(version, str):
@@ -357,8 +357,8 @@ class SchemaVersion:
             ))
             return
         if version != self._version:
-            warnings.append(YAMLError(
-                message=f"schema_version '{version}' != current version '{self._version}'",
+            errors.append(YAMLError(
+                message=f"Unsupported schema_version '{version}'; this Limen supports '{self._version}'",
                 path='schema_version',
                 suggestion=f'Update schema_version to "{self._version}"',
             ))

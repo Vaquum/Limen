@@ -129,7 +129,22 @@ assessment:
 # endregion declaration
 ```
 
-`schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema. The current schema version is `1.0`; validation warns when a manifest uses a different string, but compatibility is governed by the Python validator and compiler in this repository.
+`schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema.
+Only the exact string `"1.0"` is supported. Missing, null, non-string and unequal values fail at
+`schema_version` before current-schema fields are interpreted. Values are not
+trimmed, coerced or compared as package release versions. No older supported
+schema exists, so there is no migration transform. `metadata.limen_version`
+records a package release independently; an older compatible release remains
+admissible.
+
+This policy applies to programmatic `validate` and CLI validation, profile,
+commit, reserve, assess, dry-run and run, including stored `manifest://` documents
+and the saved YAML used by CLI resume. An unsupported saved schema is refused
+before reconstruction or artifact changes. Direct `CompiledSFD` and
+`build_manifest` calls require prevalidated input; they do not rerun validation.
+Trainer/Sensor and other scientific read-back paths retain that reconstruction
+boundary. This rule does not change unrelated integer schema versions in saved
+reports or checkpoints.
 
 `uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
@@ -1397,7 +1412,6 @@ The index follows the current validator, including its conditional rules. `Requi
 
 | Path | Rule | Condition | Contract |
 | --- | --- | --- | --- |
-| `schema_version` | Required | `always` | {"type": "str"} |
 | `metadata` | Required | `always` | {"type": "dict"} |
 | `sfd` | Required | `always` | {"type": "dict"} |
 | `uel` | Required | `always` | {"type": "dict"} |
@@ -1452,6 +1466,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `schema_version` | Required string, exactly `"1.0"`; checked before interpreting the current-schema body. | [schema_errors](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_schema_version.py) |
 | `sfd.manifest` | Actual round-parameter lookup locations; literal fields keep their native meaning. | [lookup_references](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_parameter_refs.py) |
 | `sfd.params` | Forward declarations and Boolean `include_if` domains; unused warnings require a known closed architecture signature. | [ParamCoverage](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
 | `sfd.manifest.strict_mode` | Optional Boolean; explicit null is invalid. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |

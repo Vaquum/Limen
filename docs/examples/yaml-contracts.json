@@ -10,6 +10,11 @@
       "source": "limen/yaml/_assessment_spec.py",
       "symbol": "holdout_spec"
     },
+    "schema_version": {
+      "sha256": "c979966f0648bb6121bfd7ef41f5c7075c4d811362df3db5ae4fbb6cc729455b",
+      "source": "limen/yaml/_schema_version.py",
+      "symbol": "schema_errors"
+    },
     "sfd.manifest": {
       "sha256": "3f027471e8a0cf85171ee38185a2d6e0a459cc8a0249580fdaa7269ae2bb8685",
       "source": "limen/yaml/_parameter_refs.py",
@@ -178,12 +183,6 @@
     }
   },
   "rules": [
-    {
-      "kind": "Required",
-      "path": "schema_version",
-      "type": "str",
-      "when": "always"
-    },
     {
       "kind": "Required",
       "path": "metadata",
