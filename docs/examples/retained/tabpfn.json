@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T08:58:00.653121+00:00",
-  "execution_checkout_head": "56f4e474ffdc08176832547cc0b00e0757490d7d",
+  "observed_at": "2026-10-25T09:16:11.529082+00:00",
+  "execution_checkout_head": "71c51fa672c2130bbc5eeb25975fa9658dfd43ff",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -78,12 +78,12 @@
     "experiment/_column_shims.py": "c9916e0037d54e6276512af0c91acaa2b7f3e13a66d7b91e9f9bfb0560ac872e",
     "experiment/_dynamic_barriers.py": "faf2c26ec316ee7085b45f346f22896e2331a9afed640c080aacc8c34bdcf676",
     "experiment/_factorize.py": "52e78556b1659bfea1634c20df465d34d8820af90b2e450cf5cad4c4a9d5b9e9",
-    "experiment/_factorized_admission.py": "06651c2578bb0ba09883356eaed4cbc73ead88d18380d659652cc2fe52185fa4",
+    "experiment/_factorized_admission.py": "e2347d6c72e555a0b0da1845c5941b6f375954d0895caf0a55b21a986f684a3d",
     "experiment/_factorized_contract.py": "c816d2f1a02f29f3fb9c392877192925754879d7a1796fe51cc47a126b952fff",
     "experiment/_factorized_key.py": "097783900b64cd4469484ceaef95f16ff94f6b78a90595595b1f2e0eada8a4cd",
     "experiment/_factorized_native.py": "93b20850fb24b4763ea1eb0b627e54fac227abc4f6364ff8c56d8a20e86a9a65",
     "experiment/_factorized_prep.py": "f1bdd4e0f9492815b21c85c2579033b9b6bad4c834ec027fc4973614c01b8c04",
-    "experiment/_factorized_projection.py": "eb27b07449bc4fd3ba35713c8caa1b162263c0a1435261d99aea302c44a8a65a",
+    "experiment/_factorized_projection.py": "43d960e06e58cb737f2858d92f96387af7255b92d105dfe90fd9167803b3d576",
     "experiment/_factorized_replay.py": "daefe9c719c54e55c01ce72dc2bdcc494d43ed8659555d22e2c3cc6f4678755e",
     "experiment/_family_evidence.py": "641ad9d9d9e2d75f4aeef8de65c049867c1be042e41e8316eaf80b0cf0afe34f",
     "experiment/_filter_resume.py": "20b88268556d73a961ff1a73993b4e6af6ab7182d27f8ef927eda28579c496f6",
