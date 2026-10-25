@@ -298,9 +298,9 @@ def _run_e2e_experiment(experiment_dir: Path, yaml_text: str) -> list[int]:
             yaml_path = Path(tmpdir) / 'exp.yaml'
             yaml_path.write_text(yaml_text.replace(
                 'output_format: csv',
-                f'output_format: csv\n  output_path: "{experiment_dir}"',
+                f'output_format: csv\n  output_path: "{experiment_dir.name}"',
             ))
-            run_experiment(yaml_path)
+            assert run_experiment(yaml_path, results_base=experiment_dir.parents[2])
     finally:
         DataSourceResolver.resolve = staticmethod(original)
     round_ids: list[int] = []
@@ -495,8 +495,8 @@ def test_validate_metrics_reports_missing_permutations_and_large_deterministic_m
 
 def test_trainer_yaml_end_to_end() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
         assert len(round_ids) == 2
 
@@ -521,8 +521,8 @@ def test_trainer_yaml_end_to_end() -> None:
 
 def test_trainer_yaml_reconstruction_error_stochastic() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_RANDOM_YAML)
         assert len(round_ids) == 1
 
@@ -538,8 +538,8 @@ def test_trainer_yaml_reconstruction_error_stochastic() -> None:
 
 def test_trainer_yaml_reconstruction_error_tampered_log() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
 
         df = pl.read_csv(exp_dir / 'results.csv')
@@ -552,8 +552,8 @@ def test_trainer_yaml_reconstruction_error_tampered_log() -> None:
 
 def test_trainer_yaml_logreg_stochastic_validation() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
         _, sensors = _train_e2e(exp_dir, [round_ids[0]])
         assert len(sensors) == 1
@@ -562,8 +562,8 @@ def test_trainer_yaml_logreg_stochastic_validation() -> None:
 
 def test_trainer_yaml_sensor_inference() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_LOGREG_YAML)
         trainer, sensors = _train_e2e(exp_dir, [round_ids[0]])
         sensor = sensors[0]
@@ -595,8 +595,8 @@ def test_trainer_yaml_sensor_inference() -> None:
 
 def test_trainer_yaml_feature_ablation() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_ABLATION_YAML)
         assert len(round_ids) == 1
         _, sensors = _train_e2e(exp_dir, round_ids)
@@ -608,8 +608,8 @@ def test_trainer_yaml_feature_ablation() -> None:
 
 def test_sensor_reproduces_training_metrics_on_val_test() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_REPRO_YAML)
         assert len(round_ids) == 1
 
@@ -652,8 +652,8 @@ def test_sensor_reproduces_training_metrics_on_val_test() -> None:
 
 def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
     with TemporaryDirectory() as tmpdir:
-        exp_dir = Path(tmpdir) / 'exp'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev' / 'exp'
+        exp_dir.mkdir(parents=True)
         round_ids = _run_e2e_experiment(exp_dir, _E2E_REPRO_ROLLING_YAML)
         assert len(round_ids) == 2
 

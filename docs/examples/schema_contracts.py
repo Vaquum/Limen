@@ -24,6 +24,7 @@ NESTED = {
     'sfd.manifest.acceptance': ('limen/experiment/_acceptance_settings.py', 'read_acceptance'),
     'sfd.manifest.strategy.conditions[]': ('limen/yaml/rules.py', 'ConditionsList'),
     'uel.recording': ('limen/experiment/_recording.py', 'parse_recording'),
+    'uel.output_path': ('limen/cli/commands/_results_dir.py', 'admit_output'),
     'assessment': ('limen/yaml/_assessment_spec.py', 'assessment_spec'),
     'holdout': ('limen/yaml/_assessment_spec.py', 'holdout_spec'),
 }
