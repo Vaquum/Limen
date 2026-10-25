@@ -28,13 +28,13 @@ class FittedPreparation:
         self.manifest = manifest
         if manifest.architecture_function is None:
             raise ValueError('Fitted preparation requires an architecture')
-        consumers = [value for attr, value in vars(manifest).items()
-                     if attr not in ('backtest_config', 'architecture_function', 'architecture_params')]
+        consumers = [value for attr, value in vars(manifest).items() if attr not in ('backtest_config', 'architecture_function', 'architecture_params')]
         self.names = frozenset(name for name in domain if name not in axes and (
             name not in inspect.signature(manifest.architecture_function).parameters or any(references(value, name) for value in consumers)))
         self.cache: dict[str, dict[str, object]] = {}
         self.proofs: dict[str, dict[str, object]] = {}
         self.warning_cache: dict[str, list[warnings.WarningMessage]] = {}
+        self.pending_warnings: list[warnings.WarningMessage] = []
 
     def prepare(self, raw: pl.DataFrame, params: dict[str, object],
                 prep: Callable[..., dict[str, object]]) -> tuple[dict[str, object], str, dict[str, object]]:
@@ -50,7 +50,7 @@ class FittedPreparation:
         finally:
             for warning in [*(self.warning_cache[key] if saved is not None else []), *caught]:
                 warnings.warn(str(warning.message), warning.category, stacklevel=2)
-        self.pending_warnings: list[warnings.WarningMessage] = list(caught) if saved is None else self.warning_cache[key]
+        self.pending_warnings = list(caught) if saved is None else self.warning_cache[key]
         artifacts = data.get('_fitted_params')
         if not isinstance(artifacts, dict):
             raise ValueError('Factorized preparation requires fitted artifact evidence')
