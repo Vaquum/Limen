@@ -7,6 +7,7 @@ import json
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
+from importlib import import_module
 from typing import Protocol
 import traceback
 import warnings
@@ -45,6 +46,18 @@ def feedback_failure(write: Callable[..., None], error: Exception, name: str, ms
           [*errors, {'source': name, 'error': str(error), 'traceback': traceback.format_exc()}], msq,
           suggestions=[item for item in entries if item.get('action') == 'suggest'])
     raise error
+
+
+def run_model(manifest: object, data: dict[str, object], params: dict[str, object]) -> dict[str, object]:
+    from limen.experiment._holdout_sources import check_model
+    if _holdout.binding_of(manifest) is None:
+        _ = _holdout.bind_manifest(manifest)
+    with _holdout.operation(manifest, 'experiment') as op:
+        proof = check_model(manifest, data, params, _holdout.binding_of(manifest))
+        if op is not None and proof is not None:
+            op.provenance.update({key: value for key, value in proof.items() if key not in ('research_record_id', 'role', 'experiment_record_id')})
+            op.provenance['workflow'] = dict(_mapping(proof.get('workflow')), evaluation={'version': 1, 'preparation_record_id': proof['research_record_id']})
+        return cast(Callable[[object, dict[str, object], dict[str, object]], dict[str, object]], vars(import_module('limen.experiment._objective'))['run_model'])(manifest, data, params)
 
 
 class _Prepared(Protocol):

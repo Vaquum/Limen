@@ -302,5 +302,5 @@ def research_record(binding: ProjectBinding, record_id: str) -> Mapping[str, obj
     with admission(binding.root), connection(binding.root / _HISTORY) as db:
         row = db.execute('SELECT * FROM research WHERE id=? AND project_id=?', (identifier(record_id), binding.project_id)).fetchone()
         if row is None:
-            raise ValueError('Unknown holdout research record')
+            raise HoldoutEvidenceError('Unknown holdout research record')
         return cast(Mapping[str, object], dict(row))

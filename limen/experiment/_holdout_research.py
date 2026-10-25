@@ -21,8 +21,6 @@ from limen.experiment._resolve_trade_policy import holdout_structural
 
 class ResearchManifest(SourceManifest, Protocol):
     @property
-    def backtest_config(self) -> object | None: ...
-    @property
     def split_dates(self) -> tuple[object, ...] | None: ...
     @property
     def split_walk_forward(self) -> object | None: ...
@@ -78,13 +76,13 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
     if binding is None or binding.cutoff_ns is None:
         return
     core = vars(sys.modules['limen.experiment.manifest_core'])
-    if type(manifest) not in (core['MLManifest'], core['RuleBasedManifest']):
+    if type(manifest) not in (core['MLManifest'], core['RuleBasedManifest']) and not source_workflow_active.get():
         raise ValueError('Holdout research requires a built-in manifest')
     model = cast(ResearchManifest, manifest)
     if (workers != 1 or bool(factorize) or bool(resume) or profile or any(value is not None for value in callbacks)
             or bool(walk_forward) or (model.bar_formation is not None and not (source_workflow_active.get() if sources is None else sources))
             or (test_mode and model.test_data_source_config is not None)
-            or getattr(model, 'data_dict_extension', None) is not None):
+            or (getattr(model, 'data_dict_extension', None) is not None and not source_workflow_active.get())):
         raise ValueError('Holdout research refuses profile, resume, parallel/factorized/walk-forward, alternate test source and callbacks')
     if any(name in vars(model) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model', 'compute_test_bars', 'fetch_data')):
         raise ValueError('Holdout research refuses replaced manifest methods')
@@ -213,8 +211,8 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
                 data = cast(dict[str, object], result)
                 if getattr(manifest, 'strategy', None) is not None:
                     op.provenance['schema_reason'] = 'rule-based-no-fitted-model'
-                if op.role == 'trainer' and op.replay_witness is not None and 'workflow' in op.replay_witness:
-                    op.provenance['workflow'] = copy.deepcopy(op.replay_witness['workflow'])
+                from limen.experiment._holdout_sources import remember_model
+                remember_model(manifest, data, cast(Mapping[str, object], inspect.signature(func).bind(manifest, *args, **kwargs).arguments['round_params']), op)
                 provenance = copy.deepcopy(op.provenance)
                 alignment = cast(dict[str, object], data['_alignment'])
                 alignment['holdout'] = provenance
