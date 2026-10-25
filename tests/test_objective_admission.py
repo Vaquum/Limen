@@ -111,7 +111,7 @@ def test_recorded_objective_admission_signed_exposures(direction):
 
     manifest = native_manifest().set_scaler(RobustScaler).set_objective(direction=direction)
     params = {'holding': 1800, 'folds': 2, 'min_train_samples': 2, 'direction_params': {'max_iter': 1000}}
-    data = manifest.prepare_data(exposure_source(limit=800), params)
+    data = manifest.prepare_data(exposure_source(limit=240), params)
     result = manifest.run_model(data, params)
     decisions = result['_model'].predict({'x_test': data['x_val']})['_preds']
     assert np.any(decisions < 0) and np.any(decisions > 0)
