@@ -159,7 +159,7 @@ def signal_cache(manifest: object, raw: pl.DataFrame,
             raise ValueError('Factorized holdout source population changed since cache construction')
     entry = cache.get(key)
     if entry is not None and binding is not None and binding.cutoff_ns is not None:
-        data = _mapping(getattr(entry, 'data'))
+        data = _mapping(getattr(entry, 'data', None))
         alignment = _mapping(data.get('_alignment'))
         _check(manifest, raw, _mapping(alignment.get('holdout')))
     return cache.pop(key, None)

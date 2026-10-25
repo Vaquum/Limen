@@ -512,3 +512,113 @@ def _checkpoint_boundaries(loop, config, checkpoint, metadata, monkeypatch, reta
     assert sensors[0]._fitted_params['_holdout']['research_record_id'] != sensors[0]._fitted_params['_holdout']['experiment_record_id']
     assert _artifact_state(directory) == before
     (directory / 'metadata.json').write_bytes(metadata_bytes)
+
+
+@pytest.mark.parametrize('kind', ['ml', 'rule'])
+def test_protected_factorized_provenance(kind, tmp_path, monkeypatch):
+    from itertools import product
+    from types import SimpleNamespace
+    import numpy as np
+    from limen.experiment import UniversalExperimentLoop
+    from limen.experiment import _holdout_research as research
+    from limen.experiment._factorize import FactorizedRounds
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+    from tests.test_factorize_equivalence import _numeric_equal
+    from tests.test_factorized_preparation import _config, _instrument
+    from tests.test_holdout_research import _project
+
+    config = _config()
+    if kind == 'rule':
+        body = config['sfd']['manifest']
+        body.update(type='rule_based', indicators=[], features=[],
+                    reference_architecture='limen.sfd.reference_architecture.rule_based.rule_based',
+                    strategy={'conditions': [{'id': 'up', 'type': 'relative', 'column': 'close',
+                                             'operator': '>', 'other_column': 'open'}], 'entry': 'up'})
+        for name in ('target', 'scaler'):
+            body.pop(name)
+        config['sfd']['params'] = {'fee': [4., 9.]}
+    root = _project(tmp_path / 'protected')
+    reservation = reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    raw = manifest.fetch_data()
+    domain = config['sfd']['params']
+    candidates = [dict(zip(domain, values, strict=True)) for values in product(*domain.values())]
+    control = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / 'ordinary')).manifest()
+    expected = []
+    for params in candidates:
+        prepared = control.prepare_data(raw.clone(), params.copy())
+        prepared.update(_record_execution=True, _record_model_outputs=True)
+        expected.append((prepared, control.run_model(prepared, params.copy())))
+    counts = _instrument(monkeypatch)
+    rule_fits = []
+    original = RuleBasedStrategy.train
+    def train(*args, **kwargs):
+        rule_fits.append(True)
+        return original(*args, **kwargs)
+    monkeypatch.setattr(RuleBasedStrategy, 'train', train)
+    strategy = GridStrategy(ParamDomain(domain))
+    rounds = FactorizedRounds(manifest=manifest, strategy=strategy, domain=domain, pruning=False,
+        callback=False, context=None, prep=manifest.prepare_data, model=manifest.run_model,
+        data=raw, record_execution=True, record_model_outputs=True)
+    directory = root / 'results'
+    directory.mkdir()
+    path = directory / 'round_data.jsonl'
+    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=None,
+        _yaml_reference=config, _record_execution=True, _record_model_outputs=True)
+    preparations, values = [], []
+    for index, params in enumerate(candidates):
+        with research.operation(manifest, 'experiment'):
+            data, result, _, _ = rounds.evaluate(params.copy())
+            baseline_data, baseline_result = expected[index]
+            _numeric_equal({name: value for name, value in baseline_result.items() if not name.startswith('_')},
+                           {name: value for name, value in result.items() if not name.startswith('_')})
+            np.testing.assert_array_equal(result['_preds'], baseline_result['_preds'])
+            if kind == 'ml':
+                np.testing.assert_array_equal(data['_alignment']['model_outputs']['probs'], baseline_data['_alignment']['model_outputs']['probs'])
+                if 'x_train' in data:
+                    for split in ('train', 'val', 'test'):
+                        np.testing.assert_array_equal(data['x_' + split], baseline_data['x_' + split])
+                        np.testing.assert_array_equal(data['y_' + split], baseline_data['y_' + split])
+                    preparations.append(data['_alignment']['holdout'])
+            UniversalExperimentLoop._append_round_data(writer, path, strategy.compute_param_hash(params),
+                params, result['_preds'], data['_alignment'], round_index=index)
+            values.append(result['backtest_pnl_per_bar_bps'] if kind == 'ml' else result['pnl_per_bar_bps_test'])
+    assert len(set(values)) > 1
+    if kind == 'ml':
+        assert counts == {'target': 1, 'scaler': 1, 'model': 2, 'prepare': 2}
+        assert preparations[1]['reuse'] == {'kind': 'fitted',
+            'source_preparation_record_id': preparations[0]['research_record_id']}
+    else:
+        assert len(rule_fits) == 1
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    assert len({row['round_id'] for row in rows}) == len(candidates)
+    assert len({row['holdout']['research_record_id'] for row in rows}) == len(candidates)
+    binding = history.bind(root)
+    for row in rows:
+        proof = row['holdout']
+        record = history.research_record(binding, proof['research_record_id'])
+        assert record['state'] == 'completed' and record['round_id'] == row['round_id']
+        assert json.loads(record['provenance_json']) == proof
+        if 'reuse' in proof:
+            source = history.research_record(binding, proof['reuse']['source_preparation_record_id'])
+            assert source['state'] == 'completed'
+    retained = path.read_bytes()
+    original_counts = counts.copy()
+    with research.operation(manifest, 'experiment'):
+        if rounds.preparation is not None:
+            with pytest.raises(ValueError, match='source population changed'):
+                rounds.preparation.prepare(raw.slice(1), candidates[0].copy(), rounds.prep)
+        rounds.data = raw.slice(1)
+        with pytest.raises(ValueError, match='source population changed'):
+            rounds.evaluate(candidates[0].copy())
+        rounds.data = raw
+    release_holdout(root, reservation)
+    if rounds.preparation is not None:
+        with pytest.raises(ValueError, match='revision changed'):
+            rounds.preparation.prepare(raw, candidates[0].copy(), rounds.prep)
+    with pytest.raises(ValueError, match='revision changed'):
+        rounds.evaluate(candidates[0].copy())
+    assert counts == original_counts
+    assert path.read_bytes() == retained
