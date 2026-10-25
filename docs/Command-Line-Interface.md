@@ -98,7 +98,7 @@ The [event-contract variant](Final-Holdout.md#preserve-event-economics) declares
 
 ### `limen validate <yaml_file>`
 
-Runs YAML parsing plus structural validation. It checks required top-level blocks, schema version, `metadata.mode`, manifest type, supported output formats, search strategy values, `split_dates`, parameter lists, and resolvability of `limen.*` dotted references.
+Runs YAML parsing plus structural validation. It checks required top-level blocks, schema version, `metadata.mode` and optional metadata shapes, manifest type, supported output formats, search strategy values, `split_dates`, parameter lists, and resolvability of `limen.*` dotted references.
 
 Exit behavior:
 
@@ -107,7 +107,27 @@ Exit behavior:
 
 ### `limen profile <yaml_file>`
 
-Validates and compiles the YAML, then reports parameter-space size and complexity. It also fetches the manifest's real data source and runs a covering-array sample of permutations to estimate per-permutation runtime and surface data-quality warnings (e.g. unexpected nulls). Strict mode is temporarily disabled during sampling so thin parameter combinations do not abort profiling.
+Validates and compiles the YAML, then reports parameter-space size and complexity.
+It loads the effective compiled `sfd.manifest.data_source` and attempts real
+preparation/model evaluation for a covering array. For a nonempty domain, the
+attempt count is the largest parameter-list length, independently of
+`uel.n_permutations`. Completed-sample timings cover preparation/evaluation and
+exclude source loading, although profiling may fetch remote data and fit models.
+
+Sampling follows the configured split windows and
+[holdout admission/cutoffs](Guarded-Holdout-Reference.md). `split_dates` supplies
+fetch limits only where the loader accepts them; file sources may load the whole
+file, and supported source parameter overrides remain effective. This does not
+add walk-forward profiling support. No experiment results CSV is written, but
+holdout research/exposure/failure history may be written. Strict mode is
+temporarily disabled during sampling and restored afterwards.
+
+Collected ordinary load/sample errors are reported and can exit `0`, including
+with zero completed samples. Validation, compilation, protection and unexpected
+errors exit `1`. YAML still rejects `test_data_source`; the native
+`Manifest.set_test_data_source` API remains available. For data-quality errors,
+check source coverage, configured split windows and target/preparation settings;
+row-limit parameters are not universal and can conflict with dated sources.
 
 ### `limen run <yaml_file> [<yaml_file> ...]`
 
@@ -185,6 +205,14 @@ Options:
 
 Copies a committed manifest into `manifests/` as a development-mode working file and records the source as `lineage.parent_id`. When `name` is omitted, it prompts with an auto-incremented default (e.g. `<parent>_v2`). On the next `limen commit`, the parent lineage is preserved automatically.
 
+Before creating the working copy, forking verifies the document actually copied:
+its canonical content and stored `lineage.id` must match the full source filename
+ID. This also applies to Python `fork_manifest` callers and changes made while
+the CLI name prompt is open. An integrity failure leaves the destination absent.
+Formatting and excluded lineage metadata may differ without changing identity;
+the child's lineage contains only its verified immediate `parent_id`. This is a
+content-integrity check, not proof of historical authenticity.
+
 ### `limen lineage <manifest_id>`
 
 Walks the `parent_id` chain from a committed manifest to its root and prints it root-first, with the target manifest marked.
@@ -213,7 +241,10 @@ Committed manifest URIs may use a full `manifest://sha256:<64-hex>` ID or an una
 
 Set `uel.output_format: parquet` to also write `results.parquet` after successful execution. A successful `--resume` uses this setting from the saved YAML and writes or refreshes the file in the supplied results directory, including when no new rounds run. Rejected or interrupted resumes leave any existing Parquet file unchanged.
 
-Set `uel.output_path` to override the default output directory for direct YAML runs. Committed manifest URI runs ignore `uel.output_path` and always use the hash/timestamp path under the project `results` directory.
+Set `uel.output_path` to a relative template within the direct run's mode directory;
+see the [output destination contract](Experiment-Manifest.md#output-destinations)
+for containment, relocation and resume behavior. Committed manifest URI runs
+ignore it and use the hash/timestamp path under the project `results` directory.
 
 ## Validation Boundaries
 

@@ -379,6 +379,7 @@ def test_bar_payloads_default_off(kind, tmp_path):
 
 @pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission', 'nonpersisted_pbo', 'compiled_sources'))
 def test_policy_validation(case, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     config = _config('walk_forward')
     if case in ('yaml', 'native'):
         invalid = [False, True, [], 'predictions', {'unknown': True},
@@ -430,13 +431,13 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             with pytest.raises(ValueError, match=r'PBO|max_pbo'):
                 _run(loop, kind='walk_forward', recording={**FULL, key: False})
             assert not path.exists()
-            candidate['uel']['output_path'] = str(tmp_path / (key + '-cli'))
+            candidate['uel']['output_path'] = key + '-cli'
             yaml_path = tmp_path / (key + '.yaml')
             YAML().dump(candidate, yaml_path)
             result = CliRunner().invoke(cli, ['run', '--no-progress-bar', str(yaml_path)])
             assert result.exit_code != 0
             assert 'PBO' in result.output or 'max_pbo' in result.output
-            assert not Path(candidate['uel']['output_path']).exists()
+            assert not (tmp_path / 'results/dev' / candidate['uel']['output_path']).exists()
         for key in ('predictions', 'trade_ledger'):
             candidate = copy.deepcopy(config)
             candidate['uel']['recording'] = {**FULL, key: False}
@@ -653,7 +654,8 @@ def test_scientific_equivalence(kind, campaigns):
 
 
 @pytest.mark.parametrize('case', ('trainer', 'resume_rejection', 'default_resume', 'cli', 'strict_failure', 'pbo_report'))
-def test_consumer_contracts(case, campaigns, tmp_path):
+def test_consumer_contracts(case, campaigns, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     captured = campaigns['serial']
     if case == 'trainer':
         predictions = []
@@ -739,7 +741,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
     elif case == 'cli':
         config = _config('walk_forward')
         config['sfd']['manifest']['data_source']['params']['row_count_limit'] = 384
-        config['uel'].update(output_path=str(tmp_path / 'cli-run'),
+        config['uel'].update(output_path='cli-run',
                              output_format='parquet', record_execution=True, record_model_outputs=True)
         yaml_path = tmp_path / 'recording.yaml'
         YAML().dump(config, yaml_path)
@@ -747,7 +749,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         with threadpool_limits(limits=1):
             result = runner.invoke(cli, ['run', '--no-progress-bar', str(yaml_path)])
         assert result.exit_code == 0, result.output
-        path = tmp_path / 'cli-run'
+        path = tmp_path / 'results/dev/cli-run'
         assert_frame_equal(pl.read_csv(path / 'results.csv'), pl.read_parquet(path / 'results.parquet'),
                            check_dtypes=False)
         assert all('folds' not in record for record in _records(path))

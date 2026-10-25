@@ -60,10 +60,14 @@ yaml/
 ├── __init__.py
 ├── _assessment_spec.py
 ├── _backtest_spec.py
+├── _boolean_spec.py
 ├── _feature_shim_spec.py
+├── _metadata_spec.py
 ├── _objective_spec.py
+├── _parameter_refs.py
 ├── _parser_yaml.py
 ├── _recording_spec.py
+├── _schema_version.py
 ├── _temporal_spec.py
 ├── compiler.py
 ├── config.py
@@ -82,7 +86,7 @@ yaml/
 
 - `schema_version` is currently `1.0`.
 - YAML manifests are the canonical operator-facing experiment definition; Python builders are the extension-equivalent surface.
-- YAML validation rejects `sfd.manifest.test_data_source`; runtime date limits come from `split_dates`.
+- YAML validation rejects `sfd.manifest.test_data_source`; see the [source/split profiling contract](../../docs/Command-Line-Interface.md#limen-profile-yaml_file).
 - The resolver only treats `limen.*` references as supported dotted references.
 - Store functions back `limen commit`, `limen ls`, and committed-manifest URI runs.
 

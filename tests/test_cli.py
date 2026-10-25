@@ -11,6 +11,17 @@ from limen.yaml.profiler import ProfileResult
 from tests.test_yaml import _MINIMAL_ML_YAML
 
 
+def test_cli_profile_help_describes_real_admitted_sampling() -> None:
+    result = CliRunner().invoke(cli, ['profile', '--help'])
+    assert result.exit_code == 0
+    text = ' '.join(result.output.split())
+    for phrase in ('data_source', 'preparation/model evaluation', 'covering array',
+                   'uel.n_permutations', 'exclude source loading', 'holdout',
+                   'research history', 'may exit 0 with no completions', 'unexpected errors exit 1'):
+        assert phrase in text
+    assert 'skipped for ordinary CLI manifests' not in text
+
+
 def test_cli_validate_valid_yaml_exits_0() -> None:
     runner = CliRunner()
     with runner.isolated_filesystem():
@@ -524,12 +535,12 @@ def test_cli_profile_shows_errors_from_sampling() -> None:
         Path('exp.yaml').write_text(_MINIMAL_ML_YAML)
         prof = _make_profile_result(
             attempted=3, completed=1, time_per=0.1,
-            errors=['Data too small for profiling — extend the date range in data_source.'],
+            errors=['Data too small for profiling — check source coverage and configured split windows for enough usable rows after preparation.'],
         )
         with patch('limen.cli.commands.profile.profile', return_value=prof):
             result = runner.invoke(cli, ['profile', 'exp.yaml'])
         assert 'ERROR' in result.output
-        assert 'date range' in result.output
+        assert 'source coverage' in result.output
 
 
 def test_cli_profile_parse_error_exits_1() -> None:

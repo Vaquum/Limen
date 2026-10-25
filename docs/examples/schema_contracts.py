@@ -6,6 +6,15 @@ from pathlib import Path
 
 # Open parameter mappings delegate to the named callable's argument contract.
 NESTED = {
+    'uel': ('limen/yaml/rules.py', 'UelSpec'),
+    'metadata': ('limen/yaml/_metadata_spec.py', 'check_metadata'),
+    'sfd.manifest.required_columns': ('limen/experiment/_required_columns.py', 'column_issue'),
+    'schema_version': ('limen/yaml/_schema_version.py', 'schema_errors'),
+    'sfd.manifest': ('limen/yaml/_parameter_refs.py', 'lookup_references'),
+    'sfd.params': ('limen/yaml/rules.py', 'ParamCoverage'),
+    'sfd.manifest.strict_mode': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
+    'sfd.params.use_calibration[]': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
+    'sfd.params.use_threshold[]': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
     'sfd.manifest.split_walk_forward': ('limen/experiment/_walk_forward_split.py', 'WalkForwardConfig'),
     'sfd.manifest.backtest.product': ('limen/experiment/_resolve_trade_policy.py', 'ProductConfig'),
     'sfd.manifest.backtest.funding': ('limen/experiment/_resolve_trade_policy.py', 'FundingConfig'),
@@ -15,6 +24,7 @@ NESTED = {
     'sfd.manifest.acceptance': ('limen/experiment/_acceptance_settings.py', 'read_acceptance'),
     'sfd.manifest.strategy.conditions[]': ('limen/yaml/rules.py', 'ConditionsList'),
     'uel.recording': ('limen/experiment/_recording.py', 'parse_recording'),
+    'uel.output_path': ('limen/cli/commands/_results_dir.py', 'admit_output'),
     'assessment': ('limen/yaml/_assessment_spec.py', 'assessment_spec'),
     'holdout': ('limen/yaml/_assessment_spec.py', 'holdout_spec'),
 }
@@ -31,8 +41,8 @@ def inventory(root: Path):
                 visit(settings['_rules'], settings['_condition_path'] + ' = ' + str(settings['_condition_value']))
             elif kind in ('Required', 'OneOf', 'NoUnknownKeys', 'Resolvable', 'FuncList', 'SingleFuncBlock', 'ParamKeyFields'):
                 entry = {'kind': kind, 'path': settings['_path'], 'when': condition}
-                for name in ('_known', '_choices', '_fields', '_severity'):
-                    if name in settings:
+                for name in ('_known', '_choices', '_fields', '_severity', '_rejected'):
+                    if name in settings and (name != '_rejected' or settings[name]):
                         value = settings[name]
                         entry[name[1:]] = sorted(value) if isinstance(value, (set, tuple)) else value
                 if kind == 'Required':

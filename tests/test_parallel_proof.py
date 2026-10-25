@@ -162,6 +162,33 @@ def test_parallel_proof_preserves_recorded_cases_and_worker_coverage(recorded_pr
     assert constant_line in final_data.lines(package_file)
 
 
+def test_four_worker_proof_preserves_cases_and_merged_coverage(tmp_path):
+    files = (*RECORDED, 'tests/test_param_domain.py', 'tests/test_source_interval.py')
+    collected = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', *files],
+                               cwd=ROOT, capture_output=True, text=True, check=False)
+    assert collected.returncode == 0, collected.stdout + collected.stderr
+    native_ids = [line for line in collected.stdout.splitlines() if line.startswith('tests/') and '::' in line]
+    result, profile = _run(tmp_path, ('-n', '4', '--dist', 'loadfile', '--max-worker-restart=0', *files, '-q'))
+    assert result.returncode == 0, result.stdout + result.stderr
+    parallel = profile['parallel']
+    assert parallel['worker_count'] == 4 and parallel['reconciled'] is True
+    assert parallel['distribution'] == 'loadfile'
+    assert parallel['collected_count'] == parallel['execution_count'] == len(native_ids) > 0
+    assert parallel['collected_ids_sha256'] == hashlib.sha256(json.dumps(native_ids, separators=(',', ':')).encode()).hexdigest()
+    assert sorted(record['test_name'] for record in profile['tests']) == sorted(native_ids)
+    assert len({worker['pid'] for worker in parallel['workers']}) == 4
+    assert sum(worker['test_count'] for worker in parallel['workers']) == len(native_ids)
+    final_data = coverage.CoverageData(basename=str(tmp_path / '.coverage'))
+    final_data.read()
+    for worker in parallel['workers']:
+        assert worker['backend'] == ('SysMonitor' if sys.version_info >= (3, 12) else 'CTracer')
+        final_data.set_query_context(worker['id'])
+        executed = [(name, sorted(final_data.lines(name) or [])) for name in sorted(final_data.measured_files())]
+        executed = [(name, lines) for name, lines in executed if lines]
+        assert sum(len(lines) for _, lines in executed) == worker['line_count'] > 0
+        assert hashlib.sha256(json.dumps(executed, separators=(',', ':')).encode()).hexdigest() == worker['lines_sha256']
+
+
 def _replay(retained):
     plugin = RuntimeProfilePlugin()
     plugin.requested_workers = 2

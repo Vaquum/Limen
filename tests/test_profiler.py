@@ -106,7 +106,7 @@ def test_covering_array_values_are_from_original_lists() -> None:
 
 def test_classify_error_small_dataset() -> None:
     msg = _classify_error(ValueError('Found array with 0 sample(s)'))
-    assert 'date range' in msg
+    assert 'source coverage' in msg and 'split windows' in msg
 
 
 def test_classify_error_class_diversity() -> None:
@@ -117,6 +117,29 @@ def test_classify_error_class_diversity() -> None:
 def test_classify_error_nan() -> None:
     msg = _classify_error(ValueError('Input contains NaN'))
     assert 'NaN' in msg
+
+
+@pytest.mark.parametrize('original,category,actions', (
+    ('Found array with 0 sample(s) in test data (n_rows=0)', 'Data too small for profiling',
+     ('source coverage', 'split windows', 'preparation')),
+    ('The number of classes has to be at least 2 in test data (n_rows=3)', 'class diversity',
+     ('target/label', 'split windows', 'affected split')),
+    ('Input contains NaN in test data (n_rows=3)', 'NaN or Inf',
+     ('source values', 'preparation settings')),
+    ('Input contains Inf in test data (n_rows=3)', 'NaN or Inf',
+     ('source values', 'preparation settings')),
+))
+def test_profile_error_guidance_is_actionable_and_preserves_original(original, category, actions):
+    rendered = _classify_error(ValueError(original))
+    suffix = f' ({original})'
+    assert rendered.endswith(suffix)
+    guidance = rendered[:-len(suffix)]
+    assert category in guidance
+    assert all(action in guidance for action in actions)
+    assert 'n_rows' not in guidance
+    assert 'row_count_limit' not in guidance
+    assert 'test data' not in guidance.lower()
+    assert 'date range in data_source' not in guidance
 
 
 def test_classify_error_generic() -> None:
@@ -218,7 +241,7 @@ def test_profile_runtime_records_errors_when_all_permutations_fail() -> None:
     assert result.sample_permutations_completed == 0
     assert result.sample_time_seconds_per_permutation is None
     assert len(result.errors) == 3
-    assert all('date range' in e for e in result.errors)
+    assert all('source coverage' in e and 'split windows' in e for e in result.errors)
 
 
 def test_profile_runtime_partial_failure_timing_from_completed_only() -> None:

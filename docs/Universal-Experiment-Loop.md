@@ -300,7 +300,7 @@ is recorded as started then failed.
 
 On the ordinary MSQ path, UEL calls the SFD's preparation and model functions for each candidate. Manifest-driven SFDs supply these functions through their manifest. Custom SFDs supply them directly and require explicit `data=`. Configure candidate values in the strategy's `ParamDomain`; configure custom functions in the SFD. The `factorize` option above has a separate, narrower manifest-only contract.
 
-When `search_strategy` is set, the legacy-only `run()` arguments `prep_each_round`, `random_search`, `maintain_details_in_params`, `params`, `prep`, and `model` are accepted but ignored. Configure the strategy and SFD instead.
+When `search_strategy` is set, `run()` rejects non-`None` `params`, `prep`, and `model` overrides before round execution or output recovery. Configure candidate values in the strategy and custom functions on the SFD. Existing recording, parallel and protected-run admission checks retain precedence. The legacy loop controls `prep_each_round`, `random_search`, and `maintain_details_in_params` remain ignored on the MSQ path.
 
 For saved custom runs, the SFD must expose `__name__` and preparation must supply the expected `_alignment` metadata. Arbitrary custom SFD execution does not imply Trainer compatibility: Trainer reconstructs a manifest from a saved `yaml_reference`.
 

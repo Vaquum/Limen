@@ -289,9 +289,10 @@ def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypat
     else:
         config = _config()
         config['sfd']['params']['max_iter'] = [None, 1000]
-    path = tmp_path / 'experiment'
+    monkeypatch.chdir(tmp_path)
+    path = tmp_path / 'results/dev/experiment'
     config['uel'].update(
-        output_path=str(path), n_permutations=4, workers=workers,
+        output_path='experiment', n_permutations=4, workers=workers,
         feedback_interval=1, checkpoint_interval=1,
         record_execution=True, record_model_outputs=True,
         recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
@@ -356,8 +357,8 @@ def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypat
 
     assert f'Parquet → {path / "results.parquet"}' in result.output
     assert result.output.index('Parquet →') < result.output.index('Experiment complete')
-    control = tmp_path / 'control'
-    config['uel']['output_path'] = str(control)
+    control = tmp_path / 'results/dev/control'
+    config['uel']['output_path'] = 'control'
     control_yaml = tmp_path / 'control.yaml'
     YAML().dump(config, control_yaml)
     result = invoke(str(control_yaml))

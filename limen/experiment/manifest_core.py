@@ -1,11 +1,13 @@
 import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
+from limen.experiment._required_columns import admit_columns
+from limen.experiment._boolean_controls import boolean, manifest_controls
 from limen.backtest.trade_contract import TradeInputs, TradePolicy
 from limen.experiment._holdout_history import HoldoutEvidenceError
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import attach_outcomes, sensor_decisions, target_context
+from limen.experiment._prepare_trade_context import admit_formation, attach_outcomes, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, attach_trade_context as _attach_trade_context
 from limen.experiment._objective import ObjectiveConfig
@@ -420,17 +422,9 @@ class Manifest:
 
     def set_required_bar_columns(self, columns: list[str]) -> 'Manifest':
 
-        '''
-        Set required columns after bar formation.
+        '''Admit and copy a nonempty list of distinct, nonblank column names.'''
 
-        Args:
-            columns (List[str]): List of required column names
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        self.required_bar_columns = columns
+        self.required_bar_columns = admit_columns(columns)
 
         return self
 
@@ -448,15 +442,19 @@ class Manifest:
             Manifest: Self for method chaining
 
         Raises:
-            ValueError: If train is not positive, or if val or test is negative
+            ValueError: If ratios are not non-bool ints, train is not positive, or any ratio is negative
         '''
 
+        sc = (train, val, test)
+        if not all(isinstance(v, int) and not isinstance(v, bool) for v in cast(tuple[object, ...], sc)):
+            raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
+        if any(v < 0 for v in sc):
+            raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
+        if sum(sc) == 0:
+            raise ValueError('split_config ratios must not all be zero')
         if train <= 0:
             raise ValueError('Manifest train split ratio must be positive')
-        if val < 0 or test < 0:
-            raise ValueError('Manifest val and test split ratios must be non-negative')
-
-        self.split_config = (train, val, test)
+        self.split_config = sc
 
         return self
 
@@ -599,18 +597,12 @@ class Manifest:
             if not isinstance(sc, tuple):
                 raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
             sc = cast(tuple[Any, ...], sc)
-            if not (len(sc) == _split_len
-                    and all(isinstance(v, int) and not isinstance(v, bool) for v in sc)):
+            if len(sc) != _split_len:
                 raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
-            if any(v < 0 for v in sc):
-                raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
-            if sum(sc) == 0:
-                raise ValueError('split_config ratios must not all be zero')
             _ = new_manifest.set_split_config(*cast(tuple[int, int, int], sc))
             # Ratio override supersedes a previously-pinned date split.
             # Without this, _resolve_split would keep using split_dates and
-            # the override would silently no-op (e.g. Trainer.train_sensors
-            # passing (1, 0, 0) to retrain on all available data).
+            # a caller-owned ratio override would silently no-op.
             new_manifest.split_dates = None
 
         ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}
@@ -820,6 +812,9 @@ class MLManifest(Manifest):
 
     from limen.experiment._column_shims import prepare_column_shims as _prepare_column_shims, set_feature_shims
 
+    def __post_init__(self) -> None:
+        _ = boolean(self.strict_mode, 'strict_mode')
+
     def set_objective(self, metric: str = 'backtest_total_return', direction: str = 'maximize') -> 'MLManifest':
         self.objective = ObjectiveConfig(metric, direction)
         return self
@@ -848,17 +843,9 @@ class MLManifest(Manifest):
 
     def set_strict_mode(self, strict_mode: bool) -> 'MLManifest':
 
-        '''
-        Enable or disable strict mode for null detection after CCO dislodgement.
+        '''Require a Boolean controlling unexpected-null errors after CCO dislodgement.'''
 
-        Args:
-            strict_mode (bool): If True, unexpected nulls in feature columns raise StrictModeError
-
-        Returns:
-            MLManifest: Self for method chaining
-        '''
-
-        self.strict_mode = strict_mode
+        self.strict_mode = boolean(strict_mode, 'strict_mode')
         return self
 
 
@@ -1123,6 +1110,7 @@ class MLManifest(Manifest):
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
 
+        _ = manifest_controls(self, round_params)
         return _run_objective_model(self, data, round_params)
 
     def sensor_input_prep(
@@ -1382,6 +1370,8 @@ def _process_bars(
 
     if manifest.bar_formation and round_params.get('bar_type', 'base') != 'base':
         func, base_params = manifest.bar_formation
+        if manifest.resolve_trade_policy(round_params) is not None:
+            admit_formation(func)
         resolved = _resolve_params(base_params, round_params)
         bar_data = data.pipe(func, **resolved)
         all_datetimes = bar_data['datetime'].to_list()
@@ -1876,6 +1866,7 @@ def _run_prepare_setup(
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
     from limen.experiment._manifest_preparation import admit_native_date_ends, finish_prepare_setup
+    _ = manifest_controls(manifest, round_params)
     admit_native_date_ends(manifest.split_dates, manifest.data_source_config, manifest.test_data_source_config)
     _allocation_stage.admit(manifest, round_params)
     raw_data = _holdout.admit(manifest, raw_data)
@@ -1895,14 +1886,15 @@ def _run_prepare_setup(
 
 
 def _requires_fold_validation(manifest: Manifest, round_params: Mapping[str, object]) -> bool:
+    use_calibration, use_threshold = manifest_controls(manifest, round_params)
     if getattr(manifest, 'objective', None) is not None:
         return True
     if not isinstance(manifest, MLManifest):
         return False
     config = manifest.prediction_calibration_config
     return config is not None and (
-        (config.calibration_func is not None and bool(round_params.get('use_calibration', True)))
-        or (config.threshold_func is not None and bool(round_params.get('use_threshold', True)))
+        (config.calibration_func is not None and use_calibration)
+        or (config.threshold_func is not None and use_threshold)
     )
 
 

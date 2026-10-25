@@ -1,7 +1,9 @@
 from limen.yaml._assessment_spec import check_assessment
+from limen.yaml._metadata_spec import check_metadata
+from limen.yaml._schema_version import schema_errors
+from limen.yaml._boolean_spec import BooleanControlsSpec
 from dataclasses import dataclass, field
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 from limen.yaml.errors import YAMLError
 from limen.yaml._objective_spec import check_objective_spec
@@ -30,7 +32,6 @@ from limen.yaml.rules import Rule
 from limen.yaml.rules import RuleEngine
 from limen.yaml.rules import ScalerSpec
 from limen.yaml.rules import SingleFuncBlock
-from limen.yaml.rules import SchemaVersion
 from limen.yaml.rules import UelSpec
 from limen.yaml.rules import SfdParams
 from limen.yaml.rules import SplitSpec
@@ -53,6 +54,7 @@ from limen.yaml.schema import ML_MANIFEST_REQUIRED
 from limen.yaml.schema import PCA_COMPRESSION_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_REQUIRED
+from limen.yaml.schema import RULE_YAML_REJECTIONS
 from limen.yaml.schema import SCALER_EXPLICIT_OPTIONAL
 from limen.yaml.schema import SCALER_EXPLICIT_REQUIRED
 from limen.yaml.schema import SCALER_FROM_PARAMS_REQUIRED
@@ -69,7 +71,6 @@ from limen.yaml.schema import VALID_MANIFEST_TYPES
 from limen.yaml.schema import VALID_MODES
 from limen.yaml.schema import VALID_OUTPUT_FORMATS
 from limen.yaml.schema import VALID_SEARCH_STRATEGY_TYPES
-from limen.yaml.schema import VERSION
 
 
 @dataclass
@@ -84,16 +85,13 @@ class ValidationResult:
 
 
 _TOP_LEVEL_ENGINE = RuleEngine(cast(list[Rule], [
-    Required('schema_version', str, suggestion=f'Set schema_version: "{VERSION}"'),
     Required('metadata', dict),
     Required('sfd', dict),
     Required('uel', dict),
 ]))
 
 _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
-
-    SchemaVersion(VERSION),
-
+    BooleanControlsSpec(),
     Required('metadata.name', str),
     NameSlug(),
     Required('metadata.mode', str),
@@ -168,12 +166,12 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
         NoUnknownKeys('sfd.manifest.strategy', STRATEGY_REQUIRED),
         WarnIfPresent(
             'sfd.manifest',
-            ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL,
+            (ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL) - RULE_YAML_REJECTIONS.keys(),
             message_template="Field '{key}' is not used in rule_based manifests",
         ),
         NoUnknownKeys(
             'sfd.manifest',
-            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL | {'acceptance'},
+            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL | {'acceptance'}, rejected=RULE_YAML_REJECTIONS,
         ),
     ])),
 
@@ -197,13 +195,16 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 
     '''Collect YAML errors and warnings; validity requires no errors.'''
 
-    errors: list[YAMLError] = []
+    errors = schema_errors(yaml_dict)
     warnings: list[YAMLError] = []
+    if errors:
+        return ValidationResult(valid=False, errors=errors)
 
     _TOP_LEVEL_ENGINE.run(yaml_dict, errors, warnings)
     if errors:
         return ValidationResult(valid=False, errors=errors, warnings=warnings)
 
+    check_metadata(yaml_dict, errors)
     check_assessment(yaml_dict, errors)
     check_objective_spec(yaml_dict, errors)
     _MAIN_ENGINE.run(yaml_dict, errors, warnings)

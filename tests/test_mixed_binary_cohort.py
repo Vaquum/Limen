@@ -32,13 +32,13 @@ def mixed_campaigns(tmp_path_factory):
     campaigns = []
     with patch('requests.sessions.Session.request', side_effect=AssertionError('recorded inputs only')):
         for architecture in ('logreg_binary', 'lightgbm_binary'):
-            directory = root / architecture
+            directory = root / 'results/dev' / architecture
             source = _yaml(directory, 42, narrowed=True).replace('limen.sfd.reference_architecture.logreg_binary', 'limen.sfd.reference_architecture.' + architecture)
             if architecture == 'lightgbm_binary':
                 source = source.replace('C: [1.0]', 'n_estimators: [10]\n    num_leaves: [5]\n    n_jobs: [1]').replace('max_iter: [100]', 'verbosity: [-1]')
             path = root / f'{architecture}.yaml'
             path.write_text(source)
-            assert run_experiment(path, progress_bar=False)
+            assert run_experiment(path, results_base=root, progress_bar=False)
             trainer = Trainer(directory, data=recorded)
             sensors = trainer.train(pl.read_csv(directory / 'results.csv')['id'].to_list())
             campaigns.append((directory, sensors[0]))
@@ -63,7 +63,7 @@ def _dispatch(data, architecture, **params):
 @pytest.fixture(scope='module')
 def same_directory(tmp_path_factory):
     root = tmp_path_factory.mktemp('mixed-selected-ids')
-    reference, errors = parse(_yaml(root / 'results', 42, narrowed=True))
+    reference, errors = parse(_yaml(root / 'results/dev/mixed', 42, narrowed=True))
     assert not errors
     reference['metadata']['name'] = 'mixed_dispatch'
     reference['sfd']['params'].update(architecture=['limen.sfd.reference_architecture.logreg_binary', 'limen.sfd.reference_architecture.lightgbm_binary'], n_estimators=[10], n_jobs=[1])
@@ -77,8 +77,8 @@ def same_directory(tmp_path_factory):
     with patch.object(CompiledSFD, 'manifest', manifest):
         path = root / 'research.yaml'
         path.write_text(json.dumps(reference))
-        assert run_experiment(path, progress_bar=False)
-        directory = root / 'results'
+        assert run_experiment(path, results_base=root, progress_bar=False)
+        directory = root / 'results/dev/mixed'
         ids = pl.read_csv(directory / 'results.csv')['id'].to_list()
         sensors = Trainer(directory).train(ids)
         assert {type(sensor._model) for sensor in sensors} == {LogRegBinary, LightGBMBinary}

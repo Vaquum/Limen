@@ -301,8 +301,9 @@ def test_python_resume_rejects_changed_setting_without_rewriting(record_outputs,
 @pytest.mark.parametrize('record_execution', (False, True))
 def test_cli_records_and_resumes_independently_of_execution(record_execution, recorded_bars, tmp_path, monkeypatch):
     config = _config('lightgbm', calibrated=True)
-    path = tmp_path / 'experiment'
-    config['uel'].update(output_path=str(path), record_model_outputs=True, record_execution=record_execution, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
+    monkeypatch.chdir(tmp_path)
+    path = tmp_path / 'results/dev/experiment'
+    config['uel'].update(output_path='experiment', record_model_outputs=True, record_execution=record_execution, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     yaml_path = tmp_path / 'experiment.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
