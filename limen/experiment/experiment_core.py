@@ -245,9 +245,7 @@ class UniversalExperimentLoop:
             self.prep, self.model = self._walk_forward.prepare, self._walk_forward.evaluate
 
         if resume and self._search_strategy is None:
-            raise ValueError(
-                'UniversalExperimentLoop resume=True is only supported with a search_strategy.'
-            )
+            raise ValueError('UniversalExperimentLoop resume=True is only supported with a search_strategy.')
 
         if self._search_strategy is not None:
             self._run_with_msq(
