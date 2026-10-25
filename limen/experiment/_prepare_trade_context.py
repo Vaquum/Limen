@@ -30,6 +30,7 @@ class PreparedTradeContext:
     partitions: tuple[TradeInputs, ...]
     model_rows: tuple[pl.DataFrame, ...]
     source_settings: tuple[tuple[Callable[..., object], JsonValue] | None, ...]
+    native_support: tuple[pl.DataFrame, ...]
 
 
 def source_settings(config: BacktestConfig, params: Mapping[str, object]) -> tuple[tuple[Callable[..., object], JsonValue] | None, ...]:
@@ -93,6 +94,46 @@ def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = Non
     return timing.with_columns(pl.Series('row_id', [f'row:{index}' for index in range(data.height)]), *[data[key] for key in ('open', 'high', 'low', 'close')]).select(OBSERVATION_COLUMNS)
 
 
+def admit_formation(function: Callable[..., object]) -> None:
+    from limen.data.bars import liquidity_bars, trade_bars, volume_bars
+    if function not in (liquidity_bars, trade_bars, volume_bars):
+        raise ValueError('Event execution requires a standard formation with recoverable contiguous native support')
+
+
+def _bar_support(raw: pl.DataFrame, bars: pl.DataFrame, prices: pl.DataFrame) -> pl.DataFrame:
+    if not raw.height or not bars.height:
+        raise ValueError('Event execution requires nonempty declared partitions')
+    timing = prices.select(_METADATA)
+    if any(dtype != pl.Int64 for dtype in timing.dtypes) or timing.null_count().sum_horizontal()[0]:
+        raise ValueError('Native support requires complete integer UTC nanosecond clocks')
+    if ((prices['start_ns'] > prices['end_ns']) | (prices['open_available_at_ns'] < prices['start_ns']) | (prices['available_at_ns'] < prices['end_ns']) | (prices['available_at_ns'] < prices['open_available_at_ns'])).any():
+        raise ValueError('Native support requires causal interval and availability clocks')
+    if (prices['start_ns'].slice(1) < prices['end_ns'].head(-1)).any():
+        raise ValueError('Native support intervals overlap or are out of order')
+    times = raw['datetime'].dt.epoch('ns')
+    if times.null_count() or times.is_duplicated().any() or not times.is_sorted():
+        raise ValueError('Native support requires unique ordered source identities')
+    positions = {value: index for index, value in enumerate(times)}
+    counts = bars['bar_count'].to_list() if 'bar_count' in bars.columns else [1] * bars.height
+    rows: list[dict[str, object]] = []
+    previous = 0
+    for row, (instant, count) in enumerate(zip(bars['datetime'].dt.epoch('ns'), counts, strict=True)):
+        first = positions.get(instant)
+        if first is None or type(count) is not int or count < 1 or first < previous or first + count > prices.height:
+            raise ValueError('Model bar has no recoverable nonoverlapping native membership')
+        last = first + count
+        support = prices.slice(first, count)
+        expected = (support['open'][0], support['high'].max(), support['low'].min(), support['close'][-1])
+        if any(name in bars.columns and bars[name][row] != value for name, value in zip(('open', 'high', 'low', 'close'), expected, strict=True)):
+            raise ValueError('Model bar disagrees with its contiguous native support')
+        rows.append({'native_first': first, 'native_last': last - 1, 'available_at_ns': int(cast(int, support['available_at_ns'].max()))})
+        previous = last
+    result = pl.DataFrame(rows)
+    if not result['available_at_ns'].is_sorted() or result['available_at_ns'].max() > prices['available_at_ns'][-1]:
+        raise ValueError('Derived decisions overtake another bar or escape the true source partition')
+    return result
+
+
 def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_splits: list[pl.DataFrame], bars: list[pl.DataFrame], params: Mapping[str, object], *, interval_seconds: object = None, frozen_sources: FrozenTradeSources | None = None, barriers: pl.DataFrame | None = None) -> PreparedTradeContext:
     interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params, 'recorded source interval')
     if callable(frozen_sources):
@@ -113,21 +154,10 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
     initial = resolve_number(config.initial_equity, params, 'initial equity')
     inputs: list[TradeInputs] = []
     model_rows: list[pl.DataFrame] = []
+    native_support: list[pl.DataFrame] = []
     for index, (raw, model) in enumerate(zip(raw_splits, bars, strict=True)):
         raw_prices = normalize_observations(raw, interval_seconds=interval_seconds, timestamp_role=config.source_timestamp_role)
-        if not raw_prices.height or not model.height:
-            raise ValueError('Event execution requires nonempty declared partitions')
-        starts = raw['datetime'].dt.epoch('ns').to_list()
-        counts = model['bar_count'].to_list() if 'bar_count' in model.columns else [1] * model.height
-        positions = {int(value): position for position, value in enumerate(starts)}
-        rows: list[dict[str, object]] = []
-        for position, (time, count) in enumerate(zip(model['datetime'].dt.epoch('ns'), counts, strict=True)):
-            first = positions[int(time)]
-            last = first + int(count) - 1
-            if last >= raw_prices.height:
-                raise ValueError('Bar membership exceeds its true source partition')
-            rows.append({'datetime': model['datetime'][position], 'row_id': f'partition:{index}:bar:{position}', 'available_at_ns': int(raw_prices['available_at_ns'][last])})
-        mapping = pl.DataFrame(rows).with_columns(model['datetime'])
+        mapping = _bar_support(raw, model, raw_prices).with_columns(model['datetime'], pl.Series('row_id', [f'partition:{index}:bar:{position}' for position in range(model.height)]))
         if barriers is not None:
             if 'bar_count' in model.columns and model['bar_count'].ne(1).any():
                 raise ValueError('Dynamic barriers reject resampled/ambiguous model bars')
@@ -138,15 +168,18 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
         observations = raw_prices if execution is None else execution.filter((pl.col('start_ns') <= end) & (pl.col('end_ns') >= start))
         funding = prepare_funding(policy.funding, history, start, end) if policy.funding is not None else None
         sources = [source_binding(observations, f'execution:partition:{index}', start, end, _precision(observations), 'causal_recorded_prices')]
-        sources.append(source_binding(mapping.select('datetime', 'row_id', 'available_at_ns'), f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))
+        native = raw_prices.select('row_id', *_METADATA)
+        sources.append(source_binding(native, f'native:partition:{index}', start, end, 1, 'native_constituent_clocks'))
+        sources.append(source_binding(mapping.select('datetime', 'row_id', 'native_first', 'native_last', 'available_at_ns'), f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))
         if funding is not None:
             sources.append(source_binding(funding, f'funding:partition:{index}', start, end, 1, 'normalized_funding_support'))
-        signals = mapping.drop('datetime').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
+        signals = mapping.drop('datetime', 'native_first', 'native_last').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
         partition = TradeInputs(initial, start, end, signals, observations, funding, tuple(sources))
         _ = event_plan(partition, policy)
         inputs.append(partition)
         model_rows.append(mapping)
-    return PreparedTradeContext(policy, tuple(inputs), tuple(model_rows), source_settings(config, params))
+        native_support.append(native)
+    return PreparedTradeContext(policy, tuple(inputs), tuple(model_rows), source_settings(config, params), tuple(native_support))
 
 
 def _precision(observations: pl.DataFrame) -> int:
@@ -239,17 +272,8 @@ def target_context(context: PreparedTradeContext | None, index: int) -> TradeTar
 
 def sensor_decisions(raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None, timestamp_role: str = 'start') -> pl.DataFrame:
     prices = normalize_observations(raw, interval_seconds=interval_seconds, timestamp_role=timestamp_role)
-    if (prices['available_at_ns'] < prices['end_ns']).any():
-        raise ValueError('Sensor decisions require source availability at or after interval end')
-    positions = {int(value): index for index, value in enumerate(raw['datetime'].dt.epoch('ns'))}
-    counts = bars['bar_count'].to_list() if 'bar_count' in bars.columns else [1] * bars.height
-    available: list[int] = []
-    for time, count in zip(bars['datetime'].dt.epoch('ns'), counts, strict=True):
-        last = positions[int(time)] + int(count) - 1
-        if last >= prices.height:
-            raise ValueError('Sensor model-bar membership exceeds its recorded source')
-        available.append(int(prices['available_at_ns'][last]))
-    return bars.select('datetime').with_columns(pl.Series('__trade_available_at_ns__', available, dtype=pl.Int64))
+    support = _bar_support(raw, bars, prices)
+    return bars.select('datetime').with_columns(support['available_at_ns'].rename('__trade_available_at_ns__'))
 
 
 def resolve_component_kwargs(architecture: object, data: Mapping[str, object], kwargs: dict[str, object], params: Mapping[str, object]) -> None:
