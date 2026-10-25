@@ -10,6 +10,7 @@ from typing import Generic, Protocol, TypeVar, cast
 from limen.experiment import manifest_core
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.config import is_mapping
+from limen.yaml.errors import ResolutionError
 from limen.yaml.resolver import resolve
 
 
@@ -18,7 +19,10 @@ def architecture_identity(architectures: set[str]) -> str:
 
 
 def same_architecture(actual: str, expected: str) -> bool:
-    return actual.strip().lower() == expected.strip().lower() or (actual.startswith('limen.') and expected.startswith('limen.') and resolve(actual) is resolve(expected))
+    try:
+        return actual.strip().lower() == expected.strip().lower() or (actual.startswith('limen.') and expected.startswith('limen.') and resolve(actual) is resolve(expected))
+    except ResolutionError as exc:
+        raise ValueError('Cohort bound architecture cannot be resolved') from exc
 
 __all__ = ['RoundSources']
 

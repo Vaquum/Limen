@@ -260,12 +260,14 @@ def test_recorded_mixed_cohort_refusals(mixed_campaigns):
     campaigns, bars = mixed_campaigns
     cohort = _cohort(campaigns)
     state = (cohort.cohort_id, cohort.member_ids, cohort.manifest_id, cohort.aggregation_mode, vars(cohort)['_mixed_policy'], cohort._members)
-    for fault in ('manifest', 'architecture', 'declaration'):
+    for fault in ('manifest', 'architecture', 'unresolvable_architecture', 'declaration'):
         invalid = copy.copy(campaigns[1][1])
         if fault == 'manifest':
             invalid.manifest_id = 'wrong-source'
         elif fault == 'architecture':
             invalid._round_params = {**invalid.round_params, 'architecture': 'limen.sfd.reference_architecture.ridge_regressor'}
+        elif fault == 'unresolvable_architecture':
+            invalid._round_params = {**invalid.round_params, 'architecture': 'limen.sfd.reference_architecture.missing'}
         else:
             invalid._model = object()
         with pytest.raises(ValueError):
