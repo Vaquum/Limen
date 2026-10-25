@@ -129,6 +129,35 @@ def test_factorized_declared_local_architecture(tmp_path):
     assert calls == [1.]
 
 
+def test_factorized_replay_does_not_copy_fitted_models(tmp_path):
+    from threading import Lock
+    from limen.experiment import UniversalExperimentLoop
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.yaml.compiler import build_manifest
+    from tests.test_factorized_preparation import _bars
+
+    calls = []
+    def locked_model(data, **params):
+        calls.append(params['alpha'])
+        result = ridge_regressor(data, **{name: params[name] for name in ('alpha', 'solver', 'positive', 'copy_X')})
+        result['_model'].lock = Lock()
+        return result
+    declare_reuse(locked_model, ReuseContract(lambda settings: None,
+        consumes=('alpha', 'solver', 'positive', 'copy_X'), prediction_kind='continuous'))
+    for enabled in (False, True):
+        config = _configuration('ridge')
+        manifest = build_manifest(config).with_reference_architecture(locked_model)
+        domain = config['sfd']['params']
+        sfd = SimpleNamespace(__name__='recorded_locked_ridge', params=lambda _domain=domain: _domain, manifest=lambda _manifest=manifest: _manifest)
+        loop = UniversalExperimentLoop(sfd=sfd, data=_bars(), experiment_dir=tmp_path / str(enabled),
+            search_strategy=GridStrategy(ParamDomain(domain)), checkpoint_interval=1)
+        calls.clear()
+        _run(loop, enabled=enabled)
+        assert len(calls) == (2 if enabled else 4)
+    _numeric_equal(_science(tmp_path / 'False'), _science(tmp_path / 'True'))
+
+
 @pytest.mark.parametrize('case', ['ridge', 'seed', 'economic', 'opaque'])
 def test_factorized_contract_refusals(case, tmp_path):
     config = _configuration('ridge')
@@ -184,6 +213,28 @@ def test_factorized_partial_calibration_requires_declared_callbacks():
     bound = CalibrationConfig(threshold_func=undeclared)
     rounds.manifest.with_reference_architecture(partial(logreg_binary, prediction_calibration_config=bound))
     with pytest.raises(ValueError, match=r'threshold.*missing deterministic reuse declaration'):
+        _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
+
+
+@pytest.mark.parametrize('stage', ['calibration', 'threshold'])
+@pytest.mark.parametrize('reference', ['fee', '{fee}', '{fee:.1f}'])
+@pytest.mark.parametrize('active', [True, False])
+def test_factorized_bound_calibration_preserves_economic_dependencies(stage, reference, active):
+    from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
+    from limen.experiment import CalibrationConfig
+    from limen.experiment._factorized_admission import validate_domain
+    from limen.sfd.reference_architecture.logreg_binary import logreg_binary
+
+    config = _configuration('logreg')
+    config['sfd']['params']['use_' + stage] = [active]
+    rounds = _rounds(config)
+    bound = (CalibrationConfig(calibration_func=sklearn_probability_calibrator, calibration_params={'method': reference})
+             if stage == 'calibration' else CalibrationConfig(threshold_func=grid_threshold_optimizer, threshold_params={'threshold_min': reference}))
+    rounds.manifest.with_reference_architecture(partial(logreg_binary, prediction_calibration_config=bound))
+    if active:
+        with pytest.raises(ValueError, match=stage + ': consumes an economic parameter'):
+            _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
+    else:
         _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
 
 
