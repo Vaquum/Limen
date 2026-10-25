@@ -88,7 +88,7 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
         raise ValueError('Holdout research refuses profile, resume, parallel/factorized/walk-forward, alternate test source and callbacks')
     if any(name in vars(model) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model', 'compute_test_bars', 'fetch_data')):
         raise ValueError('Holdout research refuses replaced manifest methods')
-    holdout_structural(model)
+    holdout_structural(model, sources=source_workflow_active.get() if sources is None else sources)
     if model.split_dates is not None:
         for value in model.split_dates:
             if not isinstance(value, (date, datetime)):

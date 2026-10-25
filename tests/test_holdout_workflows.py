@@ -972,3 +972,128 @@ def test_protected_fold_lineage(population, tmp_path, monkeypatch):
     release_holdout(root, reservation)
     with pytest.raises(ValueError, match='revision changed'):
         invalid.train([identity], fold=0)
+
+
+@pytest.mark.parametrize(('bar_type', 'secondary'), [('base', None), ('trade', None), ('base', 'direct'), ('base', 'fixed')])
+def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, monkeypatch):
+    import numpy as np
+    from contextlib import nullcontext
+    from time import perf_counter
+    from types import SimpleNamespace
+    from limen.experiment._fixed_trade_sources import fixed_trade_sources
+    from limen.experiment._holdout_sources import source_operation
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from tests.test_factorize_equivalence import _numeric_equal
+    from tests.test_factorized_preparation import _config, _params
+
+    root = _project(tmp_path / 'source-support')
+    config = _config()
+    body = config['sfd']['manifest']
+    body['bar_formation'] = {'func': 'limen.data.bars.trade_bars', 'params': {'trade_threshold': 100000}}
+    config['sfd']['params']['bar_type'] = [bar_type]
+    raw = pl.read_parquet(_FIXTURE).head(192)
+    raw = raw.filter(pl.col('datetime') != raw['datetime'][50])
+    prefix = raw.filter(pl.col('datetime').dt.epoch('ns') + 3600_000_000_000 <= history.utc_day('2024-01-07'))
+    control_config = copy.deepcopy(config)
+    if secondary is not None:
+        from tests.test_fixed_trade_sources import _funding_frame, FUNDING_FIXTURE
+        execution = pl.read_parquet(_FIXTURE).head(192)
+        starts = execution['datetime'].dt.epoch('ns')
+        execution = execution.with_columns(starts.alias('start_ns'), (starts + 3600_000_000_000).alias('end_ns'),
+            starts.alias('open_available_at_ns'), (starts + 3600_000_000_000).alias('available_at_ns'))
+        learning_starts = raw['datetime'].dt.epoch('ns')
+        raw = raw.with_columns(learning_starts.alias('start_ns'), (learning_starts + 3600_000_000_000).alias('end_ns'),
+            learning_starts.alias('open_available_at_ns'), (learning_starts + 3600_000_000_000).alias('available_at_ns'))
+        prefix = raw.filter(pl.col('available_at_ns') <= history.utc_day('2024-01-07'))
+        funding = _funding_frame().with_columns(pl.lit(str(FUNDING_FIXTURE)).alias('recorded_origin'),
+            pl.lit(hashlib.sha256(FUNDING_FIXTURE.read_bytes()).hexdigest()).alias('recorded_origin_sha256'))
+        for name, frame, predicate in (('execution', execution, pl.col('available_at_ns') <= history.utc_day('2024-01-07')),
+                                        ('funding', funding, pl.col('settlement_at') <= history.utc_day('2024-01-07'))):
+            frame.write_parquet(root / (name + '.parquet'))
+            frame.filter(predicate).write_parquet(root / (name + '-prefix.parquet'))
+        for reference, suffix in ((config, ''), (control_config, '-prefix')):
+            source_body = reference['sfd']['manifest']
+            source_body['split_dates']['test_end'] = '2024-01-06'
+            source_body['backtest'] = {'product': {'kind': 'linear_perpetual', 'instrument': 'BTCUSDT', 'base_currency': 'BTC', 'quote_currency': 'USDT',
+                'quantity_step': 1e-9, 'min_notional': 0.0}, 'fee_bps': 4., 'slip_bps': 3., 'notional_rate': 0.5, 'source_interval_seconds': 3600.,
+                'execution_data_source': {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(root / ('execution' + suffix + '.parquet'))}},
+                'funding': {'preset': 'binance_btcusdt', 'data_source': {'method': 'limen.data.HistoricalData.get_any_file',
+                    'params': {'file_path_or_url': str(root / ('funding' + suffix + '.parquet'))}}}}
+    ordinary = CompiledSFD(control_config, project_root=_project(tmp_path / 'ordinary-source')).manifest()
+    params = _params(config)
+    baseline = ordinary.prepare_data(prefix, params.copy())
+    baseline.update(_record_execution=True, _record_model_outputs=True)
+    baseline_result = ordinary.run_model(baseline, params.copy())
+    reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    compiled = CompiledSFD(config, project_root=root)
+    manifest = compiled.manifest()
+    directory = root / 'results'
+    directory.mkdir()
+    strategy = GridStrategy(ParamDomain(config['sfd']['params']))
+    identity = strategy.compute_param_hash(params)
+    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+        _yaml_reference=config, _record_execution=True, _record_model_outputs=True, _workers=1, _factorize=False,
+        _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_limen_version=UniversalExperimentLoop._get_limen_version)
+    with fixed_trade_sources(manifest, config['sfd']['params']) if secondary == 'fixed' else nullcontext(), source_operation(manifest):
+        with pytest.raises(ValueError, match='Holdout research refuses'):
+            UniversalExperimentLoop(sfd=compiled, project_root=root)
+        UniversalExperimentLoop._write_metadata(writer, directory)
+        started = perf_counter()
+        prepared = manifest.prepare_data(raw, params.copy())
+        prepared.update(_record_execution=True, _record_model_outputs=True)
+        result = manifest.run_model(prepared, params.copy())
+        elapsed = perf_counter() - started
+        UniversalExperimentLoop._append_round_data(writer, directory / 'round_data.jsonl.gz', identity, params,
+            result['_preds'], prepared['_alignment'], round_index=0)
+        pl.DataFrame([params | {key: value for key, value in result.items() if not key.startswith('_')} |
+            {'id': identity, '_round_index': 0, 'strict_mode_error': None, 'execution_time': elapsed}]).write_csv(directory / 'results.csv')
+        if secondary is not None:
+            assert prepared['_trade_context'].partitions[-1].funding_events.height > 0
+            if secondary == 'fixed':
+                assert manifest.prepare_data(raw, params.copy())['holdout']['workflow'] == prepared['holdout']['workflow']
+                execution.slice(1).write_parquet(root / 'execution.parquet')
+                from tests.test_factorized_preparation import _instrument
+                with monkeypatch.context() as guarded:
+                    counts = _instrument(guarded)
+                    with pytest.raises(ValueError, match='frozen source differs'):
+                        manifest.prepare_data(raw, params.copy())
+                    assert counts['target'] == counts['scaler'] == counts['model'] == 0
+                execution.write_parquet(root / 'execution.parquet')
+    _numeric_equal({key: value for key, value in baseline_result.items() if not key.startswith('_')},
+                   {key: value for key, value in result.items() if not key.startswith('_')})
+    np.testing.assert_array_equal(result['_preds'], baseline_result['_preds'])
+    for partition in ('train', 'val', 'test'):
+        assert prepared['x_' + partition].equals(baseline['x_' + partition])
+    proof = prepared['holdout']
+    assert history.research_record(history.bind(root), proof['research_record_id'])['state'] == 'completed'
+    formation = proof['workflow']['formation']
+    assert formation['active'] == (bar_type != 'base')
+    assert proof['source']['admitted']['gaps']
+    assert all(value <= proof['cutoff_ns'] for item in formation['partitions'] for value in item['last_available_ns'])
+    for item in formation['partitions']:
+        assert item['derived']['rows'] == len(item['members'])
+        if bar_type == 'base':
+            assert item['native'] == item['derived']
+        else:
+            assert any(len(group) > 1 for group in item['members'])
+    with source_operation(manifest), research.operation(manifest, 'replay') as replay:
+        replay.replay_witness = proof
+        repeated = manifest.prepare_data(prefix, params.copy())
+    assert repeated['holdout']['workflow'] == proof['workflow']
+    with source_operation(manifest):
+        sensors = Trainer(directory, data=prefix, project_root=root).train([identity])
+    fitted = sensors[0]._fitted_params['_holdout']
+    with _round_storage.open_text(directory / 'round_data.jsonl.gz') as stream:
+        published = json.loads(next(stream))['holdout']
+    assert fitted['experiment_record_id'] == published['research_record_id']
+    assert fitted['workflow'] == proof['workflow']
+    if secondary is not None:
+        from dataclasses import replace
+        from limen.experiment._holdout_sources import _roles
+        bound = replace(history.bind(root), cutoff_ns=history.utc_day('2024-01-05'))
+        frames, witnesses = _roles(manifest.backtest_config, params, bound, None)
+        assert 1704412800001_000000 not in witnesses['funding']['clocks']['actual_support_ns']
+        assert 1704412800001_000000 in funding['settlement_at'].to_list()
+        assert frames[1]['settlement_at'].max() <= bound.cutoff_ns
+        assert witnesses['execution']['clocks']['end_ns'][-1] == bound.cutoff_ns

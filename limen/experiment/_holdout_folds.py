@@ -140,7 +140,7 @@ def live(manifest: object, raw: pl.DataFrame, binding: ProjectBinding, entry: Ma
     selector = cast(tuple[Callable[..., pl.DataFrame], Mapping[str, object]] | None, getattr(manifest, 'pre_split_data_selector', None))
     selected = raw if selector is None else selector[0](raw, **resolve(selector[1], _mapping(entry['round_params'])))
     selected = research.selected_input(manifest, selected)
-    if 'workflow' not in proof:
+    if 'workflow' not in proof or _mapping(proof['workflow']).get('kind') == 'sources':
         record_geometry({'splits': {}}, proof, selected, dict(zip(('train', 'validation', 'test'), split(manifest, selected), strict=True)), cast(int, binding.interval_seconds))
         return
     flow = _mapping(proof['workflow'])

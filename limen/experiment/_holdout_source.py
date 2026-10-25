@@ -86,6 +86,16 @@ def admit_frame(frame: pl.DataFrame, *, interval: int, lower_ns: int | None, upp
     frame = _normal(frame)
     step = interval * 1_000_000_000
     clock = pl.col('datetime').dt.epoch('ns')
+    timing = {'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns'}
+    if timing & set(frame.columns):
+        if not timing <= set(frame.columns) or any(frame[name].dtype != pl.Int64 or frame[name].null_count() for name in timing):
+            raise ValueError('Holdout native source requires all four nonnull nanosecond clocks')
+        if frame.select(((pl.col('start_ns') != clock) | (pl.col('end_ns') != clock + step)
+                         | (pl.col('available_at_ns') < pl.col('end_ns'))
+                         | (pl.col('open_available_at_ns') < pl.col('start_ns'))
+                         | (pl.col('open_available_at_ns') > pl.col('available_at_ns'))).any()).item():
+            raise ValueError('Holdout native source clocks disagree with complete causal support')
+        frame = frame.filter(pl.col('available_at_ns') <= upper_ns)
     frame = frame.filter((clock + step <= upper_ns) & (clock >= lower_ns if lower_ns is not None else pl.lit(True)))
     if frame.is_empty():
         raise ValueError('Holdout admission has no complete native bars')
