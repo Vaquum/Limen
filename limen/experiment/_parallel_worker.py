@@ -183,8 +183,7 @@ def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
                 authority: _protection.WorkerAuthority | None = None) -> None:
     from limen.yaml.compiler import build_manifest
 
-    global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion
-    global _worker_authority
+    global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion, _worker_authority
     _ = signal.signal(signal.SIGINT, signal.SIG_IGN)
     _ = signal.signal(signal.SIGTERM, signal.SIG_DFL)
     if os.name == 'posix':
@@ -200,8 +199,7 @@ def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
                                         sources.execution.read() if sources.execution is not None else None,
                                         sources.funding.read() if sources.funding is not None else None)
     _worker_yaml, _worker_sources = yaml_reference, restored
-    _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion = record_execution, record_model_outputs, fold_promotion
-    _worker_authority = authority
+    _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion, _worker_authority = record_execution, record_model_outputs, fold_promotion, authority
 
 
 def evaluate_round(round_params: dict[str, object]) -> RoundPayload:

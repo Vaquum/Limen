@@ -204,13 +204,18 @@ def worker_operation(manifest: object, raw: pl.DataFrame, authority: WorkerAutho
         yield
         return
     binding, source, parent = authority
-    if _holdout.bind_manifest(manifest, binding.root) != binding:
-        raise ValueError('Protected worker authority changed')
+    check_binding(binding)
+    if not isinstance(identity, str):
+        raise ValueError('Protected worker requires its occurrence identity')
+    vars(manifest)['_holdout_binding'], vars(manifest)['_holdout_interval_seconds'] = binding, binding.interval_seconds
     vars(manifest)['_holdout_round_id'] = identity
     with _holdout.operation(manifest, 'experiment') as op:
         if op is not None:
-            if parent is None or research_record(binding, parent)['state'] != 'started':
+            if parent is None:
                 raise ValueError('Protected worker lacks its active coordinator')
+            coordinator = research_record(binding, parent)
+            if coordinator['state'] != 'started' or coordinator['role'] != 'experiment' or coordinator['revision'] != binding.revision or coordinator['round_id'] is not None:
+                raise ValueError('Protected worker coordinator authority changed')
             admitted, evidence = frame_evidence(raw, binding)
             if admitted.height != raw.height or any(_mapping(source).get(key) != evidence[key] for key in ('admitted_sha256', 'admitted', 'interval_seconds')):
                 raise ValueError('Protected worker source differs from admitted coordinator input')

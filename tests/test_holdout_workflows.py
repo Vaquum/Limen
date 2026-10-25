@@ -631,3 +631,184 @@ def test_protected_factorized_provenance(kind, tmp_path, monkeypatch):
         rounds.evaluate(candidates[0].copy())
     assert counts == original_counts
     assert path.read_bytes() == retained
+
+
+def _protected_worker_init(config, snapshot, authority, cwd):
+    import os
+    from limen.experiment._parallel_worker import worker_init
+    os.chdir(cwd)
+    worker_init(config, snapshot, True, True, authority=authority)
+
+
+def _protected_rejected_worker(config, snapshot, authority, cwd, occurrence):
+    from unittest.mock import patch
+    from limen.experiment import MLManifest
+    from limen.experiment._parallel_worker import evaluate_round
+    _protected_worker_init(config, snapshot, authority, cwd)
+    def prepare(*_args, **_kwargs):
+        raise AssertionError('Invalid worker authority reached preparation')
+    with patch.object(MLManifest, 'prepare_data', prepare):
+        return evaluate_round(occurrence)
+
+
+@pytest.mark.parametrize('cwd_mode', ['outside', 'foreign'])
+def test_protected_worker_handoff(cwd_mode, tmp_path):
+    from concurrent.futures import ProcessPoolExecutor
+    from dataclasses import replace
+    from functools import partial
+    from types import SimpleNamespace
+    from limen.experiment import _holdout_composition as protection
+    from limen.experiment._parallel_commit import ParallelCommit
+    from limen.experiment._parallel_sources import snapshot_sources
+    from limen.experiment._parallel_worker import evaluate_round, startup_limits
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from tests.test_factorized_preparation import _config, _params
+    from tests.test_factorize_equivalence import _numeric_equal
+
+    config = _config()
+    root = _project(tmp_path / 'protected-worker')
+    reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    raw = manifest.fetch_data()
+    cwd = _project(tmp_path / 'foreign') if cwd_mode == 'foreign' else tmp_path
+    control = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / 'control')).manifest()
+    params = _params(config)
+    original = control.prepare_data(raw.clone(), params.copy())
+    original.update(_record_execution=True, _record_model_outputs=True)
+    expected = control.run_model(original, params.copy())
+    identity = GridStrategy(ParamDomain(config['sfd']['params'])).compute_param_hash(params)
+    occurrence = params | {'_round_index': 0, '_id': identity}
+    directory = root / 'results'
+    directory.mkdir()
+    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=None,
+        _yaml_reference=config, _record_execution=True, _record_model_outputs=True)
+    host = SimpleNamespace(manifest=manifest, data=raw, params=params, _walk_forward=None,
+        _append_round_data=partial(UniversalExperimentLoop._append_round_data, writer), experiment_log=None)
+    with research.operation(manifest, 'experiment') as operation:
+        authority = protection.worker_authority(manifest)
+        with startup_limits(), snapshot_sources(raw, None, None, tmp_path) as snapshot, ProcessPoolExecutor(
+                max_workers=1, mp_context=multiprocessing.get_context('spawn'), initializer=_protected_worker_init,
+                initargs=(config, snapshot, authority, str(cwd))) as pool:
+            payload = pool.submit(evaluate_round, occurrence).result(timeout=40)
+            binding, source, parent_id = authority
+            for refused in (
+                (replace(binding, root=tmp_path), source, parent_id),
+                (replace(binding, revision=binding.revision + 1), source, parent_id),
+                (binding, source | {'admitted_sha256': '0' * 64}, parent_id),
+                (binding, source, None),
+            ):
+                with pytest.raises(RuntimeError, match=r'revision|coordinator|source'):
+                    pool.submit(_protected_rejected_worker, config, snapshot, refused, str(cwd), occurrence).result(timeout=40)
+        _numeric_equal({key: value for key, value in expected.items() if not key.startswith('_')},
+                       {key: value for key, value in payload.results.items() if not key.startswith('_')})
+        assert payload.results['_preds'].tolist() == expected['_preds'].tolist()
+        assert payload.alignment['model_outputs'] == original['_alignment']['model_outputs']
+        proof = payload.alignment['holdout']
+        assert proof['project_id'] == authority[0].project_id
+        parent = history.research_record(authority[0], proof['experiment_record_id'])
+        assert parent['state'] == 'completed'
+        assert json.loads(parent['provenance_json'])['experiment_record_id'] == operation.record_id
+        commit = ParallelCommit(host, directory / 'results.csv', directory / 'round_data.jsonl', [])
+        invalid = [
+            {key: value for key, value in payload.alignment.items() if key != 'holdout'},
+            payload.alignment | {'holdout': proof | {'project_id': history.bind(_project(tmp_path / 'other')).project_id}},
+            payload.alignment | {'holdout': proof | {'round_id': 'foreign-round'}},
+        ]
+        for alignment in invalid:
+            before = _artifact_state(directory)
+            with pytest.raises(ValueError, match=r'holdout|protection|Factorized|history'):
+                commit.commit(occurrence, replace(payload, alignment=alignment,
+                    results=payload.results | {'must_not_extend_header': 1.}))
+            assert _artifact_state(directory) == before
+        commit.commit(occurrence, payload)
+        prefix = _artifact_state(directory)
+        with pytest.raises(ValueError, match='occurrence'):
+            commit.commit(occurrence | {'_id': 'foreign-round', '_round_index': 1}, payload)
+        assert _artifact_state(directory) == prefix
+    row = json.loads((directory / 'round_data.jsonl').read_text())
+    assert row['round_id'] == identity
+    assert row['holdout']['research_record_id'] != proof['research_record_id']
+
+
+def _protected_orphan_worker(config, snapshot, authority, pipe):
+    import os
+    from unittest.mock import patch
+    from limen.experiment._parallel_worker import worker_init, evaluate_round
+    from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+    from tests.test_factorized_preparation import _params
+
+    worker_init(config, snapshot, False, False, authority=authority)
+    original = LightGBMBinary.train
+    def train(*args, **kwargs):
+        result = original(*args, **kwargs)
+        pipe.send(('model', os.getpid()))
+        assert pipe.recv() == 'finish'
+        return result
+    with patch.object(LightGBMBinary, 'train', train):
+        evaluate_round(_params(config) | {'_id': 'orphan', '_round_index': 0})
+
+
+def _protected_worker_coordinator(root, config, pipe):
+    from pathlib import Path
+    from limen.experiment import _holdout_composition as protection
+    from limen.experiment._parallel_sources import snapshot_sources
+    from limen.experiment._parallel_worker import startup_limits
+
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    raw = manifest.fetch_data()
+    with research.operation(manifest, 'experiment'), startup_limits(), snapshot_sources(raw, None, None, Path(root)) as snapshot:
+        worker = multiprocessing.get_context('spawn').Process(target=_protected_orphan_worker,
+            args=(config, snapshot, protection.worker_authority(manifest), pipe))
+        worker.start()
+        pipe.send(('worker', worker.pid))
+        worker.join()
+
+
+@pytest.mark.parametrize('active', [True, False])
+def test_protected_worker_parent_death(active, tmp_path, monkeypatch):
+    import os
+    import signal
+    from tests.test_factorized_preparation import _config
+
+    root = _project(tmp_path / 'orphan-project')
+    if active:
+        reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    context = multiprocessing.get_context('spawn')
+    receiver, sender = context.Pipe()
+    coordinator = context.Process(target=_protected_worker_coordinator, args=(str(root), _config(), sender))
+    worker_pid = None
+    coordinator.start()
+    try:
+        for _ in range(2):
+            assert receiver.poll(40), 'The spawned worker did not reach real model evaluation'
+            state, pid = receiver.recv()
+            worker_pid = pid
+            if state == 'model':
+                break
+        assert state == 'model'
+        coordinator.kill()
+        coordinator.join(10)
+        assert not coordinator.is_alive()
+        monkeypatch.setattr(history, '_BUSY_TIMEOUT_SECONDS', 0.15)
+        start, end = ('2024-01-09', '2024-01-10') if active else ('2024-01-07', '2024-01-09')
+        with pytest.raises(sqlite3.OperationalError, match='locked'):
+            reserve_holdout(root, start, end, interval_seconds=3600)
+        os.kill(worker_pid, signal.SIGKILL)
+        worker_pid = None
+        assert reserve_holdout(root, start, end, interval_seconds=3600)
+        assert not (root / 'results').exists()
+        with history.connection(root / 'manifests/holdout.sqlite3') as db:
+            rows = db.execute('SELECT state FROM research').fetchall()
+        if active:
+            assert sum(row['state'] == 'started' for row in rows) >= 2
+        else:
+            assert not rows
+    finally:
+        if coordinator.is_alive():
+            coordinator.kill()
+            coordinator.join(10)
+        if worker_pid is not None:
+            os.kill(worker_pid, signal.SIGKILL)
+        receiver.close()
+        sender.close()
