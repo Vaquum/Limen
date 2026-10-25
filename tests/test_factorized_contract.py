@@ -1,5 +1,6 @@
 import copy
 import warnings
+from dataclasses import replace
 from types import SimpleNamespace
 
 import numpy as np
@@ -111,6 +112,23 @@ def test_factorized_contract_refusals(case, tmp_path):
 def test_factorized_cache_key_retains_types():
     values = [None, True, 1, 1., '1', (1, 2), [1, 2], {'value': 1}, np.int64(1), np.float64(1.), -0., 0.]
     assert len({parameter_key({'value': value}) for value in values}) == len(values)
+
+
+def test_factorized_preflight_projects_only_eligibility_inputs(monkeypatch):
+    from limen.experiment._factorized_native import contract_for
+    from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
+
+    declaration = contract_for(lightgbm_binary)
+    calls = []
+    def validate(settings):
+        calls.append(settings)
+        declaration.validate(settings)
+    monkeypatch.setattr(lightgbm_binary, '__limen_reuse__', replace(declaration, validate=validate), raising=False)
+    config = _config()
+    config['sfd']['params'].update({f'unrelated_{index}': list(range(10)) for index in range(10)})
+    config['sfd']['params'].update({f'unexposed_resource_alias_{index}': list(range(10)) for index in range(5)})
+    _rounds(config)
+    assert 0 < len(calls) <= 500
 
 
 @pytest.mark.parametrize('fees', [[4., 9.], [9., 4.]])

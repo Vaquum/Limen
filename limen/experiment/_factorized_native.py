@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
+from contextlib import AbstractContextManager
 from functools import lru_cache, partial
 from importlib import import_module
 from typing import Literal, cast
 
 from limen.experiment._factorized_contract import ReuseContract, declared
+
+
+def native_threads() -> AbstractContextManager[object]:
+    limit = cast(Callable[..., AbstractContextManager[object]], vars(import_module('threadpoolctl'))['threadpool_limits'])
+    return limit(limits=1)
 
 
 def _pure(_params: Mapping[str, object]) -> None:

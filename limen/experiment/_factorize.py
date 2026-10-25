@@ -17,6 +17,7 @@ import polars as pl
 from limen.experiment._factorized_admission import validate_candidate, validate_domain
 from limen.experiment._factorized_key import parameter_key
 from limen.experiment._factorized_replay import replay, validate_output
+from limen.experiment._factorized_native import native_threads
 from limen.experiment.errors import StrictModeError
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
@@ -134,7 +135,7 @@ class FactorizedRounds:
             fitted: dict[str, object] = {}
             caught: list[warnings.WarningMessage] = []
             try:
-                with warnings.catch_warnings(record=True) as caught:
+                with warnings.catch_warnings(record=True) as caught, native_threads():
                     warnings.simplefilter('always')
                     if self.preparation is None:
                         data = self.prep(self.data, round_params=params)
@@ -175,7 +176,7 @@ class FactorizedRounds:
                 for split in positions:
                     frame = cast(pl.DataFrame, data[split])
                     evidence[split] = frame.select(col for col in ('datetime', 'open', 'high', 'low', 'close') if col in frame.columns)
-            with warnings.catch_warnings(record=True) as economic:
+            with warnings.catch_warnings(record=True) as economic, native_threads():
                 warnings.simplefilter('always')
                 _ = replay(self.manifest, self.contract, result, copy.deepcopy(evidence), params.copy(), positions, self.record_execution)
             scientific_warnings = list(caught)
@@ -205,7 +206,7 @@ class FactorizedRounds:
         data['_alignment'] = copy.deepcopy(entry.data['_alignment'])
         data['_record_execution'] = self.record_execution
         data['_record_model_outputs'] = self.record_model_outputs
-        with warnings.catch_warnings(record=True) as caught:
+        with warnings.catch_warnings(record=True) as caught, native_threads():
             warnings.simplefilter('always')
             result = replay(self.manifest, self.contract, entry.result, data, params, entry.positions, self.record_execution)
         recorded = list(dict.fromkeys([*entry.warnings, *(str(w.message) for w in caught)]))
