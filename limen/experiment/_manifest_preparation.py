@@ -66,6 +66,8 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
     frozen = cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None))
     if callable(frozen):
         frozen = frozen(manifest.backtest_config, round_params)
+    from limen.experiment._holdout_sources import verify_sources
+    frozen = verify_sources(manifest, raw_splits, splits, round_params, frozen)
     trade = None
     if policy is not None and manifest.backtest_config is not None:
         from limen.experiment._dynamic_barriers import dynamic_barriers, prepare_barriers
@@ -83,7 +85,8 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
         held = binding_of(manifest)
         if held is not None and held.cutoff_ns is not None:
             from limen.experiment._resolve_trade_policy import holdout_event_policy
-            policy = holdout_event_policy(manifest.backtest_config, round_params)
+            from limen.experiment._holdout_source import source_workflow_active
+            policy = holdout_event_policy(manifest.backtest_config, round_params, sources=source_workflow_active.get())
             for inputs in trade.partitions:
                 if inputs.partition_end_ns > held.cutoff_ns:
                     raise ValueError('Holdout event partition crosses the reserved cutoff')

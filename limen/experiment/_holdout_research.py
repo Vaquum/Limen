@@ -16,7 +16,7 @@ import polars as pl
 
 import limen.experiment._holdout_checkpoint as _checkpoint_proof
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
-from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec
+from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec, source_workflow_active
 from limen.experiment._resolve_trade_policy import holdout_structural
 
 class ResearchManifest(SourceManifest, Protocol):
@@ -73,7 +73,7 @@ def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding
 
 def reject_modes(manifest: object, *, workers: object = 1, factorize: object = False,
                  resume: object = False, callbacks: tuple[object, ...] = (), test_mode: bool = False,
-                 profile: bool = False, walk_forward: object = False) -> None:
+                 profile: bool = False, walk_forward: object = False, sources: bool | None = None) -> None:
     binding = binding_of(manifest)
     if binding is None or binding.cutoff_ns is None:
         return
@@ -82,13 +82,13 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
         raise ValueError('Holdout research requires a built-in manifest')
     model = cast(ResearchManifest, manifest)
     if (workers != 1 or bool(factorize) or bool(resume) or profile or any(value is not None for value in callbacks)
-            or bool(walk_forward) or model.bar_formation is not None
+            or bool(walk_forward) or (model.bar_formation is not None and not (source_workflow_active.get() if sources is None else sources))
             or (test_mode and model.test_data_source_config is not None)
             or getattr(model, 'data_dict_extension', None) is not None):
         raise ValueError('Holdout research refuses profile, resume, parallel/factorized/walk-forward, alternate test source and callbacks')
     if any(name in vars(model) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model', 'compute_test_bars', 'fetch_data')):
         raise ValueError('Holdout research refuses replaced manifest methods')
-    holdout_structural(model)
+    holdout_structural(model, sources=source_workflow_active.get() if sources is None else sources)
     if model.split_dates is not None:
         for value in model.split_dates:
             if not isinstance(value, (date, datetime)):
@@ -244,7 +244,7 @@ def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, tes
         return None, data, cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'prep', None)), cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'model', None))
     reference = cast(Mapping[str, object], getattr(sfd, '_yaml', {}))
     config = cast(Mapping[str, object], reference.get('uel', {}))
-    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None)
+    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None, sources=False)
     if manifest.architecture_function is None:
         raise ValueError('UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.')
     with operation(manifest, 'experiment'):
@@ -278,7 +278,7 @@ def run_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_
         call = cast(Mapping[str, object], values.arguments)
         with operation(manifest, 'experiment'):
             reject_modes(manifest, workers=call.get('workers') or getattr(host, '_workers', 1), factorize=call.get('factorize'), resume=call.get('resume'),
-                         callbacks=(*[call.get(name) for name in ('params', 'prep', 'model')], getattr(host, '_intra_callback', None)), walk_forward=getattr(manifest, 'split_walk_forward', None) is not None)
+                         callbacks=(*[call.get(name) for name in ('params', 'prep', 'model')], getattr(host, '_intra_callback', None)), walk_forward=getattr(manifest, 'split_walk_forward', None) is not None, sources=False)
             binding = binding_of(manifest)
             if binding is not None and binding.cutoff_ns is not None:
                 attrs = cast(dict[str, object], vars(host))

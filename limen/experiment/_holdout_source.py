@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal, Protocol, TypedDict, cast
 from collections.abc import Callable
 from itertools import pairwise
+from contextvars import ContextVar
 import limen.data.historical_data as _historical
 
 import numpy as np
@@ -32,6 +33,7 @@ _spot_dataset_repo_for_kline_size = cast(Callable[[int, str], str], vars(_histor
 
 _NATIVE = frozenset((60, 900, 1800, 3600, 7200, 14400))
 _GET_FILE, _GET_SPOT = HistoricalData.get_any_file, HistoricalData.get_spot_klines
+source_workflow_active: ContextVar[bool] = ContextVar('holdout_source_workflow', default=False)
 
 
 class Bounds(TypedDict):
@@ -84,6 +86,17 @@ def admit_frame(frame: pl.DataFrame, *, interval: int, lower_ns: int | None, upp
     frame = _normal(frame)
     step = interval * 1_000_000_000
     clock = pl.col('datetime').dt.epoch('ns')
+    timing = {'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns'}
+    if timing & set(frame.columns):
+        if not timing <= set(frame.columns) or any(frame[name].dtype != pl.Int64 or frame[name].null_count() for name in timing):
+            raise ValueError('Holdout native source requires all four nonnull nanosecond clocks')
+        if frame.select(((pl.col('start_ns') != clock) | (pl.col('end_ns') != clock + step)
+                         | (pl.col('available_at_ns') < pl.col('end_ns'))
+                         | (pl.col('open_available_at_ns') < pl.col('start_ns'))
+                         | (pl.col('open_available_at_ns') > pl.col('available_at_ns'))).any()).item():
+            raise ValueError('Holdout native source clocks disagree with complete causal support')
+        if frame.select(((clock + step <= upper_ns) & (pl.col('available_at_ns') > upper_ns)).any()).item():
+            raise ValueError('Holdout native source availability crosses the reserved cutoff')
     frame = frame.filter((clock + step <= upper_ns) & (clock >= lower_ns if lower_ns is not None else pl.lit(True)))
     if frame.is_empty():
         raise ValueError('Holdout admission has no complete native bars')
