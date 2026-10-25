@@ -139,6 +139,14 @@ NOTE: `search_strategy.seed` seeds random sampling, Sobol sampling or a grid wit
 
 `pruning_strategies` declares reducers that fire every `feedback_interval` rounds during a run — see [Reducers And Feedback](Reducers-And-Feedback.md) for the reducer catalog, YAML syntax, and tuning.
 
+`uel.intra_callback` is unsupported in YAML and rejected whenever present,
+including null or a resolvable callable name. Use the Python
+`UniversalExperimentLoop(intra_callback=callback)` argument with a callable
+receiving `(log, msq)`; see [manual intervention](Developer/Pruning-Strategies.md#manual-intervention).
+Fresh CLI commands and `limen run --resume` reject saved declarations containing
+the key before construction or scientific writes. Native callable callbacks and
+scientific read-back remain supported; no YAML import or callback registry exists.
+
 ### Parallel rounds
 
 Set `uel.workers: 4` or run `limen run experiment.yaml --workers 4` to evaluate

@@ -11,6 +11,7 @@ from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
 from limen.yaml.config import is_mapping
+from limen.yaml._callback_spec import callback_error
 
 
 def run_resume(results_dir: Path, progress_bar: bool = True,
@@ -110,19 +111,16 @@ def _load_resume_metadata(results_dir: Path) -> dict[str, Any] | None:
     yaml_reference = metadata.get('yaml_reference')
 
     if not is_mapping(yaml_reference):
-        click.secho(
-            "  ✗ metadata.json has no valid 'yaml_reference' — experiment was not started from a YAML file.",
-            fg='red',
-        )
+        click.secho("  ✗ metadata.json has no valid 'yaml_reference' — experiment was not started from a YAML file.", fg='red')
         return None
 
     if not isinstance(yaml_reference.get('metadata'), dict) or 'name' not in yaml_reference['metadata']:
-        click.secho(
-            "  ✗ 'yaml_reference' is missing 'metadata.name' — cannot identify experiment.",
-            fg='red',
-        )
+        click.secho("  ✗ 'yaml_reference' is missing 'metadata.name' — cannot identify experiment.", fg='red')
         return None
 
+    if error := callback_error(yaml_reference):
+        click.secho(f'  ✗ {error}', fg='red')
+        return None
     return metadata
 
 
