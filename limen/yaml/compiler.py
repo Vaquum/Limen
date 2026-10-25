@@ -20,6 +20,7 @@ from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
 from limen.yaml._objective_spec import apply_objective, objective_reducer_params
 from limen.yaml.resolver import resolve
+from limen.yaml.schema import RULE_YAML_REJECTIONS
 
 
 def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
@@ -82,6 +83,9 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
 
 def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
 
+    rejected = [f'sfd.manifest.{key}: {message}' for key, message in RULE_YAML_REJECTIONS.items() if key in m]
+    if rejected:
+        raise ValueError('; '.join(rejected))
     manifest = RuleBasedManifest()
     _apply_base(manifest, m)
     _apply_indicators(manifest, m)

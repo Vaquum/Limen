@@ -557,6 +557,10 @@
         "type"
       ],
       "path": "sfd.manifest",
+      "rejected": {
+        "bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded",
+        "target": "Field 'target' is unsupported in rule_based YAML and would be discarded"
+      },
       "severity": "warning",
       "when": "sfd.manifest.type = rule_based"
     },
