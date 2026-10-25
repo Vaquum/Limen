@@ -187,6 +187,28 @@ def test_factorized_partial_calibration_requires_declared_callbacks():
         _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
 
 
+@pytest.mark.parametrize('stage', ['calibration', 'threshold'])
+@pytest.mark.parametrize('reference', ['fee', '{fee}', '{fee:.1f}'])
+@pytest.mark.parametrize('active', [True, False])
+def test_factorized_bound_calibration_preserves_economic_dependencies(stage, reference, active):
+    from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
+    from limen.experiment import CalibrationConfig
+    from limen.experiment._factorized_admission import validate_domain
+    from limen.sfd.reference_architecture.logreg_binary import logreg_binary
+
+    config = _configuration('logreg')
+    config['sfd']['params']['use_' + stage] = [active]
+    rounds = _rounds(config)
+    bound = (CalibrationConfig(calibration_func=sklearn_probability_calibrator, calibration_params={'method': reference})
+             if stage == 'calibration' else CalibrationConfig(threshold_func=grid_threshold_optimizer, threshold_params={'threshold_min': reference}))
+    rounds.manifest.with_reference_architecture(partial(logreg_binary, prediction_calibration_config=bound))
+    if active:
+        with pytest.raises(ValueError, match=stage + ': consumes an economic parameter'):
+            _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
+    else:
+        _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
+
+
 def test_factorized_override_refuses_before_preparation():
     from limen.experiment import MLManifest
     from limen.experiment._factorized_admission import validate_domain
