@@ -205,7 +205,7 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
     def guarded(manifest: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         if binding_of(manifest) is None:
             _ = bind_manifest(manifest)
-        reject_modes(manifest, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None and '_walk_forward_fold' not in vars(manifest))
+        reject_modes(manifest, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None and getattr(manifest, '_walk_forward_fold', None) is None)
         parent = _CURRENT.get()
         with operation(manifest, parent.role if parent is not None else 'experiment') as op:
             result = func(manifest, *args, **kwargs)
