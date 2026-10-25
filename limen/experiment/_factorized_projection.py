@@ -10,7 +10,7 @@ from limen.experiment.manifest_core import MLManifest, Manifest
 from limen.scalers import SCALER_REGISTRY
 
 
-def _references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
+def parameter_references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
     if isinstance(value, str):
         found: set[str] = {value} if value in domain else set()
         for _, field, spec, _ in Formatter().parse(value):
@@ -18,10 +18,10 @@ def _references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
                 name = field.split('.', 1)[0].split('[', 1)[0]
                 if name in domain:
                     found.add(name)
-            found.update(_references(spec, domain))
+            found.update(parameter_references(spec, domain))
         return found
     if isinstance(value, Mapping):
-        return set[str]().union(*(_references(item, domain) for item in cast(Mapping[object, object], value).values()))
+        return set[str]().union(*(parameter_references(item, domain) for item in cast(Mapping[object, object], value).values()))
     return set()
 
 
@@ -35,10 +35,10 @@ def projections(manifest: Manifest, domain: Mapping[str, list[object]]) -> list[
         keys = None if declaration is None else declaration.validation_keys
         names: set[str] = set(domain) if arguments is None and keys is None else set()
         if keys is None and arguments is not None:
-            names.update(_references(arguments, domain))
+            names.update(parameter_references(arguments, domain))
         elif keys is not None and declaration is not None:
             for name in (*keys, *declaration.parameter_keys):
-                names.update(_references(name if arguments is None else arguments.get(name, name), domain))
+                names.update(parameter_references(name if arguments is None else arguments.get(name, name), domain))
         groups.append(frozenset(names | selectors | (activation or set())))
 
     add(manifest.architecture_function, None)
@@ -60,7 +60,7 @@ def projections(manifest: Manifest, domain: Mapping[str, list[object]]) -> list[
             else:
                 state = inspect.getclosurevars(factory).nonlocals
                 selector = dynamic.get('scaler_type')
-                active = _references(selector, domain)
+                active = parameter_references(selector, domain)
                 for component in SCALER_REGISTRY.values():
                     add(component, {**state['_static'], **dynamic}, activation=active)
         config = manifest.prediction_calibration_config

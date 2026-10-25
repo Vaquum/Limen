@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import copy
 import signal
 import time
 import traceback
@@ -213,12 +214,13 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
     results: dict[str, object] = {}
     succeeded = False
     caught: list[warnings.WarningMessage] = []
+    protection: dict[str, object] | None = None
     limit = cast(Callable[..., _ThreadLimits], vars(import_module('threadpoolctl'))['threadpool_limits'])
     try:
         with limit(limits=1), warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             manifest = build_manifest(_worker_yaml)
-            with _protection.worker_operation(manifest, _worker_sources.learning, _worker_authority, round_params.get('_id')):
+            with _protection.worker_operation(manifest, _worker_sources.learning, _worker_authority, round_params.get('_id')) as protection:
                 _require_cpu({name: [value] for name, value in manifest.resolve_model_kwargs(params).items() if name in _CPU_KNOBS})
                 vars(manifest)['_frozen_trade_sources'] = (_worker_sources.execution, _worker_sources.funding)
                 folds = None
@@ -244,6 +246,7 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
                 succeeded = True
     except StrictModeError as exc:
         results = {'strict_mode_error': str(exc)}
+        alignment = {} if protection is None else {'holdout_failure': copy.deepcopy(protection)}
         pools = _native_pools()
     except Exception as exc:
         raise RuntimeError(f"Parallel round {round_params.get('_round_index')} ({round_params.get('_id')}) failed:\n{traceback.format_exc()}") from exc

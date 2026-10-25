@@ -11,7 +11,7 @@ from typing import Protocol
 import warnings
 
 from limen.experiment.convergence_report import convergence_warning
-from typing import TypeVar, cast
+from typing import Literal, TypeVar, cast
 
 import polars as pl
 
@@ -50,7 +50,7 @@ def _binding(manifest: object) -> ProjectBinding | None:
     return binding
 
 
-def _check(manifest: object, raw: pl.DataFrame, proof: Mapping[str, object]) -> None:
+def check(manifest: object, raw: pl.DataFrame, proof: Mapping[str, object], *, state: Literal['completed', 'failed'] = 'completed') -> None:
     binding = _binding(manifest)
     if binding is None or binding.cutoff_ns is None:
         if proof:
@@ -75,7 +75,7 @@ def _check(manifest: object, raw: pl.DataFrame, proof: Mapping[str, object]) -> 
     saved = research_record(binding, identity)
     original_proof = dict(proof)
     _ = original_proof.pop('reuse', None)
-    if (saved['role'] != 'experiment' or saved['state'] != 'completed'
+    if (saved['role'] != 'experiment' or saved['state'] != state
             or saved['revision'] != binding.revision
             or json.loads(str(saved['provenance_json'])) != original_proof):
         raise ValueError('Factorized holdout reuse conflicts with completed history')
@@ -89,7 +89,7 @@ def prepared_cache(cache: dict[str, dict[str, object]], proofs: dict[str, dict[s
         _ = proofs.pop(key, None)
         return None
     if key in proofs or (binding is not None and binding.cutoff_ns is not None):
-        _check(manifest, raw, _mapping(proofs.get(key)))
+        check(manifest, raw, _mapping(proofs.get(key)))
     _ = cache.pop(key)
     cache[key] = saved
     return saved
@@ -129,7 +129,7 @@ def remember_fitted(owner: _Prepared, key: str, fitted: dict[str, object],
         proof = _mapping(_mapping(data['_alignment']).get('holdout'))
         original = dict(proof)
         _ = original.pop('reuse', None)
-        _check(owner.manifest, raw, original)
+        check(owner.manifest, raw, original)
         owner.proofs[key] = copy.deepcopy(original)
     owner.cache[key] = fitted
 
@@ -165,7 +165,7 @@ def signal_cache(manifest: object, raw: pl.DataFrame,
     if entry is not None and binding is not None and binding.cutoff_ns is not None:
         data = _mapping(getattr(entry, 'data', None))
         alignment = _mapping(data.get('_alignment'))
-        _check(manifest, raw, _mapping(alignment.get('holdout')))
+        check(manifest, raw, _mapping(alignment.get('holdout')))
     return cache.pop(key, None)
 
 
@@ -178,7 +178,7 @@ def signal_result(manifest: object, raw: pl.DataFrame, data: dict[str, object],
     if binding is None or binding.cutoff_ns is None:
         return data, result, recorded, converged
     original = _mapping(_mapping(data['_alignment']).get('holdout'))
-    _check(manifest, raw, original)
+    check(manifest, raw, original)
     with _holdout.operation(manifest, 'experiment') as op:
         if op is None:
             raise ValueError('Protected factorized signal reuse lacks research history')
@@ -199,9 +199,9 @@ def worker_authority(manifest: object) -> WorkerAuthority | None:
 
 
 @contextmanager
-def worker_operation(manifest: object, raw: pl.DataFrame, authority: WorkerAuthority | None, identity: object) -> Iterator[None]:
+def worker_operation(manifest: object, raw: pl.DataFrame, authority: WorkerAuthority | None, identity: object) -> Iterator[dict[str, object] | None]:
     if authority is None:
-        yield
+        yield None
         return
     binding, source, parent = authority
     check_binding(binding)
@@ -221,19 +221,5 @@ def worker_operation(manifest: object, raw: pl.DataFrame, authority: WorkerAutho
                 raise ValueError('Protected worker source differs from admitted coordinator input')
             vars(manifest)['_holdout_source'] = copy.deepcopy(source)
             op.provenance['experiment_record_id'] = parent
-        yield
-
-
-def verify_worker(manifest: object, raw: pl.DataFrame, alignment: Mapping[str, object], identity: str) -> None:
-    binding = _binding(manifest)
-    if binding is None or binding.cutoff_ns is None:
-        if 'holdout' in alignment:
-            raise ValueError('Unprotected worker returned protected evidence')
-        return
-    proof = _mapping(alignment.get('holdout'))
-    _check(manifest, raw, proof)
-    parent = research_record(binding, cast(str, proof['experiment_record_id']))
-    op = cast(ContextVar[object | None], vars(_holdout)['_CURRENT']).get()
-    if (proof['round_id'] != identity or parent['state'] != 'completed' or parent['role'] != 'experiment'
-            or parent['round_id'] != identity or json.loads(str(parent['provenance_json']))['experiment_record_id'] != vars(op)['record_id']):
-        raise ValueError('Protected worker occurrence or coordinator history changed')
+            op.provenance['source'] = copy.deepcopy(source)
+        yield None if op is None else op.provenance

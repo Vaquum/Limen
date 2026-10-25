@@ -9,7 +9,7 @@ from typing import cast
 from limen.experiment._factorized_contract import ReuseContract
 from limen.experiment._factorized_key import parameter_key
 from limen.experiment._factorized_native import contract_for, native_rule
-from limen.experiment._factorized_projection import projections
+from limen.experiment._factorized_projection import parameter_references, projections
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest, make_fitted_scaler
 from limen.scalers import SCALER_REGISTRY, RobustScaler
 from limen.targets.next_return import NextReturnTarget
@@ -102,6 +102,7 @@ def validate_candidate(manifest: Manifest, params: dict[str, object], axes: froz
                 raise ValueError('factorize requires a declared calibration configuration')
             config = supplied
         if config is not None:
+            original_config = config
             config = config.resolve(params)
             signature = inspect.signature(cast(Callable[..., object], function))
             if ((config.calibration_func is not None and params.get('use_calibration', True)) or (config.threshold_func is not None and params.get('use_threshold', True))) and not any(name == 'prediction_calibration_config' or item.kind == inspect.Parameter.VAR_KEYWORD for name, item in signature.parameters.items()):
@@ -111,6 +112,9 @@ def validate_candidate(manifest: Manifest, params: dict[str, object], axes: froz
                 ('threshold', config.threshold_func, config.threshold_params, params.get('use_threshold', True)),
             ):
                 if component is not None and active:
+                    original_arguments = original_config.calibration_params if name == 'calibration' else original_config.threshold_params
+                    if parameter_references(original_arguments, {axis: [] for axis in axes}):
+                        raise ValueError(f'factorize requires stage {name}: consumes an economic parameter')
                     _ = _stage(name, component, arguments, axes)
                     if callable(arguments.get('metric')):
                         _ = _stage(name + '.metric', arguments['metric'], {}, axes)
