@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T07:20:32.805860+00:00",
-  "execution_checkout_head": "6aa48741803cef4f54bf0361ef6b629566c280d5",
+  "observed_at": "2026-10-25T07:32:13.048472+00:00",
+  "execution_checkout_head": "001d09f09345f0720fcce332f059f6bbd1c3d9da",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -98,7 +98,7 @@
     "experiment/_holdout_source.py": "211a0f6239ecba588e219c5595987d7f2b1ce6985ac0de32807b784ccf01dcc3",
     "experiment/_manifest_preparation.py": "4c804d2db5ea113ae6070a27b1a4ecd1f197b9c54508050824e6d268676f81f8",
     "experiment/_objective.py": "434afd4d6f330d51ca6d917d52253f8937dbfbb86cfe84adc1f9b79ec4ac6624",
-    "experiment/_objective_optimizer.py": "bda9dab88f021b77fe5232cb24b66f69e7dccd11a0b2c42417e27158a8cf3f25",
+    "experiment/_objective_optimizer.py": "b382ccf725b0be5bac32d28cd54f7c77734d02510eeb53a007df7d7ceda91a4a",
     "experiment/_objective_run.py": "201bd1cc7842783f062c8fabe22c688a6be980f97553d94f1dfae219f453a34a",
     "experiment/_parallel_commit.py": "dbff9aad51dab99e272c431d458a8c648e99993ba8b660d7448c14481484a0c3",
     "experiment/_parallel_resume.py": "347e176cca477c9c945792a944e2c85fb445f471cb7da4b1f175f495ffbf8ea2",
