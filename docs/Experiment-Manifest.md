@@ -125,12 +125,12 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `search_strategy.seed` | int | none | candidate-generation seed; required, non-boolean and nonnegative for Sobol |
 | `search_strategy.shuffle` | bool | `false` | grid-only seeded finite permutation; true requires an integer `seed`; see [seeded traversal](Advanced-Search.md#seeded-finite-traversal) |
 | `prep_each_round` | bool | `true` | compatibility setting; ordinary CLI/MSQ execution always prepares each candidate |
-| `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
+| `checkpoint_interval` | int | `1000` | rounds between checkpoint writes; positive non-boolean integer |
 | `record_execution` | bool | `false` | record test snapshot series and unscaled market returns; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `record_model_outputs` | bool | `false` | record test probabilities and boosting iteration counts; see [UEL recording](Universal-Experiment-Loop.md#record-model-outputs) |
 | `recording` | mapping of bool | all groups `false` | choose saved predictions, alignment arrays, event ledger and fold details; resume requires applicable groups; see [UEL recording policy](Universal-Experiment-Loop.md#recording-policy) |
 | `factorize` | bool | `false` | reuse deterministic snapshot signal work across independent backtest-only grid axes; see [UEL](Universal-Experiment-Loop.md) |
-| `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
+| `feedback_interval` | int | `100` | rounds between feedback-controller triggers; positive non-boolean integer |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
 | `output_path` | str | `{name}_{datetime}` | output-directory template; `{name}` and `{datetime}` are substituted, and it is ignored for committed-manifest URI runs |
@@ -1428,6 +1428,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `uel` | Optional field types, positive feedback/checkpoint intervals (including rejection of anchored YAML booleans), search controls and finite execution budgets. | [UelSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
 | `sfd.manifest.split_walk_forward` | `n_folds`: `int`, required; `test_bars`: `int`, required; `purge_bars`: `int`, required; `embargo_bars`: `int`, required; `anchored`: `bool`, required | [WalkForwardConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_walk_forward_split.py) |
 | `sfd.manifest.backtest.product` | `kind`: `Literal['cash_spot', 'linear_perpetual']`, required; `instrument`: `str`, required; `base_currency`: `str`, required; `quote_currency`: `str`, required; `quantity_step`: `float \| str`, required; `min_notional`: `float \| str`, required; `initial_margin_fraction`: `float \| str`, default `1.0`; `maintenance_margin_fraction`: `float \| str`, default `0.0` | [ProductConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
 | `sfd.manifest.backtest.funding` | `adapter`: `FundingAdapter`, default `funding_adapter`; `adapter_version`: `str`, default `ADAPTER_VERSION`; `preset`: `str \| None`, default `None`; `params`: `dict[str, object]`, default `field(default_factory=dict[str, object])`; `data_source`: `SourceConfig \| None`, default `None` | [FundingConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |

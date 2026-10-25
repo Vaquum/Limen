@@ -1,4 +1,5 @@
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
+from ruamel.yaml.scalarbool import ScalarBoolean
 from limen.experiment._walk_forward_split import read_walk_forward_config
 import inspect
 import math
@@ -1141,6 +1142,7 @@ class BacktestCostSpec:
         _check_backtest_spec(yaml_dict, errors)
 
 
+_UEL_INTERVALS = ('feedback_interval', 'checkpoint_interval')
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
     ('workers', int, None),
     ('record_execution', bool, None),
@@ -1156,7 +1158,7 @@ _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
 
 class UelSpec:
 
-    '''Type checks for optional uel fields that the CLI assumes are specific types.'''
+    '''Check optional uel types and positive execution intervals.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -1192,13 +1194,13 @@ class UelSpec:
             if field not in uel:
                 continue
             value = uel[field]
-            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
+            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)) or (field in _UEL_INTERVALS and isinstance(value, ScalarBoolean)):
                 errors.append(YAMLError(
                     message=f"'uel.{field}' must be a {expected.__name__} (got {type(value).__name__})",
                     path=f'uel.{field}',
                     suggestion=suggestion,
                 ))
-            elif field in ('workers', 'feedback_interval', 'checkpoint_interval') and value <= 0:
+            elif (field == 'workers' or field in _UEL_INTERVALS) and value <= 0:
                 errors.append(YAMLError(
                     message=f"'uel.{field}' must be a positive integer",
                     path=f'uel.{field}',
