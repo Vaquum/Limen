@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import copy
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
+from importlib import import_module
 from typing import Protocol
+import traceback
 import warnings
 
 from limen.experiment.convergence_report import convergence_warning
@@ -16,13 +18,48 @@ from typing import Literal, TypeVar, cast
 import polars as pl
 
 import limen.experiment._holdout_research as _holdout
-from limen.experiment._holdout_history import ProjectBinding, check_binding, research_record
+from limen.experiment._holdout_history import HoldoutEvidenceError, ProjectBinding, check_binding, research_record
 from limen.experiment._holdout_source import frame_evidence
 
 __all__: list[str] = []
 _T = TypeVar('_T')
 _HEADER = ('project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds')
 WorkerAuthority = tuple[ProjectBinding, dict[str, object] | None, str | None]
+
+
+def propagate(error: Exception) -> None:
+    if isinstance(error, HoldoutEvidenceError):
+        raise error
+
+
+def error_entry(source: str, error: Exception) -> dict[str, str]:
+    propagate(error)
+    return {'source': source, 'error': str(error), 'traceback': traceback.format_exc()}
+
+
+def feedback_failure(write: Callable[..., None], error: Exception, name: str, msq: object,
+                     interventions: list[dict[str, object]], errors: list[dict[str, str]], current_round: int, partial: list[dict[str, object]]) -> None:
+    if not isinstance(error, HoldoutEvidenceError):
+        return
+    entries = [*interventions, *[dict(entry, source=name) for entry in partial]]
+    write(current_round, [item for item in entries if item.get('action') != 'suggest'],
+          [*errors, {'source': name, 'error': str(error), 'traceback': traceback.format_exc()}], msq,
+          suggestions=[item for item in entries if item.get('action') == 'suggest'])
+    raise error
+
+
+def run_model(manifest: object, data: dict[str, object], params: dict[str, object]) -> dict[str, object]:
+    from limen.experiment._holdout_sources import check_model
+    if _holdout.binding_of(manifest) is None:
+        _ = _holdout.bind_manifest(manifest)
+    with _holdout.operation(manifest, 'experiment') as op:
+        proof = check_model(manifest, data, params, _holdout.binding_of(manifest))
+        if op is not None and proof is not None:
+            if _mapping(data.get('_alignment')).get('holdout') != proof or ('_fitted_params' in data and _mapping(data['_fitted_params']).get('_holdout') != proof):
+                raise HoldoutEvidenceError('Protected model evidence differs across preparation carriers')
+            op.provenance.update({key: value for key, value in proof.items() if key not in ('research_record_id', 'role', 'experiment_record_id')})
+            op.provenance['workflow'] = dict(_mapping(proof.get('workflow')), evaluation={'version': 1, 'preparation_record_id': proof['research_record_id']})
+        return cast(Callable[[object, dict[str, object], dict[str, object]], dict[str, object]], vars(import_module('limen.experiment._objective'))['run_model'])(manifest, data, params)
 
 
 class _Prepared(Protocol):
@@ -34,7 +71,7 @@ class _Prepared(Protocol):
 
 def _mapping(value: object) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
-        raise ValueError('Factorized holdout reuse lacks genuine recorded protection evidence')
+        raise HoldoutEvidenceError('Factorized holdout reuse lacks genuine recorded protection evidence')
     return cast(Mapping[str, object], value)
 
 
@@ -46,7 +83,7 @@ def _binding(manifest: object) -> ProjectBinding | None:
     if binding.cutoff_ns is not None:
         op = cast(ContextVar[object | None], vars(_holdout)['_CURRENT']).get()
         if op is None or vars(op)['manifest'] is not manifest or vars(op)['binding'] != binding:
-            raise ValueError('Protected factorized reuse requires a held research operation')
+            raise HoldoutEvidenceError('Protected factorized reuse requires a held research operation')
     return binding
 
 
@@ -54,31 +91,31 @@ def check(manifest: object, raw: pl.DataFrame, proof: Mapping[str, object], *, s
     binding = _binding(manifest)
     if binding is None or binding.cutoff_ns is None:
         if proof:
-            raise ValueError('Protected factorized population cannot become unprotected')
+            raise HoldoutEvidenceError('Protected factorized population cannot become unprotected')
         return
     if any(proof.get(key) != getattr(binding, key if key != 'reservation_revision' else 'revision')
            for key in _HEADER):
-        raise ValueError('Factorized holdout binding or revision changed')
+        raise HoldoutEvidenceError('Factorized holdout binding or revision changed')
     admitted, actual = frame_evidence(raw, binding)
     if admitted.height != raw.height:
-        raise ValueError('Factorized holdout source introduced reserved observations')
+        raise HoldoutEvidenceError('Factorized holdout source introduced reserved observations')
     source = _mapping(proof.get('source'))
     original = _mapping(getattr(manifest, '_holdout_source', None))
     for key in ('admitted_sha256', 'admitted', 'interval_seconds'):
         if source.get(key) != actual[key] or original.get(key) != source.get(key):
-            raise ValueError('Factorized holdout admitted source population changed')
+            raise HoldoutEvidenceError('Factorized holdout admitted source population changed')
     if any(source.get(key) != original.get(key) for key in ('kind', 'identity', 'method')):
-        raise ValueError('Factorized holdout source declaration changed')
+        raise HoldoutEvidenceError('Factorized holdout source declaration changed')
     identity = proof.get('research_record_id')
     if not isinstance(identity, str):
-        raise ValueError('Factorized holdout reuse lacks original research record')
+        raise HoldoutEvidenceError('Factorized holdout reuse lacks original research record')
     saved = research_record(binding, identity)
     original_proof = dict(proof)
     _ = original_proof.pop('reuse', None)
     if (saved['role'] != 'experiment' or saved['state'] != state
             or saved['revision'] != binding.revision
             or json.loads(str(saved['provenance_json'])) != original_proof):
-        raise ValueError('Factorized holdout reuse conflicts with completed history')
+        raise HoldoutEvidenceError('Factorized holdout reuse conflicts with completed history')
 
 
 def prepared_cache(cache: dict[str, dict[str, object]], proofs: dict[str, dict[str, object]],
@@ -110,12 +147,12 @@ def fitted_artifacts(manifest: object, data: dict[str, object],
     binding = _binding(manifest)
     if binding is None or binding.cutoff_ns is None:
         if '_holdout' in artifacts:
-            raise ValueError('Unprotected factorization cannot carry protected fitted metadata')
+            raise HoldoutEvidenceError('Unprotected factorization cannot carry protected fitted metadata')
         return artifacts
     proof = _mapping(data.get('holdout'))
     if (_mapping(artifacts.get('_holdout')) != proof
             or _mapping(_mapping(data.get('_alignment')).get('holdout')) != proof):
-        raise ValueError('Factorized protection carrier differs across prepared data')
+        raise HoldoutEvidenceError('Factorized protection carrier differs across prepared data')
     if original is not None:
         _carrier(data, dict(proof, reuse={'kind': 'fitted',
                                           'source_preparation_record_id': _mapping(original)['research_record_id']}))
@@ -152,7 +189,7 @@ def signal_cache(manifest: object, raw: pl.DataFrame,
                  cache: dict[str, _T], key: str) -> _T | None:
     binding = _binding(manifest)
     if binding != original[0]:
-        raise ValueError('Factorized holdout binding changed since preparation')
+        raise HoldoutEvidenceError('Factorized holdout binding changed since preparation')
     if binding is not None and binding.cutoff_ns is not None:
         source = _mapping(original[1])
         current = _mapping(getattr(manifest, '_holdout_source', None))
@@ -160,7 +197,7 @@ def signal_cache(manifest: object, raw: pl.DataFrame,
         if admitted.height != raw.height or any(
                 source.get(name) != current.get(name) for name in ('kind', 'identity', 'method', 'admitted_sha256', 'admitted')
         ) or any(source.get(name) != evidence[name] for name in ('admitted_sha256', 'admitted')):
-            raise ValueError('Factorized holdout source population changed since cache construction')
+            raise HoldoutEvidenceError('Factorized holdout source population changed since cache construction')
     entry = cache.get(key)
     if entry is not None and binding is not None and binding.cutoff_ns is not None:
         data = _mapping(getattr(entry, 'data', None))
@@ -181,7 +218,7 @@ def signal_result(manifest: object, raw: pl.DataFrame, data: dict[str, object],
     check(manifest, raw, original)
     with _holdout.operation(manifest, 'experiment') as op:
         if op is None:
-            raise ValueError('Protected factorized signal reuse lacks research history')
+            raise HoldoutEvidenceError('Protected factorized signal reuse lacks research history')
         op.provenance.update({key: copy.deepcopy(value) for key, value in original.items()
                               if key not in ('research_record_id', 'role', 'experiment_record_id', 'round_id', 'reuse')})
         op.provenance['reuse'] = {'kind': 'signal', 'source_preparation_record_id': original['research_record_id']}
@@ -206,19 +243,19 @@ def worker_operation(manifest: object, raw: pl.DataFrame, authority: WorkerAutho
     binding, source, parent = authority
     check_binding(binding)
     if not isinstance(identity, str):
-        raise ValueError('Protected worker requires its occurrence identity')
+        raise HoldoutEvidenceError('Protected worker requires its occurrence identity')
     vars(manifest)['_holdout_binding'], vars(manifest)['_holdout_interval_seconds'] = binding, binding.interval_seconds
     vars(manifest)['_holdout_round_id'] = identity
     with _holdout.operation(manifest, 'experiment') as op:
         if op is not None:
             if parent is None:
-                raise ValueError('Protected worker lacks its active coordinator')
+                raise HoldoutEvidenceError('Protected worker lacks its active coordinator')
             coordinator = research_record(binding, parent)
             if coordinator['state'] != 'started' or coordinator['role'] != 'experiment' or coordinator['revision'] != binding.revision or coordinator['round_id'] is not None:
-                raise ValueError('Protected worker coordinator authority changed')
+                raise HoldoutEvidenceError('Protected worker coordinator authority changed')
             admitted, evidence = frame_evidence(raw, binding)
             if admitted.height != raw.height or any(_mapping(source).get(key) != evidence[key] for key in ('admitted_sha256', 'admitted', 'interval_seconds')):
-                raise ValueError('Protected worker source differs from admitted coordinator input')
+                raise HoldoutEvidenceError('Protected worker source differs from admitted coordinator input')
             vars(manifest)['_holdout_source'] = copy.deepcopy(source)
             op.provenance['experiment_record_id'] = parent
             op.provenance['source'] = copy.deepcopy(source)

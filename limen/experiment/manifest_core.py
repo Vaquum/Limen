@@ -1,18 +1,21 @@
 import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
-from limen.backtest.trade_contract import TradePolicy
+from limen.backtest.trade_contract import TradeInputs, TradePolicy
+from limen.experiment._holdout_history import HoldoutEvidenceError
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import attach_outcomes, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, attach_trade_context as _attach_trade_context
-from limen.experiment._objective import ObjectiveConfig, run_model as _run_objective_model
+from limen.experiment._objective import ObjectiveConfig
+from limen.experiment._holdout_composition import run_model as _run_objective_model
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, validate_witness as _validate_witness
 from collections.abc import Mapping
 from limen.experiment._resolve_backtest_config import resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
 import copy
 import inspect
+from importlib import import_module
 import logging
 import random
 import re
@@ -1992,15 +1995,58 @@ def _finalize_to_data_dict(
     if price_data_for_backtest is not None:
         data_dict['price_data_for_backtest'] = price_data_for_backtest
 
-    if manifest.data_dict_extension:
-        data_dict = manifest.data_dict_extension(
-            data_dict=data_dict,
-            split_data=split_data,
-            round_params=round_params,
-            fitted_params=fitted_params
-        )
+    from limen.experiment._holdout_sources import extend
+    data_dict, split_data = extend(manifest, data_dict, split_data, round_params, fitted_params)
 
     return _partitions.retained(manifest, split_data, data_dict)
+
+
+def capture_model_inputs(data: Mapping[str, object]) -> dict[str, object]:
+    witness = cast(Callable[[pl.DataFrame], dict[str, object]], vars(import_module('limen.experiment._holdout_sources'))['_frame'])
+    result: dict[str, object] = {}
+    names = ('x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test', 'train', 'val', 'test')
+    for name in (*names, 'price_data_for_backtest'):
+        if name in data:
+            value = data[name]
+            try:
+                frame = value if isinstance(value, pl.DataFrame) else value.to_frame() if isinstance(value, pl.Series) else pl.DataFrame(np.asarray(value), orient='row')
+                columns = cast(list[str], data.get('_feature_names', []))
+                if columns and not isinstance(value, (pl.DataFrame, pl.Series)):
+                    frame.columns = columns[1:-1] if name.startswith('x_') else columns[-1:]
+            except (TypeError, ValueError, pl.exceptions.PolarsError) as exc:
+                raise HoldoutEvidenceError(f'Protected model inputs cannot be recovered: {name}') from exc
+            result[name] = witness(frame)
+    result['feature_names'] = copy.deepcopy(data.get('_feature_names'))
+    result['strategy'] = copy.deepcopy(data.get('strategy'))
+    alignment = cast(Mapping[str, object], data.get('_alignment', {}))
+    result['alignment'] = {key: repr(alignment[key]) for key in ('missing_datetimes', 'first_test_datetime', 'last_test_datetime', 'test_datetimes') if key in alignment}
+    context = data.get('_trade_context')
+    partitions = (*context.partitions, data.get('_trade_inputs')) if isinstance(context, PreparedTradeContext) else (data.get('_trade_inputs'),)
+    result['execution'] = [{'observations': witness(inputs.observations), 'funding': None if inputs.funding_events is None else witness(inputs.funding_events),
+        'signals': witness(inputs.signals.drop('target', strict=False)), 'equity': inputs.initial_equity, 'start': inputs.partition_start_ns, 'end': inputs.partition_end_ns, 'sources': repr(inputs.sources)} for inputs in partitions if isinstance(inputs, TradeInputs)]
+    labels = data.get('_trade_labels')
+    result['trade_labels'] = None if not isinstance(labels, OutcomeLabels) else {'rows': witness(labels.rows), 'contract_digest': labels.contract_digest}
+    return result
+
+
+def capture_model_declaration(manifest: object, params: Mapping[str, object]) -> tuple[str, str]:
+    from limen.experiment._factorized_key import parameter_key
+    from limen.experiment._factorized_native import contract_for
+    references = cast(Callable[[object, str], bool], vars(import_module('limen.experiment._factorize'))['_references'])
+    declared = {key: value for key, value in vars(manifest).items() if not key.startswith('_') or key in ('_walk_forward_fold', '_holdout_round_id')}
+    architecture = getattr(manifest, 'architecture_function', None)
+    model_keys: set[str] = set(inspect.signature(architecture).parameters) if callable(architecture) else set()
+    contract = contract_for(architecture)
+    if contract is not None:
+        model_keys.update(contract.parameter_keys)
+    config = getattr(manifest, 'backtest_config', None)
+    consumers = {key: value for key, value in declared.items() if key not in ('architecture_function', 'backtest_config')}
+    axes = {str(getattr(config, key, '')).strip('{}') for key in ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')}
+    extension = getattr(manifest, 'data_dict_extension', None)
+    extension_contract = contract_for(extension)
+    keys = {key for key in params if key not in model_keys | axes or references(consumers, key) or getattr(getattr(getattr(manifest, 'target_class_config', None), 'target_class', None), 'requires_trade_context', False)
+            or (extension is not None and (extension_contract is None or key in (*extension_contract.parameter_keys, *(extension_contract.validation_keys or ()))))}
+    return repr(declared), parameter_key({key: params[key] for key in keys})
 
 
 def _finalize_rule_based_data(

@@ -318,6 +318,8 @@ When `test_mode=True` and a test data source is configured, `fetch_test_data()` 
 That is why foundational SFDs can run locally with no explicit `data=` and still use the configured test data source.
 To keep local runs bounded, configure `set_test_data_source()` with explicit `kline_size` and `row_count_limit`.
 
+Direct protected `run_model()` calls require the same Manifest instance and its completed preparation, current reservation revision, pipeline and consumed inputs. The research lease remains held through model evaluation. Altered or foreign preparations fail before the architecture runs. The private composition prerequisites also verify useful extension features against ordered row and label carriers after the extension; public extension and hook activation remains guarded until the complete workflow is connected.
+
 ## Pipeline Configuration
 
 ### `set_split_config(train, val, test)`

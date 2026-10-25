@@ -1189,3 +1189,208 @@ def test_protected_native_fold_refusal_preserves_withdrawal(tmp_path):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
         assert db.execute('SELECT COUNT(*) FROM research').fetchone()[0] == 0
     withdraw_holdout(root, reservation)
+
+
+@pytest.mark.parametrize('partial', [False, True])
+def test_protected_extension_and_hook_lineage(partial, tmp_path, monkeypatch):
+    from limen.experiment.feedback_controller import FeedbackController
+    from limen.experiment._holdout_history import HoldoutEvidenceError
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.experiment.msq import MSQ
+    from limen.log.log import Log
+    from tests.test_factorized_preparation import _instrument
+
+    root = _project(tmp_path / 'feedback-project')
+    config = _configuration(root)
+    reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    compiled = CompiledSFD(config, project_root=root)
+    directory = root / 'results'
+    loop = UniversalExperimentLoop(sfd=compiled, project_root=root, experiment_dir=directory,
+        yaml_reference=config, search_strategy=build_search_strategy(config))
+    loop.run('hook-lineage', n_permutations=1, progress_bar=False, post_processing=True)
+    retained = Log(uel_object=loop)
+    domain = ParamDomain({'C': [1.0, 2.0]})
+    strategy = GridStrategy(domain)
+    queue = MSQ(strategy, domain)
+    audit_path = root / 'feedback-audit.jsonl'
+    def successful(log, mutable):
+        assert log._get_test_data_with_all_cols(0).height > 0
+        mutable.remove_is('C', 2.0)
+    with research.operation(loop.manifest, 'experiment'):
+        applied = FeedbackController(intra_callback=successful, audit_log_path=audit_path).trigger(retained, queue, strategy, 1)
+    assert len(applied) == 1 and domain.values_for('C') == [1.0]
+    assert next(queue)['C'] == 1.0
+    domain = ParamDomain({'C': [1.0, 2.0]})
+    strategy = GridStrategy(domain)
+    queue = MSQ(strategy, domain)
+    retained.data = retained.data.slice(1)
+    def failing(log, mutable):
+        if partial:
+            mutable.remove_is('C', 2.0)
+        log._get_test_data_with_all_cols(0)
+    controller = FeedbackController(intra_callback=failing, audit_log_path=audit_path)
+    before = _artifact_state(directory)
+    with monkeypatch.context() as guarded:
+        counts = _instrument(guarded)
+        with pytest.raises(HoldoutEvidenceError, match='replay admitted source changed'), research.operation(loop.manifest, 'experiment') as operation:
+            controller.trigger(retained, queue, strategy, 2)
+        assert counts['target'] == counts['scaler'] == counts['model'] == 0
+    assert _artifact_state(directory) == before
+    assert history.research_record(history.bind(root), operation.record_id)['state'] == 'failed'
+    audit = [json.loads(line) for line in audit_path.read_text().splitlines()]
+    assert audit[-1]['errors'][0]['source'] == 'intra_callback'
+    assert 'HoldoutEvidenceError' in audit[-1]['errors'][0]['traceback']
+    assert len(audit[-1]['interventions']) == int(partial)
+    assert len(queue.intervention_log) == int(partial)
+    if not partial:
+        _direct_consumption_lineage(tmp_path, monkeypatch)
+
+
+def recorded_consumed_feature(data_dict, split_data, round_params, fitted_params):
+    carriers = []
+    for suffix, source in zip(('train', 'val', 'test'), split_data, strict=True):
+        label = source.columns[-1]
+        features = [name for name in source.columns if name not in ('datetime', label)]
+        frame = source.with_columns(pl.col(features[0]).pow(2).alias('recorded_squared')).select('datetime', *features, 'recorded_squared', label)
+        data_dict['x_' + suffix] = frame.drop('datetime', label)
+        data_dict['y_' + suffix] = frame[label]
+        carriers.append(frame)
+    data_dict['_feature_names'] = carriers[0].columns
+    data_dict['train'] = carriers[0].drop('datetime')
+    if '_holdout_carriers' in data_dict:
+        data_dict['_holdout_carriers'] = carriers
+    return data_dict
+
+
+def _direct_consumption_lineage(tmp_path, monkeypatch):
+    import numpy as np
+    from limen.experiment._holdout_sources import source_operation
+    from limen.experiment._holdout_history import HoldoutEvidenceError
+    from tests.test_factorize_equivalence import _numeric_equal
+    from tests.test_factorized_preparation import _config, _params
+    from limen.experiment._walk_forward_run import WalkForwardRun
+    from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+    for kind in ('ml', 'rule', 'fold'):
+        root = _project(tmp_path / ('direct-' + kind))
+        config = _config()
+        if kind == 'rule':
+            body = config['sfd']['manifest']
+            body.update(type='rule_based', indicators=[], features=[], reference_architecture='limen.sfd.reference_architecture.rule_based.rule_based',
+                strategy={'conditions': [{'id': 'up', 'type': 'relative', 'column': 'close', 'operator': '>', 'other_column': 'open'}], 'entry': 'up'})
+            for name in ('target', 'scaler'):
+                body.pop(name)
+            config['sfd']['params'] = {'fee': [4., 9.]}
+        if kind == 'fold':
+            config['sfd']['manifest'].pop('split_dates')
+            config['sfd']['manifest']['split_walk_forward'] = {'n_folds': 2, 'test_bars': 12, 'purge_bars': 1, 'embargo_bars': 1, 'anchored': True}
+        manifest = CompiledSFD(config, project_root=root).manifest()
+        if kind != 'rule':
+            manifest.add_to_data_dict(recorded_consumed_feature)
+        params = _params(config)
+        prefix = pl.read_parquet(_FIXTURE).head(144)
+        if kind == 'fold':
+            ordinary = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / ('control-' + kind))).manifest()
+            ordinary.add_to_data_dict(recorded_consumed_feature)
+            control = WalkForwardRun(ordinary, prefix, tmp_path / 'native-control')
+            expected_data = control.prepare(prefix, params.copy())
+            expected = control.evaluate(expected_data, params.copy())
+        else:
+            from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+            model_class = RuleBasedStrategy if kind == 'rule' else LightGBMBinary
+            original_train = model_class.train
+            leased_calls = []
+            def train_inside_lease(*args, _root=root, _original=original_train, _calls=leased_calls, **kwargs):
+                with pytest.raises(ValueError, match='Cannot change reservations inside active research'):
+                    reserve_holdout(_root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+                _calls.append(True)
+                return _original(*args, **kwargs)
+            zero_active = manifest.prepare_data(prefix, params.copy())
+            zero_active['_record_model_outputs'] = True
+            with monkeypatch.context() as held:
+                held.setattr(model_class, 'train', train_inside_lease)
+                expected = manifest.run_model(zero_active, params.copy())
+            assert leased_calls
+        reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+        # Construct after reservation; the earlier object is the zero-active case below.
+        protected = CompiledSFD(copy.deepcopy(config), project_root=root).manifest()
+        if kind != 'rule':
+            protected.add_to_data_dict(recorded_consumed_feature)
+        if kind == 'fold':
+            with source_operation(protected):
+                runner = WalkForwardRun(protected, pl.read_parquet(_FIXTURE).head(192), root / 'fold-output', promotion=True)
+                actual = runner.evaluate(runner.prepare(runner.raw, params.copy()), params.copy())
+            _numeric_equal({key: value for key, value in expected.items() if not key.startswith('_')}, {key: value for key, value in actual.items() if not key.startswith('_')})
+            continue
+        with source_operation(protected):
+            prepared = protected.prepare_data(prefix, params.copy())
+            prepared['_record_model_outputs'] = True
+            actual = protected.run_model(prepared, params.copy())
+            _numeric_equal({key: value for key, value in expected.items() if not key.startswith('_')}, {key: value for key, value in actual.items() if not key.startswith('_')})
+            np.testing.assert_array_equal(expected['_preds'], actual['_preds'])
+            assert len(actual['_preds']) > 0
+            proof = prepared['holdout']
+            assert proof['workflow']['consumption']['version'] == 1
+            if kind == 'ml':
+                assert 'recorded_squared' in prepared['x_train'].columns
+                assert proof['model_schema'][-1]['name'] == 'recorded_squared'
+            for bad in ('foreign', 'foreign_stripped', 'matrix', 'shape', 'prediction', 'strategy', 'pipeline', 'missing', 'carrier', 'round'):
+                copied = copy.deepcopy(prepared)
+                owner = protected
+                if bad == 'foreign':
+                    owner = CompiledSFD(copy.deepcopy(config), project_root=root).manifest()
+                elif bad == 'foreign_stripped':
+                    owner = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / ('unreserved-foreign-' + kind))).manifest()
+                    copied.pop('holdout')
+                elif bad == 'matrix':
+                    copied['train' if kind == 'rule' else 'x_train'] = copied['train' if kind == 'rule' else 'x_train'].reverse()
+                elif bad == 'shape':
+                    copied['x_train'] = np.asarray(copied['x_train'])[:, :-1]
+                elif bad == 'prediction':
+                    copied['x_test'] = copied['x_test'][::-1] if kind == 'rule' else copied['x_test'].reverse()
+                elif bad == 'strategy':
+                    if kind == 'rule':
+                        copied['strategy'] = dict(copied['strategy'], entry='unprepared-rule')
+                    else:
+                        copied['_feature_names'] = copied['_feature_names'][::-1]
+                elif bad == 'pipeline':
+                    owner = copy.deepcopy(protected)
+                    owner.set_split_config(4, 1, 2)
+                elif bad == 'missing':
+                    copied.pop('holdout')
+                elif bad == 'carrier':
+                    copied['_alignment']['holdout'] = dict(copied['holdout'], research_record_id='foreign')
+                else:
+                    vars(protected)['_holdout_round_id'] = 'changed-round'
+                with monkeypatch.context() as guarded:
+                    from tests.test_factorized_preparation import _instrument
+                    counts = _instrument(guarded)
+                    def no_rule_fit(*args, **kwargs):
+                        pytest.fail('invalid lineage reached rule fitting')
+                    guarded.setattr(RuleBasedStrategy, 'train', no_rule_fit)
+                    with pytest.raises(HoldoutEvidenceError):
+                        owner.run_model(copied, params.copy())
+                    assert counts['model'] == 0
+                vars(protected).pop('_holdout_round_id', None)
+        # A preparation made before a first reservation cannot be consumed afterwards.
+        with pytest.raises(HoldoutEvidenceError):
+            manifest.run_model(zero_active, params.copy())
+        if kind == 'ml':
+            for invalid in ('reorder', 'label', 'names', 'suffix', 'price'):
+                candidate = CompiledSFD(copy.deepcopy(config), project_root=root).manifest()
+                def invalid_extension(data_dict, split_data, round_params, fitted_params, invalid=invalid):
+                    output = recorded_consumed_feature(data_dict, split_data, round_params, fitted_params)
+                    if invalid == 'reorder':
+                        output['x_train'] = output['x_train'].reverse()
+                    elif invalid == 'label':
+                        output['y_train'] = output['y_train'].reverse()
+                    elif invalid == 'names':
+                        output['_feature_names'] = output['_feature_names'][:-1]
+                    elif invalid == 'suffix':
+                        output['_holdout_carriers'][2] = pl.read_parquet(_FIXTURE).slice(150, output['x_test'].height)
+                    else:
+                        output['price_data_for_backtest'] = output['price_data_for_backtest'].reverse()
+                    return output
+                candidate.data_dict_extension = invalid_extension
+                with pytest.raises(HoldoutEvidenceError), source_operation(candidate):
+                    candidate.prepare_data(prefix, params.copy())
