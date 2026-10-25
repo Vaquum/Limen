@@ -161,10 +161,29 @@ def test_recorded_objective_tuning(direction, flags, architecture):
     np.testing.assert_array_equal(result['_preds'], expected['_preds'])
 
 
-@pytest.mark.parametrize('fault', ['held_out_labels', 'reordered_features', 'discarded_calibrator', 'raw_decisions'])
+@pytest.mark.parametrize('route', ['round', 'partial'])
+@pytest.mark.parametrize('direction', ['maximize', 'minimize'])
+def test_objective_binds_actual_call_calibration(route, direction):
+    config = objective_config(direction)
+    baseline, parameters, original = _prepared(config)
+    expected = baseline.run_model(original, parameters)
+    manifest, params, data = _prepared(config)
+    calibration = manifest.prediction_calibration_config
+    manifest.prediction_calibration_config = None
+    if route == 'round':
+        params['prediction_calibration_config'] = calibration
+    else:
+        manifest.with_reference_architecture(partial(logreg_binary, prediction_calibration_config=calibration))
+    result = manifest.run_model(data, params)
+    assert result[COLUMN] == expected[COLUMN]
+    assert result['optimal_threshold'] == expected['optimal_threshold']
+    np.testing.assert_array_equal(result['_preds'], expected['_preds'])
+
+
+@pytest.mark.parametrize('fault', ['held_out_labels', 'held_out_threshold_labels', 'reordered_features', 'discarded_calibrator', 'raw_decisions'])
 def test_objective_evidence_refusals_calibration(fault):
     def invalid(data, **params):
-        if fault == 'held_out_labels':
+        if fault in ('held_out_labels', 'held_out_threshold_labels'):
             data['y_val'] = data['y_test']
         elif fault == 'reordered_features':
             data['x_val'] = data['x_val'].reverse()
@@ -184,7 +203,8 @@ def test_objective_evidence_refusals_calibration(fault):
     manifest, params, data = _prepared(objective_config('minimize'))
     assert len(data['y_val']) == len(data['y_test'])
     assert not np.array_equal(data['y_val'], data['y_test'])
-    params['use_threshold'] = False
+    params['use_threshold'] = fault == 'held_out_threshold_labels'
+    params['use_calibration'] = fault != 'held_out_threshold_labels'
     manifest.with_reference_architecture(invalid)
     with pytest.raises(ValueError, match='Objective'):
         manifest.run_model(data, params)
@@ -272,13 +292,17 @@ def test_recorded_objective_lifecycle(rule, tmp_path):
 
 
 @pytest.mark.parametrize('kind', ['calibrator_inactive', 'optimizer_inactive', 'both_inactive'])
-def test_recorded_objective_lifecycle_ordinary_empty_calibration(kind, tmp_path):
+@pytest.mark.parametrize('objective', [False, True])
+def test_recorded_objective_lifecycle_ordinary_empty_calibration(kind, objective, tmp_path):
     from limen.experiment._holdout_freeze import validate_member
     from limen.experiment.holdout import reserve_holdout
     from tests.test_holdout_research import _project, _configuration
 
     root = _project(tmp_path / 'project')
     config = _configuration(root)
+    if objective:
+        config['sfd']['manifest']['objective'] = {'metric': 'backtest_total_return', 'direction': 'maximize'}
+        config['sfd']['manifest']['backtest'] = {'product': {'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC', 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0.0}}
     reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
     config['sfd']['manifest']['calibration'] = {}
     if kind != 'optimizer_inactive':

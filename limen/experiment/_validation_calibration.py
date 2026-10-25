@@ -22,8 +22,26 @@ class _Predictor(Protocol):
     def predict_proba(self, values: object) -> object: ...
 
 
+class _Resolvable(Protocol):
+    def resolve(self, params: dict[str, object]) -> CalibrationConfigProtocol: ...
+
+
 def _closed_scorer(_labels: object, _predictions: object) -> float:
     raise ValueError('Objective validation receipt is already finished')
+
+
+def resolve_config(value: object, params: dict[str, object]) -> CalibrationConfigProtocol | None:
+    use_calibration, use_threshold = params.get('use_calibration', True), params.get('use_threshold', True)
+    if not use_calibration and not use_threshold:
+        return None
+    kind = vars(import_module('limen.experiment.manifest_core'))['CalibrationConfig']
+    if not isinstance(value, cast(type[object], kind)):
+        raise ValueError('Objective requires a manifest calibration configuration')
+    resolve = cast(_Resolvable, value).resolve
+    config = resolve(params)
+    factory = cast(Callable[..., CalibrationConfigProtocol], kind)
+    return factory(calibration_func=config.calibration_func if use_calibration else None, calibration_params=config.calibration_params,
+                   threshold_func=config.threshold_func if use_threshold else None, threshold_params=config.threshold_params)
 
 
 class _Calibrated:
@@ -49,7 +67,7 @@ class ValidationReceipt:
         self.labels: npt.NDArray[np.float64] | None = np.asarray(validation_labels, dtype=np.float64).copy()
         self.probabilities: npt.NDArray[np.float64] | None = None
         self.predictor: _Calibrated | None = None
-        self.optimizer = None if config.threshold_func is None else ObjectiveOptimizer(config.threshold_func, scorer, maximize, scorer.inputs.signals.height)
+        self.optimizer = None if config.threshold_func is None else ObjectiveOptimizer(config.threshold_func, scorer, maximize, scorer.inputs.signals.height, labels=self.labels)
 
     def calibrate(self, clf: object, x_val: object, y_val: object, **params: object) -> object:
         if self.inputs is None or self.labels is None or not np.array_equal(np.asarray(x_val), self.inputs, equal_nan=True) or not np.array_equal(np.asarray(y_val), self.labels, equal_nan=True):
@@ -98,5 +116,6 @@ class ValidationReceipt:
         self.scorer = _closed_scorer
         if self.optimizer is not None:
             self.optimizer.selection = None
+            self.optimizer.labels = None
             self.optimizer.evaluated.clear()
             self.optimizer.scorer = _closed_scorer

@@ -17,7 +17,7 @@ from limen.calibration.pipeline import CalibrationConfigProtocol
 from limen.experiment._objective_optimizer import check_optimizer
 from limen.experiment._prepare_trade_context import PreparedTradeContext
 from limen.experiment._manifest_preparation import apply_backtest_cost
-from limen.experiment._validation_calibration import ValidationReceipt
+from limen.experiment._validation_calibration import ValidationReceipt, resolve_config
 from limen.experiment._validation_decisions import ModelManifest, validation_inputs, validation_header, validation_evidence
 
 
@@ -151,24 +151,24 @@ def run_model(manifest: ModelManifest, data: dict[str, object], round_params: di
         raise TypeError('Manifest objective must be an ObjectiveConfig or None')
     kwargs = {} if allocation else manifest.resolve_model_kwargs(round_params)
     config = None if allocation else getattr(manifest, 'prediction_calibration_config', None)
+    if objective is not None and config is None:
+        config = kwargs.get('prediction_calibration_config')
     if config is not None:
-        use_calibration, use_threshold = round_params.get('use_calibration', True), round_params.get('use_threshold', True)
-        config = config.resolve(round_params) if use_calibration or use_threshold else None
-        if config is not None:
-            config = replace(config, calibration_func=config.calibration_func if use_calibration else None, threshold_func=config.threshold_func if use_threshold else None)
-            if objective is not None and config.calibration_func is None and config.threshold_func is None:
-                config = None
-        if config is not None:
-            if not any(name == 'prediction_calibration_config' or parameter.kind == inspect.Parameter.VAR_KEYWORD for name, parameter in inspect.signature(function).parameters.items()):
-                raise ValueError('MLManifest Calibration is configured but the architecture function does not accept `prediction_calibration_config`')
+        config = resolve_config(config, round_params)
+        accepts = any(name == 'prediction_calibration_config' or parameter.kind == inspect.Parameter.VAR_KEYWORD for name, parameter in inspect.signature(function).parameters.items())
+        if config is not None and (objective is None or config.calibration_func is not None or config.threshold_func is not None) and not accepts:
+            raise ValueError('MLManifest Calibration is configured but the architecture function does not accept `prediction_calibration_config`')
+        if accepts and (config is not None or objective is not None):
             kwargs['prediction_calibration_config'] = config
+        elif objective is not None:
+            _ = kwargs.pop('prediction_calibration_config', None)
     apply_backtest_cost(manifest, data, round_params)
     if hasattr(manifest, 'prediction_calibration_config') and not allocation:
         resolve_component_kwargs(function, data, kwargs, round_params)
     scorer = None if objective is None else prepare_objective(data, function, config)
     inputs = None if scorer is None else validation_inputs(data, scorer)
     header = None if scorer is None else validation_header(data, scorer, cast(Mapping[str, object], inputs))
-    receipt = None if scorer is None or config is None or objective is None else ValidationReceipt(config, scorer, objective.maximize, validation_inputs=data['x_val'], validation_labels=data['y_val'])
+    receipt = None if scorer is None or config is None or objective is None or (config.calibration_func is None and config.threshold_func is None) else ValidationReceipt(config, scorer, objective.maximize, validation_inputs=data['x_val'], validation_labels=data['y_val'])
     if header is not None:
         data['_validation_context'] = deepcopy(header)
     if receipt is not None:

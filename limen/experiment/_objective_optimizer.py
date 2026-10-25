@@ -45,6 +45,7 @@ class ObjectiveOptimizer:
     rows: int
     evaluated: dict[bytes, float] = field(default_factory=dict[bytes, float])
     selection: tuple[npt.NDArray[np.float64], float] | None = None
+    labels: npt.NDArray[np.float64] | None = None
 
     def score(self, labels: object, predictions: object) -> float:
         result = self.scorer(labels, predictions)
@@ -52,6 +53,8 @@ class ObjectiveOptimizer:
         return result
 
     def __call__(self, y_val: object, val_proba: object, **params: object) -> tuple[float, float]:
+        if self.labels is not None and not np.array_equal(np.asarray(y_val), self.labels, equal_nan=True):
+            raise ValueError('Objective threshold selection must use the original ordered validation labels')
         probabilities = validate_probabilities(val_proba).copy()
         if probabilities.size != self.rows:
             raise ValueError('Objective optimizer probabilities do not match validation rows')
