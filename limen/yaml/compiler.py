@@ -279,8 +279,8 @@ class CompiledSFD:
 
         super().__init__()
 
-        admit_controls(yaml_dict)
         self._yaml, self._holdout_project_root, self.__name__ = initialize_compiled(yaml_dict, project_root)
+        admit_controls(yaml_dict)
         self._manifest_cache: Manifest | None = None
 
     def params(self) -> dict[str, list[Any]]:
