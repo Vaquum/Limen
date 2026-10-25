@@ -59,6 +59,24 @@ def _assert_ledger(actual, expected):
         assert getattr(actual, field).equals(getattr(expected, field))
 
 
+def test_recorded_objective_retains_model_source_precision_with_native_binding():
+    from limen.experiment._objective import prepare_objective
+
+    bars = recorded_source()
+    stamps = bars['datetime'].dt.epoch('ns')
+    expected_precision = stamps[1] - stamps[0]
+    assert expected_precision == 3_600_000_000_000
+    manifest, _, data = _prepared(objective_config(calibrated=False), bars)
+    scorer = prepare_objective(data, manifest.architecture_function, manifest.prediction_calibration_config)
+    model = next(source for source in scorer.inputs.sources if source.identity == 'objective:validation:model')
+    assert model.precision_ns == expected_precision
+    for index, partition in enumerate(data['_trade_context'].partitions):
+        assert partition.sources[0].identity == f'execution:partition:{index}'
+        assert partition.sources[1].identity == f'model:partition:{index}'
+        assert partition.sources[1].precision_ns == expected_precision
+        assert partition.sources[-1].identity == f'native:partition:{index}'
+
+
 @pytest.mark.parametrize('direction', ('maximize', 'minimize'))
 def test_recorded_objective_selects_return(direction):
     config = objective_config(direction)
