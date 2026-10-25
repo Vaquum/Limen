@@ -172,9 +172,9 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
         sources = [source_binding(observations, f'execution:partition:{index}', start, end, _precision(observations), 'causal_recorded_prices')]
         native = raw_prices.select('row_id', *_METADATA)
         sources.append(source_binding(mapping.select('datetime', 'row_id', 'native_first', 'native_last', 'available_at_ns'), f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))
+        sources.append(source_binding(native, f'native:partition:{index}', start, end, 1, 'native_constituent_clocks'))
         if funding is not None:
             sources.append(source_binding(funding, f'funding:partition:{index}', start, end, 1, 'normalized_funding_support'))
-        sources.append(source_binding(native, f'native:partition:{index}', start, end, 1, 'native_constituent_clocks'))
         signals = mapping.drop('datetime', 'native_first', 'native_last').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
         partition = TradeInputs(initial, start, end, signals, observations, funding, tuple(sources))
         _ = event_plan(partition, policy)
