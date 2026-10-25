@@ -146,8 +146,7 @@ def profile_cmd(yaml_file: Path) -> None:
 
     \b
     Always computed:
-      - Total permutations and complexity rating (low / medium / high / extreme)
-      - Per-parameter value counts
+      - Total permutations, complexity rating and per-parameter value counts
 
     \b
     Runtime sampling:
@@ -164,7 +163,6 @@ def profile_cmd(yaml_file: Path) -> None:
     \b
     Examples:
       limen profile experiment.yaml
-      limen profile limen/yaml/templates/logreg_binary.yaml
     '''
 
     from limen.cli.commands.profile import run_profile
