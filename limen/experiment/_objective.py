@@ -14,7 +14,8 @@ from limen.backtest.trade_contract import TradeInputs, TradePolicy, finite_numbe
 from limen.backtest.trade_execution import trade_execution
 from limen.calibration._objective_threshold import validate_probabilities
 from limen.calibration.pipeline import CalibrationConfigProtocol
-from limen.calibration.threshold import grid_threshold_optimizer
+from limen.calibration.pipeline import ThresholdOptimizerProtocol
+from limen.experiment._objective_optimizer import ObjectiveOptimizer, check_optimizer
 from limen.experiment._prepare_trade_context import PreparedTradeContext
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -60,10 +61,11 @@ def _row_count(value: object) -> int:
 
 def check_calibration(config: CalibrationConfigProtocol | None) -> None:
     if config is not None:
-        if config.threshold_func is not None and config.threshold_func is not grid_threshold_optimizer:
-            raise ValueError('Objective supports only grid_threshold_optimizer')
-        if 'metric' in config.threshold_params or '_objective_maximize' in config.threshold_params:
-            raise ValueError('Objective conflicts with an explicit threshold metric/direction')
+        check_optimizer(config)
+
+
+def bind_optimizer(config: CalibrationConfigProtocol, scorer: ValidationScorer, objective: ObjectiveConfig) -> ThresholdOptimizerProtocol | None:
+    return None if config.threshold_func is None else ObjectiveOptimizer(config.threshold_func, scorer, objective.maximize, scorer.inputs.signals.height)
 
 
 def threshold_params(config: CalibrationConfigProtocol, scorer: ValidationScorer,
