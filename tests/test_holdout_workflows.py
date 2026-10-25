@@ -1294,17 +1294,13 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
             manifest.add_to_data_dict(recorded_consumed_feature)
         params = _params(config)
         prefix = pl.read_parquet(_FIXTURE).head(144)
-        ordinary = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / ('control-' + kind))).manifest()
-        if kind != 'rule':
-            ordinary.add_to_data_dict(recorded_consumed_feature)
         if kind == 'fold':
+            ordinary = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / ('control-' + kind))).manifest()
+            ordinary.add_to_data_dict(recorded_consumed_feature)
             control = WalkForwardRun(ordinary, prefix, tmp_path / 'native-control')
             expected_data = control.prepare(prefix, params.copy())
             expected = control.evaluate(expected_data, params.copy())
         else:
-            expected_data = ordinary.prepare_data(prefix, params.copy())
-            expected_data['_record_model_outputs'] = True
-            expected = ordinary.run_model(expected_data, params.copy())
             from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
             model_class = RuleBasedStrategy if kind == 'rule' else LightGBMBinary
             original_train = model_class.train
@@ -1315,9 +1311,10 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
                 _calls.append(True)
                 return _original(*args, **kwargs)
             zero_active = manifest.prepare_data(prefix, params.copy())
+            zero_active['_record_model_outputs'] = True
             with monkeypatch.context() as held:
                 held.setattr(model_class, 'train', train_inside_lease)
-                manifest.run_model(zero_active, params.copy())
+                expected = manifest.run_model(zero_active, params.copy())
             assert leased_calls
         reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
         # Construct after reservation; the earlier object is the zero-active case below.
@@ -1342,11 +1339,14 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
             if kind == 'ml':
                 assert 'recorded_squared' in prepared['x_train'].columns
                 assert proof['model_schema'][-1]['name'] == 'recorded_squared'
-            for bad in ('foreign', 'matrix', 'shape', 'prediction', 'strategy', 'pipeline', 'missing', 'carrier', 'round'):
+            for bad in ('foreign', 'foreign_stripped', 'matrix', 'shape', 'prediction', 'strategy', 'pipeline', 'missing', 'carrier', 'round'):
                 copied = copy.deepcopy(prepared)
                 owner = protected
                 if bad == 'foreign':
                     owner = CompiledSFD(copy.deepcopy(config), project_root=root).manifest()
+                elif bad == 'foreign_stripped':
+                    owner = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / ('unreserved-foreign-' + kind))).manifest()
+                    copied.pop('holdout')
                 elif bad == 'matrix':
                     copied['train' if kind == 'rule' else 'x_train'] = copied['train' if kind == 'rule' else 'x_train'].reverse()
                 elif bad == 'shape':

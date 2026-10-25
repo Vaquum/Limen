@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T12:08:31.598767+00:00",
-  "execution_checkout_head": "964084ee61356ceb89377679a15cab7b68b22836",
+  "observed_at": "2026-10-25T12:31:28.700144+00:00",
+  "execution_checkout_head": "c4441586e807efb53b645fc302f30118a58f2adb",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -104,7 +104,7 @@
     "experiment/_holdout_report.py": "bc5dfb1b184a67f284ff504851a20c27ce208496b1022bb95f7e76a87a16b4d5",
     "experiment/_holdout_research.py": "85f5a159bd6b19ab82c6a434868ffe2a0c50550ddc6bccf236686be75ec4847a",
     "experiment/_holdout_source.py": "423c058932ea01c63510ce3cdd973e3fb7e0a821d6b748a916b56916e121a087",
-    "experiment/_holdout_sources.py": "0d1bcf0fe4cfeabef18028f7c7ddbdd1c0dbab19c4f69d519a1d3a87ceefca34",
+    "experiment/_holdout_sources.py": "3b548baf8ae814dcaa65666c4e5522931c74f09bfe582e4602b88132c6f2ad85",
     "experiment/_manifest_preparation.py": "1f64ca3bd599374cb4e9ac2d07406496bb0c5cd7fe15ac9834979911bece2231",
     "experiment/_objective.py": "4438ce310e4833ab90391cee8d421b8f58e02fcecf29f801c292311804fe6df5",
     "experiment/_objective_optimizer.py": "fdd52c31fb75f584fff52825fdb4040f9472ac28362daaf11ce361d1d8677ffb",

@@ -203,7 +203,7 @@ def remember_model(manifest: object, data: Mapping[str, object], params: Mapping
 def check_model(manifest: object, data: Mapping[str, object], params: Mapping[str, object], binding: ProjectBinding | None) -> Mapping[str, object] | None:
     proof = data.get('holdout')
     if binding is None or binding.cutoff_ns is None:
-        if proof is not None:
+        if proof is not None or any(isinstance(carrier, Mapping) and any(key in carrier for key in ('holdout', '_holdout')) for carrier in (data.get('_alignment'), data.get('_fitted_params'))):
             raise HoldoutEvidenceError('Protected preparation cannot become unprotected')
         return None
     if not isinstance(proof, Mapping):
