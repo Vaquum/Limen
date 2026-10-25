@@ -106,7 +106,7 @@ def test_covering_array_values_are_from_original_lists() -> None:
 
 def test_classify_error_small_dataset() -> None:
     msg = _classify_error(ValueError('Found array with 0 sample(s)'))
-    assert 'date range' in msg
+    assert 'source coverage' in msg and 'split windows' in msg
 
 
 def test_classify_error_class_diversity() -> None:
@@ -218,7 +218,7 @@ def test_profile_runtime_records_errors_when_all_permutations_fail() -> None:
     assert result.sample_permutations_completed == 0
     assert result.sample_time_seconds_per_permutation is None
     assert len(result.errors) == 3
-    assert all('date range' in e for e in result.errors)
+    assert all('source coverage' in e and 'split windows' in e for e in result.errors)
 
 
 def test_profile_runtime_partial_failure_timing_from_completed_only() -> None:
