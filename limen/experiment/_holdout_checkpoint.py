@@ -41,12 +41,17 @@ def _same_header(proof: Mapping[str, object], binding: ProjectBinding) -> bool:
     return set(_FIELDS) <= proof.keys() and json.dumps({key: proof[key] for key in _FIELDS}, sort_keys=True) == json.dumps(binding_header(binding), sort_keys=True)
 
 
-def _parent(binding: ProjectBinding, identity: object) -> None:
+def _parent(binding: ProjectBinding, identity: object, round_id: str | None = None) -> str:
     if not isinstance(identity, str):
         raise HoldoutEvidenceError('Protected population requires genuine experiment parent history')
     parent = research_record(binding, identity)
-    if parent['role'] != 'experiment' or parent['revision'] != binding.revision or parent['round_id'] is not None:
+    if parent['role'] != 'experiment' or parent['revision'] != binding.revision:
         raise HoldoutEvidenceError('Protected population requires original experiment parent history')
+    if parent['round_id'] is not None:
+        if parent['round_id'] != round_id or parent['state'] != 'completed':
+            raise HoldoutEvidenceError('Protected worker parent occurrence or completion changed')
+        return _parent(binding, _mapping(json.loads(str(parent['provenance_json']))).get('experiment_record_id'))
+    return str(parent['id'])
 
 
 def completed_history(binding: ProjectBinding, proof: Mapping[str, object]) -> None:
@@ -72,7 +77,7 @@ def _record(binding: ProjectBinding, identity: str, value: object,
     if source is not None and any(recorded_source.get(key) != source.get(key) for key in _SOURCE_FIELDS):
         raise HoldoutEvidenceError('Protected checkpoint admitted source changed')
     completed_history(binding, proof)
-    _parent(binding, proof.get('experiment_record_id'))
+    _ = _parent(binding, proof.get('experiment_record_id'), identity)
     return proof
 
 

@@ -725,6 +725,11 @@ def test_protected_worker_handoff(cwd_mode, tmp_path):
         parent = history.research_record(authority[0], proof['experiment_record_id'])
         assert parent['state'] == 'completed'
         assert json.loads(parent['provenance_json'])['experiment_record_id'] == operation.record_id
+        assert checkpoint_binding._parent(authority[0], proof['experiment_record_id'], identity) == operation.record_id
+        with pytest.raises(ValueError, match='parent occurrence'):
+            checkpoint_binding._parent(authority[0], proof['experiment_record_id'], 'another-occurrence')
+        with pytest.raises(ValueError, match='parent occurrence'):
+            checkpoint_binding._parent(authority[0], proof['experiment_record_id'])
         commit = ParallelCommit(host, directory / 'results.csv', directory / 'round_data.jsonl', [])
         invalid = [
             {key: value for key, value in payload.alignment.items() if key != 'holdout'},
