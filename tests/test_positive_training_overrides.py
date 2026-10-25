@@ -17,16 +17,17 @@ def test_override_rejects_zero_training(manifest_type, ratios):
 
 
 @pytest.mark.parametrize('manifest_type', (Manifest, MLManifest, RuleBasedManifest))
+@pytest.mark.parametrize('route', ('setter', 'override'))
 @pytest.mark.parametrize('ratios,lengths', (
     ((1, 0, 0), (120, 0, 0)),
     ((1, 1, 0), (60, 60, 0)),
     ((1, 0, 1), (60, 0, 60)),
     ((3, 1, 1), (72, 24, 24)),
 ))
-def test_positive_overrides_preserve_recorded_rows(manifest_type, ratios, lengths):
+def test_positive_overrides_preserve_recorded_rows(manifest_type, route, ratios, lengths):
     source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(120)
     manifest = manifest_type().set_split_config(8, 1, 2)
-    clone = manifest.with_params_override(split_config=ratios)
+    clone = manifest.with_params_override(split_config=ratios) if route == 'override' else manifest_type().set_split_config(*ratios)
     splits = _resolve_split(clone, source)
     assert tuple(split.height for split in splits) == lengths
     assert pl.concat(splits).equals(source)

@@ -448,15 +448,19 @@ class Manifest:
             Manifest: Self for method chaining
 
         Raises:
-            ValueError: If train is not positive, or if val or test is negative
+            ValueError: If ratios are not non-bool ints, train is not positive, or any ratio is negative
         '''
 
+        sc = (train, val, test)
+        if not all(isinstance(v, int) and not isinstance(v, bool) for v in sc):
+            raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
+        if any(v < 0 for v in sc):
+            raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
+        if sum(sc) == 0:
+            raise ValueError('split_config ratios must not all be zero')
         if train <= 0:
             raise ValueError('Manifest train split ratio must be positive')
-        if val < 0 or test < 0:
-            raise ValueError('Manifest val and test split ratios must be non-negative')
-
-        self.split_config = (train, val, test)
+        self.split_config = sc
 
         return self
 
@@ -599,18 +603,12 @@ class Manifest:
             if not isinstance(sc, tuple):
                 raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
             sc = cast(tuple[Any, ...], sc)
-            if not (len(sc) == _split_len
-                    and all(isinstance(v, int) and not isinstance(v, bool) for v in sc)):
+            if len(sc) != _split_len:
                 raise ValueError(f"split_config must be a 3-tuple of ints, got {sc!r}")
-            if any(v < 0 for v in sc):
-                raise ValueError(f"split_config ratios must be non-negative, got {sc!r}")
-            if sum(sc) == 0:
-                raise ValueError('split_config ratios must not all be zero')
             _ = new_manifest.set_split_config(*cast(tuple[int, int, int], sc))
             # Ratio override supersedes a previously-pinned date split.
             # Without this, _resolve_split would keep using split_dates and
-            # the override would silently no-op (e.g. Trainer.train_sensors
-            # passing (1, 0, 0) to retrain on all available data).
+            # a caller-owned ratio override would silently no-op.
             new_manifest.split_dates = None
 
         ds_overrides = {k: v for k, v in overrides.items() if k != 'split_config'}

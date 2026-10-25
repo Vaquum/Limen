@@ -336,11 +336,18 @@ This means 8/11 train, 1/11 validation, and 2/11 test.
 
 Behavior rules:
 
+- all three values must be non-Boolean Python `int` instances (integer subclasses remain supported)
 - `train` must be positive
 - `val` and `test` can be zero but not negative
 - the method raises `ValueError` if those constraints are violated
 
 Allowing zeros supports explicit workflows where validation or test data is intentionally absent. For example, a caller-created clone with `split_config=(1, 0, 0)` fits on all available rows. `Trainer` does not apply that override: it replays the original split so it can compare the original metrics.
+
+`set_split_config` and `with_params_override(split_config=(...))` share this
+element/range admission and reject before changing the source manifest. Integral
+floats, NumPy integer scalars, NaN and infinity are refused as well as fractions
+and Booleans. The override still requires a three-tuple and clears `split_dates`
+on its returned copy; the direct setter retains the current date declaration.
 
 ### `set_split_dates(train_start, train_end, val_start, val_end, test_start, test_end, *, val_predict_guard=True, test_predict_guard=True)`
 
