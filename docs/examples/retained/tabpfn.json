@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T22:53:43.388977+00:00",
-  "execution_checkout_head": "1603f80ac66f1a20c9388f02d01f4e3a7f8d757d",
+  "observed_at": "2026-10-25T23:08:34.061787+00:00",
+  "execution_checkout_head": "7dd3485c5fcd8adb060a12b1350415692a350ffd",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -139,7 +139,7 @@
     "experiment/family_acceptance_report.py": "b1a15c0541433581a25cb5acc095a689f5f820a06f79539a0dc4f5ba93f7fa51",
     "experiment/feedback_controller.py": "d3f1fd75c0e6bc976f0815c925a4a944144cfbb373807495ba3b0826e29284e9",
     "experiment/holdout.py": "e6f6a90b16b47394e09749b94e2af30ddf3cd032e664db7eff8fe845665970d1",
-    "experiment/manifest_core.py": "424cbda14fcfbc8577fd949cffa8d687c965ad20f3411c5ae044f32a3684e24d",
+    "experiment/manifest_core.py": "8b1fbc072a4983c7d67a0a2d412fedb5bd72e1d7634377162871b66f2d8f907c",
     "experiment/msq.py": "41ddcb9965d9d029e6074217f748f12bf92a6a27b60f387b0298923ba5a45f90",
     "experiment/param_domain.py": "f0c5fb40f8e47f92a9cd00fae30c3daa8e440290ccad16d65789c3ebc0667cba",
     "experiment/param_search/__init__.py": "0428f114569749bd7564043cc36b781576cb0699092ed09504846c5975963a0a",
