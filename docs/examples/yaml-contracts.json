@@ -124,6 +124,11 @@
       "source": "limen/yaml/_objective_spec.py",
       "symbol": "_read_objective"
     },
+    "sfd.manifest.required_columns": {
+      "sha256": "b0ff6f84ef669d43d17b331a096b4feb5cdeb40acae8063dfc50962d2fa14483",
+      "source": "limen/experiment/_required_columns.py",
+      "symbol": "column_issue"
+    },
     "sfd.manifest.split_walk_forward": {
       "fields": {
         "anchored": {

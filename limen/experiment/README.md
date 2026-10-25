@@ -100,6 +100,7 @@ experiment/
 ├── _prepare_backtest_data.py
 ├── _prepare_trade_context.py
 ├── _recording.py
+├── _required_columns.py
 ├── _resolve_backtest_config.py
 ├── _resolve_trade_policy.py
 ├── _result_fields.py

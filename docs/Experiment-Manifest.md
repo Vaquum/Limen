@@ -678,6 +678,17 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 Declare the downstream columns that bar preparation must retain. After any configured bar formation completes, or directly for base bars, preparation first reads `datetime`, whether or not it was declared; its absence raises Polars `ColumnNotFoundError`. If that read succeeds, any missing declared column raises `AssertionError` under both normal Python and `python -O`.
 
+An explicit setter or YAML `required_columns` declaration must be a nonempty list
+of distinct nonblank strings. Non-list values and non-string entries raise
+`TypeError` at the native setter; empty, blank or duplicate entries raise
+`ValueError`. YAML validation locates the field or offending item, and compilation
+uses the same admission. An explicit `null` is rejected; omit the declaration to
+keep the default without additional membership requirements. Names retain exact
+case, padding and order; blank means empty or whitespace-only. The setter stores
+an owned list copy, so later caller-list edits do not change the declaration.
+Constructor field overrides and direct attribute assignment retain their existing
+behavior outside these setter/YAML declaration checks.
+
 <!-- reference: manifest-required-bars source=limen/experiment/manifest_core.py region=signature:Manifest.set_required_bar_columns role=signature -->
 ```python
 def set_required_bar_columns(self, columns: list[str]) -> 'Manifest':
@@ -1466,6 +1477,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `sfd.manifest.required_columns` | Explicit nonempty list of distinct nonblank strings; omission preserves the default and null is rejected. | [column_issue](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_required_columns.py) |
 | `schema_version` | Required string, exactly `"1.0"`; checked before interpreting the current-schema body. | [schema_errors](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_schema_version.py) |
 | `sfd.manifest` | Actual round-parameter lookup locations; literal fields keep their native meaning. | [lookup_references](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_parameter_refs.py) |
 | `sfd.params` | Forward declarations and Boolean `include_if` domains; unused warnings require a known closed architecture signature. | [ParamCoverage](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |

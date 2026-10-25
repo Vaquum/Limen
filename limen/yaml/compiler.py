@@ -131,11 +131,8 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
     if 'acceptance' in m:
         _ = manifest.set_acceptance(**m['acceptance'])
 
-    cols = m.get('required_columns')
-    if cols is not None:
-        if not is_list(cols):
-            raise ValueError(f"'required_columns' must be a list, got {type(cols).__name__}")
-        _ = manifest.set_required_bar_columns(list(cols))
+    if 'required_columns' in m:
+        _ = manifest.set_required_bar_columns(m['required_columns'])
 
     apply_backtest(manifest, m)
 

@@ -533,5 +533,6 @@
   "limen/experiment/_boolean_controls.py": 35,
   "limen/yaml/_boolean_spec.py": 50,
   "limen/yaml/_parameter_refs.py": 75,
-  "limen/yaml/_schema_version.py": 20
+  "limen/yaml/_schema_version.py": 20,
+  "limen/experiment/_required_columns.py": 40
 }

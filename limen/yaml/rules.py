@@ -1,4 +1,5 @@
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
+from limen.experiment._required_columns import column_issue
 from limen.yaml._parameter_refs import lookup_references
 from limen.experiment._walk_forward_split import read_walk_forward_config
 import inspect
@@ -495,7 +496,7 @@ class SingleFuncBlock:
 
 class RequiredColumnsSpec:
 
-    '''When required_columns is present, it must be a non-empty list of strings.'''
+    '''Admit explicit nonempty lists of distinct nonblank column names.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -503,22 +504,15 @@ class RequiredColumnsSpec:
               _warnings: list[YAMLError]) -> None:
 
         manifest = _get_manifest(yaml_dict)
-        cols = manifest.get('required_columns')
-        if cols is None:
+        if 'required_columns' not in manifest:
             return
-        if not is_list(cols):
+        if issue := column_issue(manifest['required_columns']):
+            index, message, _ = issue
             errors.append(YAMLError(
-                message=f"'required_columns' must be a list (got {type(cols).__name__})",
-                path='sfd.manifest.required_columns',
-                suggestion="Use a list of column name strings, e.g. required_columns: [open, high, low, close]",
+                message=message,
+                path='sfd.manifest.required_columns' + (f'[{index}]' if index is not None else ''),
+                suggestion='Use distinct nonblank column names, or omit required_columns to use the default',
             ))
-            return
-        for i, item in enumerate(cols):
-            if not isinstance(item, str):
-                errors.append(YAMLError(
-                    message=f"'required_columns[{i}]' must be a string (got {type(item).__name__})",
-                    path=f'sfd.manifest.required_columns[{i}]',
-                ))
 
 
 class DecoderLookbackSpec:

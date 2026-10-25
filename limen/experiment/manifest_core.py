@@ -1,6 +1,7 @@
 import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
+from limen.experiment._required_columns import admit_columns
 from limen.experiment._boolean_controls import boolean, manifest_controls
 from limen.backtest.trade_contract import TradeInputs, TradePolicy
 from limen.experiment._holdout_history import HoldoutEvidenceError
@@ -421,17 +422,9 @@ class Manifest:
 
     def set_required_bar_columns(self, columns: list[str]) -> 'Manifest':
 
-        '''
-        Set required columns after bar formation.
+        '''Admit and copy a nonempty list of distinct, nonblank column names.'''
 
-        Args:
-            columns (List[str]): List of required column names
-
-        Returns:
-            Manifest: Self for method chaining
-        '''
-
-        self.required_bar_columns = columns
+        self.required_bar_columns = admit_columns(columns)
 
         return self
 
