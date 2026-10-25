@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T07:45:19.039527+00:00",
-  "execution_checkout_head": "f1542bb887e36545f1d4b8b95761bd2e20aa6852",
+  "observed_at": "2026-10-25T08:21:15.175455+00:00",
+  "execution_checkout_head": "98dda8e5373c4bfc07e7aed8cac8634e04d60524",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -97,8 +97,8 @@
     "experiment/_holdout_research.py": "2a26c0b4c280e4d5612226ce4bfb391d790f8eff3ca65a60431d408bc42e9b34",
     "experiment/_holdout_source.py": "211a0f6239ecba588e219c5595987d7f2b1ce6985ac0de32807b784ccf01dcc3",
     "experiment/_manifest_preparation.py": "4c804d2db5ea113ae6070a27b1a4ecd1f197b9c54508050824e6d268676f81f8",
-    "experiment/_objective.py": "59e5e6252adec5ae0c497d44b0040662a7f28a8f3043a041d7fb2e81812cf41a",
-    "experiment/_objective_optimizer.py": "be0f8a31bd95d691a78cfd3cfd570e70d5d95358321b1175303fe95560b28b7c",
+    "experiment/_objective.py": "4438ce310e4833ab90391cee8d421b8f58e02fcecf29f801c292311804fe6df5",
+    "experiment/_objective_optimizer.py": "fdd52c31fb75f584fff52825fdb4040f9472ac28362daaf11ce361d1d8677ffb",
     "experiment/_objective_run.py": "201bd1cc7842783f062c8fabe22c688a6be980f97553d94f1dfae219f453a34a",
     "experiment/_parallel_commit.py": "dbff9aad51dab99e272c431d458a8c648e99993ba8b660d7448c14481484a0c3",
     "experiment/_parallel_resume.py": "347e176cca477c9c945792a944e2c85fb445f471cb7da4b1f175f495ffbf8ea2",
@@ -115,7 +115,7 @@
     "experiment/_round_storage.py": "4ee60af8b55cab53862213e7d99e68897957c24b006296cca4efdf791c6703d2",
     "experiment/_serial_resume.py": "6edfa038ce7acf0e155e438ca19894f619576dbe868726f420501e40cb02fc7a",
     "experiment/_shim_fractional_diff.py": "b0fc724b946c4d33ac0998b094c15e3ccc26cf61c883d630a79de3c4d78ff8ac",
-    "experiment/_validation_calibration.py": "8f0b937dfe59d9ae737fedf3943c1c5b3325bb576ad5b25e3895efe630fedf39",
+    "experiment/_validation_calibration.py": "dacad3b454c5e9c5062bafa9a38729b2d0f4434ee65d177752a1a5d575c8ede6",
     "experiment/_validation_decisions.py": "654f03346a41959f419a3ed7f940a6e8681d15b26063566f8770f83b9a52c590",
     "experiment/_walk_forward_run.py": "600c087a2a119a3f671a3af6ca2a27e9073c3be6457bba66300c8cb7cebb4e7d",
     "experiment/_walk_forward_split.py": "485a9605a9ea280d9d2224af0460824f93bfd16e519cfa199a60fb89a4925a15",
