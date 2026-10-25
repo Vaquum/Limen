@@ -23,6 +23,115 @@ from limen.experiment.param_search import RandomStrategy
 from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
 from tests.stubs.stubs import make_msq
 from tests.stubs.stubs import StubPruningStrategy
+from limen.yaml import CompiledSFD, build_search_strategy
+from tests.test_record_execution import _config as _recorded_config
+from tests.test_record_model_outputs import recorded_source
+
+
+_RECORDING = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+
+
+def _override_loop(interface, directory, calls, *, stop=False, search=True):
+    config = _recorded_config('binary')
+    compiled = CompiledSFD(config)
+    manifest = compiled.manifest()
+    original_params = compiled.params
+
+    def params():
+        calls.append('params')
+        return original_params()
+
+    def prep(data, round_params):
+        calls.append('prep')
+        return manifest.prepare_data(data, round_params)
+
+    def model(data, round_params):
+        calls.append('model')
+        result = manifest.run_model(data, round_params)
+        if stop:
+            loop._shutdown_requested = True
+        return result
+
+    def feedback(log, msq):
+        calls.append('intra_callback')
+
+    compiled.params = params
+    sfd = compiled if interface == 'compiled' else SimpleNamespace(__name__=__name__, params=params, prep=prep, model=model)
+    loop = UniversalExperimentLoop(
+        sfd=sfd, data=recorded_source(), experiment_dir=directory,
+        search_strategy=build_search_strategy(config) if search else None,
+        checkpoint_interval=1, feedback_interval=1, intra_callback=feedback,
+    )
+    if interface == 'compiled':
+        loop.prep, loop.model = prep, model
+    return loop
+
+
+def _artifact_snapshot(directory):
+    return {path.relative_to(directory): (path.read_bytes(), path.stat().st_mtime_ns)
+            for path in directory.rglob('*') if path.is_file()}
+
+
+@pytest.mark.parametrize('interface', ('python', 'compiled'))
+@pytest.mark.parametrize('resume', (False, True), ids=('fresh', 'resume'))
+@pytest.mark.parametrize('names', (('params',), ('prep',), ('model',), ('params', 'prep', 'model')))
+def test_msq_rejects_run_overrides(interface, resume, names, tmp_path):
+    calls = []
+    directory = tmp_path / 'run'
+    if resume:
+        first = _override_loop(interface, directory, calls, stop=True)
+        first.run('overrides', n_permutations=2, progress_bar=False, recording=_RECORDING)
+        assert first.interrupted and first.experiment_log.height == 1
+        assert (directory / 'checkpoint.json').is_file()
+    loop = _override_loop(interface, directory, calls)
+    assert (loop.manifest is None) == (interface == 'python')
+    calls.clear()
+    before = _artifact_snapshot(tmp_path)
+
+    def replacement(*args, **kwargs):
+        calls.append('replacement')
+        raise AssertionError('MSQ invoked an unsupported replacement')
+
+    with pytest.raises(ValueError) as error:
+        loop.run('overrides', n_permutations=2, resume=resume, progress_bar=False,
+                 recording=_RECORDING, **dict.fromkeys(names, replacement))
+    assert str(error.value) == f'MSQ runs reject run overrides {list(names)}; configure custom functions on the SFD'
+    assert calls == []
+    assert _artifact_snapshot(tmp_path) == before
+    if not resume:
+        assert not (directory / 'metadata.json').exists()
+    else:
+        loop.run('overrides', n_permutations=2, resume=True, progress_bar=False, recording=_RECORDING)
+        assert loop.experiment_log.height == 2
+        assert calls.count('prep') == calls.count('model') == 1
+
+
+def test_msq_accepts_custom_functions_configured_on_sfd(tmp_path):
+    calls = []
+    loop = _override_loop('python', tmp_path / 'run', calls)
+    calls.clear()
+    loop.run('configured', n_permutations=2, progress_bar=False, recording=_RECORDING)
+    assert loop.experiment_log.height == 2
+    assert calls.count('prep') == calls.count('model') == 2
+    assert 'intra_callback' in calls
+
+
+def test_standard_run_executes_all_function_overrides(tmp_path):
+    original_calls, replacement_calls = [], []
+    loop = _override_loop('python', tmp_path / 'run', original_calls, search=False)
+    replacement = _override_loop('python', None, replacement_calls, search=False)
+    original_calls.clear()
+    replacement_calls.clear()
+
+    def params():
+        replacement_calls.append('params')
+        return replacement.params | {'C': [0.3]}
+
+    loop.run('legacy', n_permutations=1, progress_bar=False, random_search=False,
+             params=params, prep=replacement.prep, model=replacement.model)
+    assert original_calls == []
+    assert replacement_calls == ['params', 'prep', 'model']
+    assert loop.experiment_log['C'].to_list() == [0.3]
 
 
 def _make_uel(strategy_cls=RandomStrategy, test_mode=True, **kwargs):

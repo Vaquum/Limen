@@ -7,6 +7,7 @@ from types import CodeType, FunctionType
 from typing import cast
 
 from limen.experiment._factorized_contract import ReuseContract
+from limen.experiment._boolean_controls import manifest_controls
 from limen.experiment._factorized_key import parameter_key
 from limen.experiment._factorized_native import contract_for, native_rule
 from limen.experiment._factorized_projection import parameter_references, projections
@@ -69,6 +70,7 @@ def _scaler(manifest: MLManifest, params: dict[str, object], axes: frozenset[str
 
 
 def validate_candidate(manifest: Manifest, params: dict[str, object], axes: frozenset[str]) -> ReuseContract:
+    use_calibration, use_threshold = manifest_controls(manifest, params)
     if type(manifest) not in (MLManifest, RuleBasedManifest) or any(name in vars(manifest) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
         raise ValueError('factorize requires the original manifest preparation and model methods')
     if manifest.split_walk_forward is not None or manifest.allocation_config is not None or getattr(manifest, 'objective', None) is not None:
@@ -105,11 +107,11 @@ def validate_candidate(manifest: Manifest, params: dict[str, object], axes: froz
             original_config = config
             config = config.resolve(params)
             signature = inspect.signature(cast(Callable[..., object], function))
-            if ((config.calibration_func is not None and params.get('use_calibration', True)) or (config.threshold_func is not None and params.get('use_threshold', True))) and not any(name == 'prediction_calibration_config' or item.kind == inspect.Parameter.VAR_KEYWORD for name, item in signature.parameters.items()):
+            if ((config.calibration_func is not None and use_calibration) or (config.threshold_func is not None and use_threshold)) and not any(name == 'prediction_calibration_config' or item.kind == inspect.Parameter.VAR_KEYWORD for name, item in signature.parameters.items()):
                 raise ValueError('factorize requires architecture acceptance of active calibration configuration')
             for name, component, arguments, active in (
-                ('calibration', config.calibration_func, config.calibration_params, params.get('use_calibration', True)),
-                ('threshold', config.threshold_func, config.threshold_params, params.get('use_threshold', True)),
+                ('calibration', config.calibration_func, config.calibration_params, use_calibration),
+                ('threshold', config.threshold_func, config.threshold_params, use_threshold),
             ):
                 if component is not None and active:
                     original_arguments = original_config.calibration_params if name == 'calibration' else original_config.threshold_params

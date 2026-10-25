@@ -1,4 +1,5 @@
 from limen.yaml._assessment_spec import check_assessment
+from limen.yaml._boolean_spec import BooleanControlsSpec
 from dataclasses import dataclass, field
 from typing import Any
 from typing import cast
@@ -53,6 +54,7 @@ from limen.yaml.schema import ML_MANIFEST_REQUIRED
 from limen.yaml.schema import PCA_COMPRESSION_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_OPTIONAL
 from limen.yaml.schema import RULE_BASED_MANIFEST_REQUIRED
+from limen.yaml.schema import RULE_YAML_REJECTIONS
 from limen.yaml.schema import SCALER_EXPLICIT_OPTIONAL
 from limen.yaml.schema import SCALER_EXPLICIT_REQUIRED
 from limen.yaml.schema import SCALER_FROM_PARAMS_REQUIRED
@@ -93,6 +95,7 @@ _TOP_LEVEL_ENGINE = RuleEngine(cast(list[Rule], [
 _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
     SchemaVersion(VERSION),
+    BooleanControlsSpec(),
 
     Required('metadata.name', str),
     NameSlug(),
@@ -168,12 +171,12 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
         NoUnknownKeys('sfd.manifest.strategy', STRATEGY_REQUIRED),
         WarnIfPresent(
             'sfd.manifest',
-            ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL,
+            (ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL) - RULE_YAML_REJECTIONS.keys(),
             message_template="Field '{key}' is not used in rule_based manifests",
         ),
         NoUnknownKeys(
             'sfd.manifest',
-            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL | {'acceptance'},
+            MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL | {'acceptance'}, rejected=RULE_YAML_REJECTIONS,
         ),
     ])),
 

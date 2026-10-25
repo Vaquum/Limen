@@ -151,10 +151,25 @@
       "source": "limen/yaml/rules.py",
       "symbol": "ConditionsList"
     },
+    "sfd.manifest.strict_mode": {
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec"
+    },
     "sfd.params": {
       "sha256": "9c216780eab58e212046df3f3507cc74026e78b8a80e46627d24bb653a7e2947",
       "source": "limen/yaml/rules.py",
       "symbol": "ParamCoverage"
+    },
+    "sfd.params.use_calibration[]": {
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec"
+    },
+    "sfd.params.use_threshold[]": {
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec"
     },
     "uel.recording": {
       "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d",
@@ -552,6 +567,10 @@
         "type"
       ],
       "path": "sfd.manifest",
+      "rejected": {
+        "bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded",
+        "target": "Field 'target' is unsupported in rule_based YAML and would be discarded"
+      },
       "severity": "warning",
       "when": "sfd.manifest.type = rule_based"
     },
