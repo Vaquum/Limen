@@ -222,7 +222,7 @@ def test_protected_pca_final_assessment(assessment_case):
     frozen = _freeze(sensor)
     paths = ('sklearn.decomposition.PCA.fit', 'sklearn.decomposition.PCA.fit_transform',
              'sklearn.preprocessing.RobustScaler.fit', 'sklearn.preprocessing.RobustScaler.fit_transform',
-             'sklearn.linear_model.LogisticRegression.fit', 'limen.targets.QuantileBinaryTarget.fit')
+             'sklearn.linear_model.LogisticRegression.fit', 'limen.targets.QuantileBinaryTarget.__init__')
     with ExitStack() as stack:
         guards = [stack.enter_context(patch(path, side_effect=AssertionError('Final assessment must not fit'))) for path in paths]
         report = _report(frozen, assessment_case)
