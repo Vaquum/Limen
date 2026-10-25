@@ -168,7 +168,7 @@ def verify_sources(manifest: object, native: list[pl.DataFrame], formed: list[pl
         raise HoldoutEvidenceError(f'Protected source evidence failed: {exc}') from exc
     workflow: dict[str, object] = {'version': 1, 'kind': 'sources', 'formation': _formation(manifest, native, formed, params, current.binding), 'roles': roles}
     expected = cast(Mapping[str, object], {} if current.replay_witness is None else current.replay_witness.get('workflow', {}))
-    if current.replay_witness is not None and workflow != {key: expected.get(key) for key in workflow}:
+    if current.replay_witness is not None and any(workflow[key] != expected.get(key) for key in ('version', 'formation', 'roles')):
         raise HoldoutEvidenceError('Protected native or derived source support changed before fitting')
     current.provenance['workflow'] = copy.deepcopy(workflow)
     return frozen
@@ -189,8 +189,7 @@ def remember_model(manifest: object, data: Mapping[str, object], params: Mapping
         expected = cast(Mapping[str, object], op.replay_witness.get('workflow', {}))
         if 'consumption' in expected and consumption != expected['consumption']:
             raise HoldoutEvidenceError('Protected consumed model inputs changed before fitting')
-        if expected.get('kind') == 'fold':
-            workflow.update(expected)
+        workflow.update(expected)
     workflow['consumption'] = consumption
     op.provenance['workflow'] = workflow
     owners = cast(dict[str, object], vars(manifest).setdefault('_holdout_preparations', {}))

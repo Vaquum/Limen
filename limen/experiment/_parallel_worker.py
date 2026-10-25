@@ -113,7 +113,8 @@ def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
     from limen.yaml.compiler import build_manifest
 
     rebuilt = build_manifest(dict(yaml_reference))
-    if _shape(vars(manifest)) != _shape(vars(rebuilt)):
+    actual = {key: value for key, value in vars(manifest).items() if key not in ('_holdout_binding', '_holdout_interval_seconds', '_holdout_source', '_holdout_preparations')}
+    if _shape(actual) != _shape(vars(rebuilt)):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
     effective = {key: list(values) for key, values in domain.items()}
     effective.update({key: [value] for key, value in (context or {}).items()})

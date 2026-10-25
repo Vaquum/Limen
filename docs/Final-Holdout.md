@@ -8,7 +8,7 @@ This records local workflow protection. It cannot establish that a person, anoth
 
 ## Prerequisites
 
-Use the matching wheel and recorded input bundle for both projects. The guarded Compiled path additionally requires a Git project containing `limen.toml`, supported native OHLC data and serial built-in research. Preserve its local history as described below before cloning or restoring the project.
+Use the matching wheel and recorded input bundle for both projects. The guarded Compiled path additionally requires a Git project containing `limen.toml` and supported native OHLC data. Preserve its local history as described below before cloning or restoring the project.
 
 ## Assess caller-owned final observations
 
@@ -36,6 +36,8 @@ def holdout(data_dir, output):
 ## Reserve and freeze a Compiled selection
 
 The Compiled example uses its own Git project. `limen reserve` records the YAML's final interval before research, `limen run` enforces that reservation, and `limen assess --reservation` reconstructs the selected Cohort, freezes it and writes `final-report.json`. The local source keeps earlier exposure unknown.
+
+The same exclusion and revision lease cover profiling, saved resume, factorized reuse, spawned workers and selected walk-forward folds under their ordinary recording requirements. Profiling records its purpose and failed samples in project history. Source formation, declared execution/funding inputs and compatible feature extensions retain their own ordered input evidence; search hooks cannot widen admitted observations. These research modes do not widen final-assessment eligibility. See the [guarded holdout reference](Guarded-Holdout-Reference.md) for restrictions and retained lineage.
 
 <!-- example: holdout-compiled-assessment source=docs/examples/compiled-research/final/run.sh region=final_assessment scenario=holdout interface=compiled role=executed -->
 ```bash

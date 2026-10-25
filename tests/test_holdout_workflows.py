@@ -151,7 +151,7 @@ def _profile_admission(tmp_path, monkeypatch, kind, failure, binding):
     with monkeypatch.context() as patch:
         for method in ('fetch_data', 'prepare_data', 'run_model'):
             patch.setattr(protected_manifest, method, no_network)
-        with pytest.raises(ValueError, match='Holdout research refuses profile'):
+        with pytest.raises(ValueError, match='Holdout research refuses replaced manifest methods'):
             profile(protected)
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
         assert [tuple(row) for row in db.execute('SELECT * FROM reservations')] == before
@@ -160,15 +160,17 @@ def _profile_admission(tmp_path, monkeypatch, kind, failure, binding):
 
     raced = compile_for_profile()
     _ = raced.manifest()
-    reject = research.reject_modes
+    bind = research.bind_manifest
+    vars(raced.manifest()).pop('_holdout_binding', None)
     raced_reservations = []
 
-    def reserve_after_precheck(value, **kwargs):
-        reject(value, **kwargs)
+    def reserve_after_binding(value, *args):
+        result = bind(value, *args)
         raced_reservations.append(reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600))
+        return result
 
     with monkeypatch.context() as patch:
-        patch.setattr(research, 'reject_modes', reserve_after_precheck)
+        patch.setattr(research, 'bind_manifest', reserve_after_binding)
         patch.setattr(raced.manifest(), 'fetch_data', no_network)
         with pytest.raises(ValueError, match='revision changed'):
             profile(raced)
@@ -497,10 +499,6 @@ def _checkpoint_boundaries(loop, config, checkpoint, metadata, monkeypatch, reta
         restored.manifest.set_split_dates(dates[0], date(2024, 1, 2), *dates[2:])
         refused('selection/split geometry')
         restored.manifest.set_split_dates(*dates)
-        before = _artifact_state(directory)
-        with pytest.raises(ValueError, match='Holdout'):
-            restored.run('protected-checkpoint', n_permutations=3, resume=True, progress_bar=False)
-        assert _artifact_state(directory) == before
     # Existing protected V1 selected artifacts predate the checkpoint envelope.
     legacy = copy.deepcopy(metadata)
     legacy.pop('holdout_binding')
@@ -725,6 +723,11 @@ def test_protected_worker_handoff(cwd_mode, tmp_path):
         parent = history.research_record(authority[0], proof['experiment_record_id'])
         assert parent['state'] == 'completed'
         assert json.loads(parent['provenance_json'])['experiment_record_id'] == operation.record_id
+        assert checkpoint_binding._parent(authority[0], proof['experiment_record_id'], identity) == operation.record_id
+        with pytest.raises(ValueError, match='parent occurrence'):
+            checkpoint_binding._parent(authority[0], proof['experiment_record_id'], 'another-occurrence')
+        with pytest.raises(ValueError, match='parent occurrence'):
+            checkpoint_binding._parent(authority[0], proof['experiment_record_id'])
         commit = ParallelCommit(host, directory / 'results.csv', directory / 'round_data.jsonl', [])
         invalid = [
             {key: value for key, value in payload.alignment.items() if key != 'holdout'},
@@ -871,8 +874,8 @@ def test_protected_fold_lineage(population, tmp_path, monkeypatch):
     else:
         assert runner.raw.height == 131
         assert runner.promotion['selection_cutoff_ns'] < history.utc_day('2024-01-07')
-    with pytest.raises(ValueError, match='Holdout research refuses'):
-        UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root)
+    public = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root)
+    assert public.data['datetime'].dt.epoch('ns').max() < history.utc_day('2024-01-07')
     params = _params(config)
     control = CompiledSFD(copy.deepcopy(config), project_root=_project(tmp_path / 'ordinary-fold')).manifest()
     if population == 'gapped_selected_prefix':
@@ -1040,8 +1043,8 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
         _yaml_reference=config, _record_execution=True, _record_model_outputs=True, _workers=1, _factorize=False,
         _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_limen_version=UniversalExperimentLoop._get_limen_version)
     with fixed_trade_sources(manifest, config['sfd']['params']) if secondary == 'fixed' else nullcontext(), source_operation(manifest):
-        with pytest.raises(ValueError, match='Holdout research refuses'):
-            UniversalExperimentLoop(sfd=compiled, project_root=root)
+        public = UniversalExperimentLoop(sfd=CompiledSFD(copy.deepcopy(config), project_root=root), project_root=root)
+        assert public.data['datetime'].dt.epoch('ns').max() < history.utc_day('2024-01-07')
         UniversalExperimentLoop._write_metadata(writer, directory)
         started = perf_counter()
         prepared = manifest.prepare_data(raw, params.copy())
@@ -1127,7 +1130,8 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
     with _round_storage.open_text(directory / 'round_data.jsonl.gz') as stream:
         published = json.loads(next(stream))['holdout']
     assert fitted['experiment_record_id'] == published['research_record_id']
-    assert fitted['workflow'] == proof['workflow']
+    assert fitted['workflow'] == published['workflow']
+    assert published['workflow']['publication']['preparation_record_id'] == proof['research_record_id']
     if secondary is not None:
         from dataclasses import replace
         from limen.experiment._holdout_sources import _roles
@@ -1394,3 +1398,403 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
                 candidate.data_dict_extension = invalid_extension
                 with pytest.raises(HoldoutEvidenceError), source_operation(candidate):
                     candidate.prepare_data(prefix, params.copy())
+
+
+@pytest.mark.parametrize('case', ['direct_ml', 'direct_rule', 'compiled', 'cli_run', 'profile_ml', 'profile_rule', 'cli_profile', 'factorized_ml', 'factorized_rule', 'workers_outside', 'workers_foreign', 'serial_resume_keep', 'serial_resume_drop', 'parallel_resume_drop', 'cli_resume_drop', 'parallel_folds', 'resumed_folds', 'qualified_fold_refit_and_log', 'dormant_formation', 'active_formation', 'execution_source', 'funding_source', 'useful_extension', 'search_affecting_hook', 'eligible_v1_assessment_nextbar', 'eligible_v1_assessment_threshold'])
+def test_recorded_protected_workflows(case, tmp_path, monkeypatch):
+    import numpy as np
+    from tests.test_factorize_equivalence import _numeric_equal
+    from tests.test_factorized_preparation import _config
+    raw = pl.read_parquet(_FIXTURE).head(192)
+    prefix = raw.filter(pl.col('datetime').dt.epoch('ns') + 3600_000_000_000 <= history.utc_day('2024-01-07'))
+    config = _config()
+    config['sfd']['params'] = {key: values[:1] for key, values in config['sfd']['params'].items()}
+    config['uel']['n_permutations'] = 1
+    if 'fold' in case:
+        body = config['sfd']['manifest']
+        body.pop('split_dates')
+        body['split_walk_forward'] = {'n_folds': 2, 'test_bars': 12, 'purge_bars': 1, 'embargo_bars': 1, 'anchored': True}
+        config['sfd']['params']['n_estimators'] = [4, 8]
+        config['uel']['n_permutations'] = 2
+    if 'formation' in case:
+        config['sfd']['manifest']['bar_formation'] = {'func': 'limen.data.bars.trade_bars', 'params': {'trade_threshold': 100000}}
+        config['sfd']['params']['bar_type'] = ['trade' if case == 'active_formation' else 'base']
+    if case.startswith('eligible_'):
+        target = {'name': 'up_next', 'class': 'limen.targets.NextBarUpTarget', 'fit_params': {}, 'transform_params': {}}
+        if case.endswith('threshold'):
+            target.update({'class': 'limen.targets.ThresholdBinaryTarget', 'fit_params': {'source_column': 'close', 'threshold': 43750.0}, 'transform_params': {'shift': -1}})
+        config['sfd']['manifest']['target'] = target
+        config['sfd']['params']['n_estimators'] = [4, 8]
+        config['uel']['n_permutations'] = 2
+    if case == 'search_affecting_hook':
+        config['sfd']['params']['n_estimators'] = [4, 8, 12, 16]
+        config['uel']['n_permutations'] = 3
+    if 'rule' in case:
+        body = config['sfd']['manifest']
+        body.update(type='rule_based', indicators=[], features=[], reference_architecture='limen.sfd.reference_architecture.rule_based.rule_based',
+            strategy={'conditions': [{'id': 'up', 'type': 'relative', 'column': 'close', 'operator': '>', 'other_column': 'open'}], 'entry': 'up'})
+        for name in ('target', 'scaler'):
+            body.pop(name)
+        config['sfd']['params'] = {'fee': [4.]}
+    if case.startswith('factorized_') or 'resume' in case:
+        if 'rule' in case:
+            config['sfd']['params']['fee'] = [1., 4., 9., 13.]
+        else:
+            config['sfd']['params']['fee'] = [4., 9.]
+            config['sfd']['params']['n_estimators'] = [4, 8]
+        config['uel']['n_permutations'] = 4
+    elif case.startswith('workers_'):
+        config['sfd']['params']['n_estimators'] = [4, 8]
+        config['uel']['n_permutations'] = 2
+    if case == 'workers_foreign':
+        monkeypatch.chdir(_project(tmp_path / 'foreign-cwd'))
+    elif case == 'workers_outside':
+        monkeypatch.chdir(tmp_path)
+    control_root = _project(tmp_path / 'ordinary-prefix')
+    control_case = 'compiled' if case.startswith(('factorized_', 'workers_', 'eligible_')) or 'resume' in case or case == 'parallel_folds' else case
+    expected, baseline, _ = _public_recorded_case(control_case, control_root, config, prefix, monkeypatch)
+    assert baseline
+    for label, source in (('full', raw), ('prefix', prefix)):
+        root = _project(tmp_path / label)
+        reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+        with monkeypatch.context() as capture:
+            if case == 'factorized_ml':
+                from tests.test_factorized_preparation import _instrument
+                counts = _instrument(capture)
+            actual, observations, proof = _public_recorded_case(case, root, config, source, monkeypatch)
+            if case == 'factorized_ml':
+                assert counts == {'target': 1, 'scaler': 1, 'model': 2, 'prepare': 2}
+        _numeric_equal(expected, actual)
+        np.testing.assert_array_equal(baseline, observations)
+        assert proof['schema_version'] == 1 and proof['source']['admitted']['rows'] == prefix.height
+        assert proof['source']['admitted']['last_close_ns'] == proof['cutoff_ns']
+        record = history.research_record(history.bind(root), proof['research_record_id'])
+        assert record['state'] == 'completed' and record['revision'] == proof['reservation_revision']
+        assert json.loads(record['provenance_json']) == proof
+        if case == 'useful_extension':
+            assert proof['model_schema'][-1]['name'] == 'recorded_squared'
+        if 'formation' in case:
+            assert proof['workflow']['formation']['active'] == (case == 'active_formation')
+        if case.startswith('eligible_'):
+            _public_assessment(root, case)
+
+
+def _public_recorded_case(case, root, config, raw, monkeypatch=None):
+    from tests.test_factorized_preparation import _params
+    reference = copy.deepcopy(config)
+    reference['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+    path = root / 'recorded-source.parquet'
+    (pl.read_parquet(_FIXTURE).head(192) if case.startswith('eligible_') else raw).write_parquet(path)
+    reference['sfd']['manifest']['data_source']['params']['file_path_or_url'] = str(path)
+    if case in ('execution_source', 'funding_source'):
+        _public_source_roles(root, reference, raw, case == 'funding_source')
+    compiled = CompiledSFD(reference, project_root=root)
+    if case.startswith('profile_') or case == 'cli_profile':
+        return _public_profile_case(case, root, reference, compiled, monkeypatch)
+    if case.startswith('direct_'):
+        manifest = compiled.manifest()
+        prepared = manifest.prepare_data(raw, _params(reference))
+        prepared['_record_model_outputs'] = True
+        result = manifest.run_model(prepared, _params(reference))
+        return ({key: value for key, value in result.items() if not key.startswith('_')},
+            result['_preds'].tolist(), prepared.get('holdout'))
+    directory = root / 'output'
+    workers = 2 if case.startswith(('workers_', 'parallel_')) else 1
+    factorize = case.startswith(('factorized_', 'eligible_'))
+    if case == 'cli_run':
+        from click.testing import CliRunner
+        from limen.cli.main import cli
+        reference['uel'].update(output_path=str(root / 'cli-output'), record_model_outputs=True)
+        yaml_path = root / 'research.yaml'
+        yaml_path.write_text(json.dumps(reference))
+        invocation = CliRunner().invoke(cli, ['run', str(yaml_path), '--no-progress-bar'])
+        assert invocation.exit_code == 0, invocation.output
+        directory = next(root.rglob('round_data.jsonl.gz')).parent
+    else:
+        if case == 'useful_extension':
+            compiled.manifest().add_to_data_dict(recorded_consumed_feature)
+        def adjust_search(log, mutable):
+            assert len(log) > 0
+            mutable.remove_is('n_estimators', 12)
+        loop = UniversalExperimentLoop(sfd=compiled, project_root=root, data=None if case == 'cli_resume_drop' else raw, yaml_reference=reference,
+            search_strategy=build_search_strategy(reference), experiment_dir=directory,
+            intra_callback=adjust_search if case == 'search_affecting_hook' else None,
+            feedback_interval=1 if case == 'search_affecting_hook' else reference['uel'].get('feedback_interval', 100))
+        count = reference['uel']['n_permutations']
+        keep = workers == 1 and not factorize and not case.endswith('_drop')
+        options = {'n_permutations': count, 'progress_bar': False, 'record_model_outputs': True, 'post_processing': keep, 'record_execution': True, 'prep_each_round': True, 'workers': workers, 'factorize': factorize}
+        if 'resume' in case or case == 'resumed_folds':
+            checkpoint = loop._checkpoint
+            def interrupt(*args, **kwargs):
+                checkpoint(*args, **kwargs)
+                path = directory / 'results.csv'
+                if path.exists() and pl.read_csv(path).height:
+                    raise RuntimeError('controlled saved-prefix interruption')
+            loop._checkpoint_interval = 1
+            loop._checkpoint = interrupt
+            with pytest.raises(RuntimeError, match='controlled saved-prefix interruption'):
+                loop.run('public-prefix', **options)
+            if case == 'cli_resume_drop':
+                from click.testing import CliRunner
+                from limen.cli.main import cli
+                invocation = CliRunner().invoke(cli, ['run', '--resume', str(directory), '--no-progress-bar'])
+                assert invocation.exit_code == 0, invocation.output
+            else:
+                loop = UniversalExperimentLoop(sfd=CompiledSFD(reference, project_root=root), project_root=root, data=raw, yaml_reference=reference,
+                    search_strategy=build_search_strategy(reference), experiment_dir=directory, checkpoint_interval=1)
+                loop.run('public-prefix', resume=True, **options)
+        else:
+            loop.run('public-prefix', **options)
+        if case == 'search_affecting_hook':
+            assert set(loop.experiment_log['n_estimators']) == {4, 8, 16}
+    with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
+        records = [json.loads(line) for line in stream]
+    assert len(records) == reference['uel']['n_permutations'] and all(row.get('preds') or row.get('folds') for row in records)
+    if 'holdout' in records[0]:
+        binding = history.bind(root)
+        assert len({row['holdout']['research_record_id'] for row in records}) == len(records)
+        for row in records:
+            proof = row['holdout']
+            saved = history.research_record(binding, proof['research_record_id'])
+            assert saved['state'] == 'completed' and saved['round_id'] == row['round_id']
+            assert json.loads(saved['provenance_json']) == proof
+    log = pl.read_csv(directory / 'results.csv')
+    assert log.height == len(records) and log['strict_mode_error'].drop_nulls().len() == 0
+    metrics = [{key: row[key] for key in log.columns if key not in (*reference['sfd']['params'], 'id', '_round_index', 'strict_mode_error', 'execution_time', '_warnings', '_convergence_warning')} for row in log.to_dicts()]
+    if case == 'qualified_fold_refit_and_log':
+        from limen.log.log import Log
+        from tests.test_factorize_equivalence import _numeric_equal
+        identity = records[0]['round_id']
+        sensor = Trainer(directory, project_root=root).train([identity], fold=0)[0]
+        if 'holdout' in records[0]:
+            assert sensor._fitted_params['_holdout']['experiment_record_id'] == records[0]['folds'][0]['holdout']['research_record_id']
+        captured = Log(uel_object=loop).experiment_backtest_results()
+        assert captured[['id', 'fold']].to_dict('records') == [{'id': row['round_id'], 'fold': k} for row in records for k in range(2)]
+        for actual, saved in zip(captured.to_dict('records'), [fold for row in records for fold in row['folds']], strict=True):
+            _numeric_equal({key: value for key, value in actual.items() if key not in ('id', 'fold')},
+                {key: saved['results']['backtest_' + key if 'backtest_' + key in saved['results'] else key + '_test'] for key in captured.columns if key not in ('id', 'fold')})
+    predictions = [[fold['preds'] for fold in row['folds']] if row.get('folds') else row['preds'] for row in records]
+    return metrics, predictions, records[0].get('holdout')
+
+
+def _public_source_roles(root, reference, raw, funding):
+    from tests.test_fixed_trade_sources import _funding_frame
+    cutoff = history.utc_day('2024-01-07')
+    execution = pl.read_parquet(_FIXTURE).head(192)
+    stamps = execution['datetime'].dt.epoch('ns')
+    execution = execution.with_columns(stamps.alias('start_ns'), (stamps + 3600_000_000_000).alias('end_ns'),
+        stamps.alias('open_available_at_ns'), (stamps + 3600_000_000_000).alias('available_at_ns'))
+    is_prefix = raw['datetime'].dt.epoch('ns').max() < cutoff
+    if is_prefix:
+        execution = execution.filter(pl.col('available_at_ns') <= cutoff)
+    execution.write_parquet(root / 'execution.parquet')
+    backtest = reference['sfd']['manifest']['backtest']
+    backtest['product'] = {'kind': 'linear_perpetual', 'instrument': 'BTCUSDT', 'base_currency': 'BTC', 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0.0}
+    backtest.update(source_interval_seconds=3600., execution_data_source={'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(root / 'execution.parquet')}})
+    if funding:
+        events = _funding_frame()
+        if is_prefix:
+            events = events.filter(pl.col('settlement_at') <= cutoff)
+        events.write_parquet(root / 'funding.parquet')
+        backtest['funding'] = {'preset': 'binance_btcusdt', 'data_source': {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(root / 'funding.parquet')}}}
+
+
+def _public_assessment(root, case):
+    from limen.experiment.holdout import freeze_holdout_selection, final_holdout_report, read_holdout_report
+    from limen.targets import NextBarUpTarget, ThresholdBinaryTarget
+    from tests.test_holdout_assessment import _SCENARIO
+    directory = root / 'output'
+    with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
+        identity = json.loads(next(stream))['round_id']
+    sensor = Trainer(directory, project_root=root).train([identity])[0]
+    target = ThresholdBinaryTarget(pl.DataFrame(), 'observed_up', 'close', 43750.0) if case.endswith('threshold') else NextBarUpTarget(pl.DataFrame(), 'observed_up')
+    frozen = freeze_holdout_selection(sensor, context_start='2024-01-06', scenarios=[_SCENARIO], evaluation_target=target)
+    with history.connection(root / history._HISTORY) as db:
+        reservation = db.execute("SELECT id FROM reservations WHERE state='active'").fetchone()[0]
+    report = final_holdout_report(frozen, project_root=root, reservation_id=reservation, end='2024-01-08')
+    assert report['state'] == 'completed'
+    assert read_holdout_report(root, report['attempt_id']) == report
+
+
+@pytest.mark.parametrize('case', ['saved_population', 'changed_source', 'missing_round', 'changed_geometry', 'feedback_nested_replay', 'profile_load_failure', 'profile_sample_failure', 'profile_protection_failure'])
+def test_protected_workflow_exclusion_and_provenance(case, tmp_path, monkeypatch):
+    from limen.experiment._holdout_history import HoldoutEvidenceError
+    from tests.test_factorized_preparation import _config, _params, _instrument
+    if case.startswith('profile_'):
+        _public_profile_failure(case, tmp_path, monkeypatch)
+        return
+    root = _project(tmp_path / 'public-exclusion')
+    config = _config()
+    config['sfd']['params'] = {key: values[:1] for key, values in config['sfd']['params'].items()}
+    config['uel']['n_permutations'] = 1
+    raw = pl.read_parquet(_FIXTURE).head(192)
+    reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    _, predictions, original = _public_recorded_case('compiled', root, config, raw)
+    assert predictions and original
+    directory = root / 'output'
+    path = _round_storage.round_path(directory)
+    with _round_storage.open_text(path) as stream:
+        records = [json.loads(line) for line in stream]
+    if case == 'feedback_nested_replay':
+        test_protected_extension_and_hook_lineage(True, tmp_path, monkeypatch)
+        return
+    if case == 'saved_population':
+        reference = copy.deepcopy(config)
+        reference['sfd']['manifest']['data_source']['params']['file_path_or_url'] = str(root / 'recorded-source.parquet')
+        alternate = CompiledSFD(reference, project_root=root).manifest().prepare_data(raw, _params(reference))['holdout']
+        assert alternate['research_record_id'] != original['research_record_id']
+        assert history.research_record(history.bind(root), alternate['research_record_id'])['state'] == 'completed'
+        with gzip.open(path, 'rt') as stream:
+            encoded = [json.loads(line) for line in stream]
+        encoded[0]['holdout']['research_record_id'] = alternate['research_record_id']
+        with gzip.open(path, 'wt') as stream:
+            stream.write(json.dumps(encoded[0]) + '\n')
+    elif case == 'changed_source':
+        raw.slice(1).write_parquet(root / 'recorded-source.parquet')
+    else:
+        with gzip.open(path, 'rt') as stream:
+            encoded = [json.loads(line) for line in stream]
+        if case == 'missing_round':
+            encoded[0].pop('holdout')
+        else:
+            encoded[0]['holdout']['splits']['test']['rows'] -= 1
+        with gzip.open(path, 'wt') as stream:
+            stream.write(json.dumps(encoded[0]) + '\n')
+    before = _artifact_state(directory)
+    with monkeypatch.context() as guarded:
+        counts = _instrument(guarded)
+        with pytest.raises(HoldoutEvidenceError):
+            Trainer(directory, project_root=root).train([records[0]['round_id']])
+        assert counts['target'] == counts['scaler'] == counts['model'] == 0
+    assert _artifact_state(directory) == before
+
+
+def _public_profile_failure(case, tmp_path, monkeypatch):
+    from limen.experiment._holdout_history import HoldoutEvidenceError
+    from limen.experiment.manifest_core import MLManifest
+    from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+    from tests.test_factorized_preparation import _config
+    root = _project(tmp_path / 'profile-failure')
+    config = _config()
+    config['sfd']['params'] = {key: values[:1] for key, values in config['sfd']['params'].items()}
+    reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    manifest = CompiledSFD(config, project_root=root)
+    calls = []
+    if case == 'profile_load_failure':
+        owner, method = MLManifest, 'fetch_data'
+    else:
+        owner, method = LightGBMBinary, 'train'
+    original = getattr(owner, method)
+    def failure(*args, **kwargs):
+        original(*args, **kwargs)
+        calls.append(True)
+        if case == 'profile_protection_failure':
+            raise HoldoutEvidenceError('controlled protected profile rejection')
+        raise RuntimeError('controlled profile failure after real work')
+    with monkeypatch.context() as capture:
+        capture.setattr(owner, method, failure)
+        if case == 'profile_protection_failure':
+            with pytest.raises(HoldoutEvidenceError, match='controlled protected profile rejection'):
+                profile(manifest)
+        else:
+            outcome = profile(manifest)
+            assert outcome.errors and outcome.sample_permutations_completed == 0
+    assert calls == [True]
+    with history.connection(root / history._HISTORY) as db:
+        rows = db.execute('SELECT state,provenance_json FROM research').fetchall()
+    failures = [json.loads(row['provenance_json']) for row in rows if row['state'] == 'failed']
+    assert failures and all(proof['purpose'] == 'profile' for proof in failures)
+    if case != 'profile_protection_failure':
+        assert any(proof.get('workflow', {}).get('kind') == 'profile_failure' for proof in failures)
+    assert not list(root.rglob('results.csv'))
+
+
+@pytest.mark.parametrize('stage', ['preparation', 'model'])
+@pytest.mark.parametrize('failure', [False, True])
+def test_protected_workflow_leases_and_revisions(stage, failure, tmp_path, monkeypatch):
+    from limen.experiment._holdout_history import HoldoutEvidenceError
+    from limen.targets import QuantileBinaryTarget
+    from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+    from tests.test_factorized_preparation import _config, _params, _instrument
+    root = _project(tmp_path / 'public-lease')
+    config = _config()
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    raw = pl.read_parquet(_FIXTURE).head(144)
+    params = _params(config)
+    context = multiprocessing.get_context('spawn')
+    parent, child = context.Pipe()
+    worker = context.Process(target=_profile_reservation_worker, args=(root, child, 0.2))
+    worker.start()
+    child.close()
+    calls = []
+    try:
+        assert parent.poll(30) and parent.recv()[0] == 'ready'
+        model_class, method = (QuantileBinaryTarget, '__init__') if stage == 'preparation' else (LightGBMBinary, 'train')
+        original = getattr(model_class, method)
+        def inside_actual_fit(*args, **kwargs):
+            with pytest.raises(ValueError, match='Cannot change reservations inside active research'):
+                reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+            parent.send('reserve')
+            assert parent.poll(30)
+            status, message, elapsed = parent.recv()
+            assert status == 'blocked' and 'locked' in message and elapsed >= 0.18
+            calls.append(True)
+            result = original(*args, **kwargs)
+            if failure:
+                raise RuntimeError('controlled failure after actual fit')
+            return result
+        if stage == 'model':
+            prepared = manifest.prepare_data(raw, params.copy())
+        with monkeypatch.context() as held:
+            held.setattr(model_class, method, inside_actual_fit)
+            def execute():
+                return manifest.prepare_data(raw, params.copy()) if stage == 'preparation' else manifest.run_model(prepared, params.copy())
+            if failure:
+                with pytest.raises(RuntimeError, match='controlled failure after actual fit'):
+                    execute()
+            else:
+                execute()
+        assert calls
+        parent.send('reserve')
+        assert parent.poll(30) and parent.recv()[0] == 'reserved'
+        with monkeypatch.context() as guarded:
+            counts = _instrument(guarded)
+            with pytest.raises(HoldoutEvidenceError, match='revision changed'):
+                manifest.prepare_data(raw, params.copy())
+            assert counts['target'] == counts['scaler'] == counts['model'] == 0
+    finally:
+        parent.send('stop')
+        worker.join(30)
+        if worker.is_alive():
+            worker.terminate()
+            worker.join(30)
+        parent.close()
+    assert worker.exitcode == 0
+
+
+def _public_profile_case(case, root, reference, compiled, monkeypatch):
+    from limen.experiment.manifest_core import MLManifest, Manifest
+    from limen.cli.main import cli
+    from click.testing import CliRunner
+    calls = []
+    owner = Manifest if case == 'profile_rule' else MLManifest
+    original = owner.run_model
+    def observe(self, data, params):
+        result = original(self, data, params)
+        calls.append(({key: value for key, value in result.items() if not key.startswith('_')}, result['_preds'].tolist(), copy.deepcopy(data.get('holdout'))))
+        return result
+    with monkeypatch.context() as capture:
+        capture.setattr(owner, 'run_model', observe)
+        if case == 'cli_profile':
+            path = root / 'research.yaml'
+            path.write_text(json.dumps(reference))
+            outcome = CliRunner().invoke(cli, ['profile', str(path)])
+            assert outcome.exit_code == 0, outcome.output
+        else:
+            result = profile(compiled)
+            assert result.sample_permutations_completed == result.sample_permutations_attempted > 0 and not result.errors
+    assert len(calls) == 1 and calls[0][1]
+    if calls[0][2] is not None:
+        assert calls[0][2]['purpose'] == 'profile'
+    assert not list(root.rglob('results.csv'))
+    return calls[0]

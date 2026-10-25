@@ -11,7 +11,7 @@ import polars as pl
 
 from limen.data.historical_data import HistoricalData
 import limen.experiment._round_storage as _storage
-from limen.experiment._holdout_history import ProjectBinding, check_binding, research_record
+from limen.experiment._holdout_history import HoldoutEvidenceError, ProjectBinding, check_binding, research_record
 
 __all__: list[str] = []
 
@@ -21,7 +21,7 @@ _SOURCE_FIELDS = ('admitted_sha256', 'admitted', 'interval_seconds')
 
 def _mapping(value: object) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
-        raise ValueError('Protected research population lacks recorded evidence')
+        raise HoldoutEvidenceError('Protected research population lacks recorded evidence')
     return cast(Mapping[str, object], value)
 
 
@@ -41,38 +41,43 @@ def _same_header(proof: Mapping[str, object], binding: ProjectBinding) -> bool:
     return set(_FIELDS) <= proof.keys() and json.dumps({key: proof[key] for key in _FIELDS}, sort_keys=True) == json.dumps(binding_header(binding), sort_keys=True)
 
 
-def _parent(binding: ProjectBinding, identity: object) -> None:
+def _parent(binding: ProjectBinding, identity: object, round_id: str | None = None) -> str:
     if not isinstance(identity, str):
-        raise ValueError('Protected population requires genuine experiment parent history')
+        raise HoldoutEvidenceError('Protected population requires genuine experiment parent history')
     parent = research_record(binding, identity)
-    if parent['role'] != 'experiment' or parent['revision'] != binding.revision or parent['round_id'] is not None:
-        raise ValueError('Protected population requires original experiment parent history')
+    if parent['role'] != 'experiment' or parent['revision'] != binding.revision:
+        raise HoldoutEvidenceError('Protected population requires original experiment parent history')
+    if parent['round_id'] is not None:
+        if parent['round_id'] != round_id or parent['state'] != 'completed':
+            raise HoldoutEvidenceError('Protected worker parent occurrence or completion changed')
+        return _parent(binding, _mapping(json.loads(str(parent['provenance_json']))).get('experiment_record_id'))
+    return str(parent['id'])
 
 
 def completed_history(binding: ProjectBinding, proof: Mapping[str, object]) -> None:
     if not _same_header(proof, binding):
-        raise ValueError('Protected round binding/revision or occurrence changed')
+        raise HoldoutEvidenceError('Protected round binding/revision or occurrence changed')
     record_id = proof.get('research_record_id')
     if not isinstance(record_id, str):
-        raise ValueError('Protected round lacks an actual research history identity')
+        raise HoldoutEvidenceError('Protected round lacks an actual research history identity')
     saved = research_record(binding, record_id)
     if (saved['role'] != 'experiment' or saved['state'] != 'completed' or saved['revision'] != binding.revision
             or saved['round_id'] != proof.get('round_id') or json.loads(str(saved['provenance_json'])) != dict(proof)):
-        raise ValueError('Protected round and completed research history disagree')
+        raise HoldoutEvidenceError('Protected round and completed research history disagree')
 
 
 def _record(binding: ProjectBinding, identity: str, value: object,
             source: Mapping[str, object] | None = None) -> Mapping[str, object]:
     proof = _mapping(value)
     if proof.get('round_id') != identity:
-        raise ValueError('Protected round binding/revision or occurrence changed')
+        raise HoldoutEvidenceError('Protected round binding/revision or occurrence changed')
     if not {'source', 'selected', 'splits', 'input_schema', 'model_schema'} <= proof.keys():
-        raise ValueError('Protected round lacks source, membership or model-input evidence')
+        raise HoldoutEvidenceError('Protected round lacks source, membership or model-input evidence')
     recorded_source = _mapping(proof['source'])
     if source is not None and any(recorded_source.get(key) != source.get(key) for key in _SOURCE_FIELDS):
-        raise ValueError('Protected checkpoint admitted source changed')
+        raise HoldoutEvidenceError('Protected checkpoint admitted source changed')
     completed_history(binding, proof)
-    _parent(binding, proof.get('experiment_record_id'))
+    _ = _parent(binding, proof.get('experiment_record_id'), identity)
     return proof
 
 
@@ -83,11 +88,11 @@ def _rows(directory: Path, count: int) -> list[dict[str, str | None]]:
     with csv_path.open(newline='') as stream:
         reader = csv.DictReader(stream)
         if reader.fieldnames is None or len(set(reader.fieldnames)) != len(reader.fieldnames) or not {'id', '_round_index', 'strict_mode_error'} <= set(reader.fieldnames):
-            raise ValueError('Protected checkpoint has an incomplete CSV schema')
+            raise HoldoutEvidenceError('Protected checkpoint has an incomplete CSV schema')
         rows = list(islice(reader, count))
     if len(rows) != count or any(not row.get('id') or row.get('_round_index') != str(index)
                                  or None in row or any(value is None for value in row.values()) for index, row in enumerate(rows)):
-        raise ValueError('Protected checkpoint has an incomplete terminal CSV population')
+        raise HoldoutEvidenceError('Protected checkpoint has an incomplete terminal CSV population')
     return rows
 
 
@@ -109,10 +114,10 @@ def _population(directory: Path, frontier: int, binding: ProjectBinding, source:
             for (index, identity), line in zip(expected, stream, strict=True):
                 entry = _mapping(json.loads(line))
                 if type(entry.get('_round_index')) is not int or entry.get('_round_index') != index or entry.get('round_id') != identity:
-                    raise ValueError('Protected checkpoint round occurrence differs from CSV')
+                    raise HoldoutEvidenceError('Protected checkpoint round occurrence differs from CSV')
                 proof: Mapping[str, object] = _record(binding, identity, entry.get('holdout'), source) if binding.cutoff_ns is not None else {}
                 if binding.cutoff_ns is None and 'holdout' in entry:
-                    raise ValueError('Protected round cannot acquire an unprotected binding/revision')
+                    raise HoldoutEvidenceError('Protected round cannot acquire an unprotected binding/revision')
                 if proof and raw is not None:
                     validate_live(manifest, raw, binding, entry)
                 completed.append({'index': index, 'round_id': identity, 'research_record_id': proof.get('research_record_id'), 'holdout': dict(proof)})
@@ -133,23 +138,23 @@ def validate_checkpoint(directory: Path, checkpoint: Mapping[str, object], metad
                         manifest: object = None, raw: pl.DataFrame | None = None) -> None:
     if 'holdout_binding' not in checkpoint and 'holdout_binding' not in metadata:
         if (binding is not None and binding.cutoff_ns is not None) or 'holdout' in metadata or 'holdout_population' in checkpoint:
-            raise ValueError('Protected resume requires the original checkpoint population binding')
+            raise HoldoutEvidenceError('Protected resume requires the original checkpoint population binding')
         path = _storage.round_path(directory)
         if path.exists():
             with _storage.open_text(path, limit=len(_storage.csv_prefix(path, cast(int, _mapping(checkpoint['metadata'])['experiment_round']) + 1))) as stream:
                 if any('holdout' in _mapping(json.loads(line)) for line in stream):
-                    raise ValueError('Protected resume requires the original checkpoint population binding')
+                    raise HoldoutEvidenceError('Protected resume requires the original checkpoint population binding')
         return
     if binding is None or any(not isinstance(item, Mapping) or dict(cast(Mapping[str, object], item)) != binding_header(binding)
                               or not _same_header(cast(Mapping[str, object], item), binding) for item in (checkpoint.get('holdout_binding'), metadata.get('holdout_binding'))):
-        raise ValueError('Protected checkpoint binding/revision changed or its envelope is missing')
+        raise HoldoutEvidenceError('Protected checkpoint binding/revision changed or its envelope is missing')
     check_binding(binding)
     validate_trainer(binding, metadata, {})
     frontier = _mapping(checkpoint.get('metadata')).get('experiment_round')
     if type(frontier) is not int or frontier < -1:
-        raise ValueError('Protected checkpoint lacks a terminal round frontier')
+        raise HoldoutEvidenceError('Protected checkpoint lacks a terminal round frontier')
     if checkpoint.get('holdout_population') != _population(directory, frontier, binding, source, manifest, raw):
-        raise ValueError('Protected checkpoint research population differs from its saved history')
+        raise HoldoutEvidenceError('Protected checkpoint research population differs from its saved history')
 
 
 def validate_trainer(binding: ProjectBinding | None, metadata: Mapping[str, object], rounds: Mapping[str, object],
@@ -158,13 +163,13 @@ def validate_trainer(binding: ProjectBinding | None, metadata: Mapping[str, obje
     if binding is None or binding.cutoff_ns is None:
         if (saved is not None or any('holdout' in _mapping(entry) for entry in rounds.values())
                 or ('holdout_binding' in metadata and metadata['holdout_binding'] != binding_header(binding))):
-            raise ValueError('Protected Trainer metadata binding/revision changed')
+            raise HoldoutEvidenceError('Protected Trainer metadata binding/revision changed')
         return
     if not isinstance(saved, Mapping) or not _same_header(cast(Mapping[str, object], saved), binding):
-        raise ValueError('Protected Trainer requires original saved project/population evidence')
+        raise HoldoutEvidenceError('Protected Trainer requires original saved project/population evidence')
     if 'holdout_binding' in metadata and metadata['holdout_binding'] != binding_header(binding):
-        raise ValueError('Protected Trainer metadata binding/revision changed')
-    _parent(binding, cast(Mapping[str, object], saved).get('research_record_id'))
+        raise HoldoutEvidenceError('Protected Trainer metadata binding/revision changed')
+    _ = _parent(binding, cast(Mapping[str, object], saved).get('research_record_id'))
     for identity, entry in rounds.items():
         record = _mapping(entry)
         _ = _record(binding, identity, record.get('holdout'), source)
@@ -174,7 +179,7 @@ def validate_trainer(binding: ProjectBinding | None, metadata: Mapping[str, obje
 
 def validate_trainer_round(binding: ProjectBinding, identity: object, proof: object) -> str:
     if not isinstance(identity, str):
-        raise ValueError('Protected Trainer round lacks completed experiment evidence')
+        raise HoldoutEvidenceError('Protected Trainer round lacks completed experiment evidence')
     return cast(str, _record(binding, identity, proof)['research_record_id'])
 
 

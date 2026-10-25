@@ -181,7 +181,9 @@ def read_binding(root: Path) -> ProjectBinding:
 
 def bind(*hints: str | Path | None) -> ProjectBinding | None:
     from limen.yaml.config import find_project_root
-    roots = {root for hint in (*hints, Path.cwd()) if hint is not None and (root := find_project_root(Path(hint))) is not None}
+    roots = {root for hint in hints if hint is not None and (root := find_project_root(Path(hint))) is not None}
+    if not roots and (root := find_project_root(Path.cwd())) is not None:
+        roots.add(root)
     if len(roots) > 1:
         raise ValueError('Holdout project root hints disagree')
     if not roots:

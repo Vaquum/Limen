@@ -53,7 +53,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
 
     try:
         from limen.experiment._holdout_research import reject_modes
-        reject_modes(compiled.manifest(), resume=True)
+        reject_modes(compiled.manifest())
         uel = UniversalExperimentLoop(
             sfd=compiled,
             search_strategy=search_strategy,
