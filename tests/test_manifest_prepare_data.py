@@ -99,10 +99,12 @@ def test_required_bar_columns_are_enforced_without_assertions(
 
 
 @pytest.mark.parametrize('formed', (False, True))
-@pytest.mark.parametrize('required', ([], ['datetime', 'close', 'volume']))
-def test_required_bar_columns_preserve_recorded_bars(formed: bool, required: list[str]) -> None:
+@pytest.mark.parametrize('required', (None, ['datetime', 'close', 'volume']))
+def test_required_bar_columns_preserve_recorded_bars(formed: bool, required: list[str] | None) -> None:
     data = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(200)
-    manifest = MLManifest().set_required_bar_columns(required)
+    manifest = MLManifest()
+    if required is not None:
+        manifest.set_required_bar_columns(required)
     if formed:
         manifest.set_bar_formation(lambda df: df)
     datetimes, bars = _process_bars(manifest, data, {'bar_type': 'formed' if formed else 'base'})

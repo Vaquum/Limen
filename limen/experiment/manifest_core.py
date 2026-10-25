@@ -425,7 +425,7 @@ class Manifest:
         Set required columns after bar formation.
 
         Args:
-            columns (List[str]): List of required column names
+            columns (List[str]): Nonempty distinct nonblank names, stored as an owned copy
 
         Returns:
             Manifest: Self for method chaining
