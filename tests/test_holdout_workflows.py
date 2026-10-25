@@ -963,11 +963,15 @@ def test_protected_fold_lineage(population, tmp_path, monkeypatch):
     with research.operation(restored_manifest, 'experiment'), pytest.raises(ValueError, match='fold'):
         rejected.restore(bad_path, None, [(0, identity)])
     assert _artifact_state(bad_directory) == before and rejected.results.is_empty()
-    manifest.set_pre_split_data_selector(lambda _frame: market)
+    def suffix_selector(_frame):
+        with pytest.raises(ValueError, match='Cannot change reservations inside active research'):
+            reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+        return market
+    manifest.set_pre_split_data_selector(suffix_selector)
     def preflight(*_args, **_kwargs):
         raise AssertionError('A suffix-returning selector reached fold geometry')
     monkeypatch.setattr(runner, '_preflight', preflight)
-    with research.operation(manifest, 'experiment'), pytest.raises(ValueError, match='outside the research prefix'):
+    with pytest.raises(ValueError, match='outside the research prefix'):
         runner.prepare(full, _params(config))
     release_holdout(root, reservation)
     with pytest.raises(ValueError, match='revision changed'):
@@ -1151,3 +1155,19 @@ def _independent_role_clocks(root, config, params, binding):
     frames, witness = _roles(configured, params, replace(current, cutoff_ns=history.utc_day('2025-05-24')), None)
     assert frames[0].equals(points)
     assert witness['execution']['clocks']['start_ns'] == witness['execution']['clocks']['end_ns'] == stamp.to_list()
+
+
+def test_protected_native_fold_refusal_preserves_withdrawal(tmp_path):
+    from tests.test_factorized_preparation import _config, _params
+    root = _project(tmp_path / 'native-fold-refusal')
+    reservation = reserve_holdout(root, '2024-01-07', '2024-01-09', interval_seconds=3600)
+    config = _config()
+    body = config['sfd']['manifest']
+    body.pop('split_dates')
+    body['split_walk_forward'] = {'n_folds': 2, 'test_bars': 12, 'purge_bars': 1, 'embargo_bars': 1, 'anchored': True}
+    manifest = CompiledSFD(config, project_root=root).manifest()
+    with pytest.raises(ValueError, match='Holdout research refuses'):
+        manifest.prepare_data(pl.read_parquet(_FIXTURE).head(144), _params(config))
+    with history.connection(root / 'manifests/holdout.sqlite3') as db:
+        assert db.execute('SELECT COUNT(*) FROM research').fetchone()[0] == 0
+    withdraw_holdout(root, reservation)

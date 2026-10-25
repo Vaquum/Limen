@@ -205,7 +205,7 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
     def guarded(manifest: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         if binding_of(manifest) is None:
             _ = bind_manifest(manifest)
-        reject_modes(manifest, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None and '_walk_forward_fold' not in vars(manifest))
+        reject_modes(manifest, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None and getattr(manifest, '_walk_forward_fold', None) is None)
         parent = _CURRENT.get()
         with operation(manifest, parent.role if parent is not None else 'experiment') as op:
             result = func(manifest, *args, **kwargs)
@@ -244,7 +244,7 @@ def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, tes
         return None, data, cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'prep', None)), cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'model', None))
     reference = cast(Mapping[str, object], getattr(sfd, '_yaml', {}))
     config = cast(Mapping[str, object], reference.get('uel', {}))
-    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=manifest.split_walk_forward is not None, sources=False)
+    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None, sources=False)
     if manifest.architecture_function is None:
         raise ValueError('UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.')
     with operation(manifest, 'experiment'):
