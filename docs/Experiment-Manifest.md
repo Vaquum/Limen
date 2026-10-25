@@ -1058,6 +1058,8 @@ This is the shape used by the bundled `dollar_bar_crash_reversal` template. `Rul
 
 ### Restrictions
 
+Rule-based YAML rejects `target` and `bar_formation` whenever either key is present, including null. The compiler would otherwise discard them. This admission also applies to saved references reconstructed by resume, Trainer, cohorts and workers. Native rule manifests still support target generation and explicitly active bar formation. Other ML-only YAML fields retain their existing warnings pending the separate closed-block admission repair.
+
 Rule-based manifests cannot use scalers or feature ablation. Both will raise `ValueError` at data-preparation time:
 
 - `set_scaler()` / `set_scaler_from_params()` — predicates depend on original indicator scales; scaling RSI to `[0,1]` makes threshold comparisons like `< 30` meaningless.
@@ -1415,7 +1417,7 @@ The index follows the current validator, including its conditional rules. `Requi
 | `sfd.manifest.strategy.entry` | Required | `sfd.manifest.type = rule_based` | {"type": "str"} |
 | `sfd.manifest.indicators` | FuncList | `sfd.manifest.type = rule_based` | {} |
 | `sfd.manifest.strategy` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["conditions", "entry"], "severity": "warning"} |
-| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "objective", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "severity": "warning"} |
+| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "objective", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "rejected": {"bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded", "target": "Field 'target' is unsupported in rule_based YAML and would be discarded"}, "severity": "warning"} |
 | `uel.n_permutations` | Required | `always` | {"type": "int"} |
 | `uel.search_strategy.type` | OneOf | `always` | {"choices": ["grid", "random", "sobol"]} |
 | `uel.search_strategy` | NoUnknownKeys | `always` | {"known": ["seed", "shuffle", "type"], "severity": "warning"} |

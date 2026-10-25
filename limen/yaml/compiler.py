@@ -81,9 +81,9 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
 
 def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
 
-    for key, message in RULE_YAML_REJECTIONS.items():
-        if key in m:
-            raise ValueError(f'sfd.manifest.{key}: {message}')
+    rejected = [f'sfd.manifest.{key}: {message}' for key, message in RULE_YAML_REJECTIONS.items() if key in m]
+    if rejected:
+        raise ValueError('; '.join(rejected))
     manifest = RuleBasedManifest()
     _apply_base(manifest, m)
     _apply_indicators(manifest, m)
