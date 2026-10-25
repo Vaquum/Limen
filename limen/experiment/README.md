@@ -79,6 +79,7 @@ experiment/
 ├── _holdout_source.py
 ├── _manifest_preparation.py
 ├── _objective.py
+├── _objective_optimizer.py
 ├── _objective_run.py
 ├── _parallel_commit.py
 ├── _parallel_resume.py

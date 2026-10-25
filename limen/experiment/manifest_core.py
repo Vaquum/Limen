@@ -7,7 +7,7 @@ from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
-from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
+from limen.experiment._objective import ObjectiveConfig, bind_optimizer as _bind_objective_optimizer, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, validate_witness as _validate_witness
 from collections.abc import Mapping
 from limen.experiment._resolve_backtest_config import resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
@@ -1161,12 +1161,12 @@ class MLManifest(Manifest):
         resolve_component_kwargs(self.architecture_function, data, model_kwargs, round_params)
         scorer = None
         if self.objective is not None:
-            scorer = _prepare_objective(data, self.architecture_function, self.prediction_calibration_config)
+            scorer = _prepare_objective(data, self.architecture_function, model_kwargs.get('prediction_calibration_config'))
             config = model_kwargs.get('prediction_calibration_config')
             if config is not None:
                 if not isinstance(config, CalibrationConfig):
                     raise ValueError('Objective requires a manifest calibration configuration')
-                model_kwargs['prediction_calibration_config'] = replace(config, threshold_params=_objective_threshold_params(config, scorer, self.objective))
+                model_kwargs['prediction_calibration_config'] = replace(config, threshold_func=_bind_objective_optimizer(config, scorer, self.objective), threshold_params=_objective_threshold_params(config, scorer, self.objective))
         result = self.architecture_function(data, **model_kwargs)
         if scorer is not None and self.objective is not None:
             result[self.objective.column] = _score_objective(data, result, scorer)
