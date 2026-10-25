@@ -130,7 +130,7 @@ class WalkForwardRun:
         self.manifest, self.raw, self.config = manifest, raw, manifest.split_walk_forward
         self.promotion = _promotion.start(manifest, raw, promotion)
         if manifest.pre_split_data_selector is None:
-            self._preflight(raw, require_validation=isinstance(manifest, MLManifest) and manifest.objective is not None)
+            self._preflight(raw, require_validation=getattr(manifest, 'objective', None) is not None)
         self.writer = TrialReturnsWriter(directory)
         self.rows: list[dict[str, object]] = []
 

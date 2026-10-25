@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from importlib import import_module
-from typing import cast
+from copy import deepcopy
+import inspect
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -12,12 +13,14 @@ import polars as pl
 from limen.backtest.execution_events import validate_observations, with_predictions
 from limen.backtest.trade_contract import TradeInputs, TradePolicy, finite_number, source_binding
 from limen.backtest.trade_execution import trade_execution
-from limen.calibration._objective_threshold import validate_probabilities
 from limen.calibration.pipeline import CalibrationConfigProtocol
-from limen.calibration.pipeline import ThresholdOptimizerProtocol
-from limen.experiment._objective_optimizer import ObjectiveOptimizer, check_optimizer
+from limen.experiment._objective_optimizer import check_optimizer
 from limen.experiment._prepare_trade_context import PreparedTradeContext
-from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.experiment._validation_calibration import ValidationReceipt
+from limen.experiment._validation_decisions import validation_inputs, validation_header, validation_evidence
+
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import Manifest
 
 
 @dataclass(frozen=True)
@@ -64,10 +67,6 @@ def check_calibration(config: CalibrationConfigProtocol | None) -> None:
         check_optimizer(config)
 
 
-def bind_optimizer(config: CalibrationConfigProtocol, scorer: ValidationScorer, objective: ObjectiveConfig) -> ThresholdOptimizerProtocol | None:
-    return None if config.threshold_func is None else ObjectiveOptimizer(config.threshold_func, scorer, objective.maximize, scorer.inputs.signals.height)
-
-
 def threshold_params(config: CalibrationConfigProtocol, scorer: ValidationScorer,
                      objective: ObjectiveConfig) -> dict[str, object]:
     check_calibration(config)
@@ -87,16 +86,13 @@ def _validate_funding_coverage(funding: pl.DataFrame, start: int, end: int) -> N
 
 def prepare_objective(data: Mapping[str, object], architecture: object,
                       calibration: CalibrationConfigProtocol | None) -> ValidationScorer:
-    name = getattr(architecture, '__name__', '')
-    if name not in ('logreg_binary', 'lightgbm_binary', 'tabpfn_binary') or architecture is not getattr(import_module(f'limen.sfd.reference_architecture.{name}'), name):
-        raise ValueError('Objective requires a supported built-in binary ML architecture')
     check_calibration(calibration)
     context = data.get('_trade_context')
-    if not isinstance(context, PreparedTradeContext) or context.policy.prediction_mode != 'binary':
-        raise ValueError('Objective requires configured binary event execution')
+    if not isinstance(context, PreparedTradeContext):
+        raise ValueError('Objective requires configured event execution')
     inputs = context.partitions[1]
-    count = _row_count(data.get('x_val'))
-    if not count or count != _row_count(data.get('y_val')) or count != inputs.signals.height:
+    count = _row_count(data.get('x_val', data.get('val')))
+    if not count or ('y_val' in data and count != _row_count(data['y_val'])) or count != inputs.signals.height:
         raise ValueError('Objective validation rows must be nonempty and aligned')
     if inputs.signals['row_id'].null_count() or inputs.signals['row_id'].is_duplicated().any():
         raise ValueError('Objective validation row identity is ambiguous')
@@ -132,16 +128,62 @@ def prepare_objective(data: Mapping[str, object], architecture: object,
     return ValidationScorer(selected, context.policy)
 
 
-def score_objective(data: Mapping[str, object], result: Mapping[str, object],
-                    scorer: ValidationScorer) -> float:
-    model = result.get('_model')
-    if not isinstance(model, ReferenceModel):
-        raise ValueError('Objective requires its fitted reference model')
-    prediction = model.predict({'x_test': data['x_val']})
-    probabilities = validate_probabilities(prediction.get('_probs'))
-    if probabilities.size != scorer.inputs.signals.height:
-        raise ValueError('Objective probabilities do not match validation rows')
-    return scorer(data.get('y_val'), prediction.get('_preds'))
+def score_objective(data: Mapping[str, object], result: Mapping[str, object], scorer: ValidationScorer,
+                    *, receipt: ValidationReceipt | None = None, inputs: Mapping[str, object] | None = None,
+                    header: Mapping[str, object] | None = None) -> float:
+    inputs = validation_inputs(data, scorer) if inputs is None else inputs
+    header = validation_header(data, scorer, inputs) if header is None else header
+    predictions, probabilities, payload = validation_evidence(inputs, result, scorer, header)
+    if receipt is not None:
+        receipt.verify(predictions, probabilities, payload)
+    return scorer(None, predictions)
+
+
+def run_model(manifest: Manifest, data: dict[str, object], round_params: dict[str, object]) -> dict[str, object]:
+    from limen.experiment.manifest_core import MLManifest
+    from limen.experiment._allocation import run as run_allocation
+    from limen.experiment._prepare_trade_context import finish_trade_result, resolve_component_kwargs
+
+    function = manifest.architecture_function
+    if function is None:
+        raise ValueError('Manifest run_model requires a configured architecture_function')
+    allocation = manifest.allocation_config is not None
+    objective = getattr(manifest, 'objective', None)
+    kwargs = {} if allocation else manifest.resolve_model_kwargs(round_params)
+    config = None if allocation else getattr(manifest, 'prediction_calibration_config', None)
+    if config is not None:
+        use_calibration, use_threshold = round_params.get('use_calibration', True), round_params.get('use_threshold', True)
+        config = config.resolve(round_params) if use_calibration or use_threshold else None
+        if config is not None:
+            config = replace(config, calibration_func=config.calibration_func if use_calibration else None, threshold_func=config.threshold_func if use_threshold else None)
+            if objective is not None and config.calibration_func is None and config.threshold_func is None:
+                config = None
+        if config is not None:
+            if not any(name == 'prediction_calibration_config' or parameter.kind == inspect.Parameter.VAR_KEYWORD for name, parameter in inspect.signature(function).parameters.items()):
+                raise ValueError('MLManifest Calibration is configured but the architecture function does not accept `prediction_calibration_config`')
+            kwargs['prediction_calibration_config'] = config
+    manifest._apply_backtest_cost(data, round_params)
+    if isinstance(manifest, MLManifest) and not allocation:
+        resolve_component_kwargs(function, data, kwargs, round_params)
+    scorer = None if objective is None else prepare_objective(data, function, config)
+    inputs = None if scorer is None else validation_inputs(data, scorer)
+    header = None if scorer is None else validation_header(data, scorer, cast(Mapping[str, object], inputs))
+    receipt = None if scorer is None or config is None else ValidationReceipt(config, scorer, objective, validation_inputs=data['x_val'], validation_labels=data['y_val'])
+    if header is not None:
+        data['_validation_context'] = deepcopy(header)
+    if receipt is not None:
+        kwargs['prediction_calibration_config'] = receipt.resolved()
+    result: dict[str, object] = {}
+    try:
+        result = run_allocation(manifest, data, round_params) if allocation else function(data, **kwargs)
+        if scorer is not None:
+            result[objective.column] = score_objective(data, result, scorer, receipt=receipt, inputs=inputs, header=header)
+        result.pop('_validation', None)
+        return result if allocation else finish_trade_result(data, result)
+    finally:
+        data.pop('_validation_context', None)
+        if receipt is not None:
+            receipt.finish(result.get('_model'))
 
 
 __all__ = ['ObjectiveConfig', 'ValidationScorer', 'prepare_objective', 'score_objective', 'threshold_params']

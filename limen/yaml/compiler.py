@@ -54,8 +54,7 @@ def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
     if manifest_type == 'ml':
         return apply_objective(_build_ml_manifest(m), yaml_dict)
     if manifest_type == 'rule_based':
-        _ = read_objective(yaml_dict)
-        return _build_rule_based_manifest(m)
+        return apply_objective(_build_rule_based_manifest(m), yaml_dict)
     raise ValueError(f"Unknown manifest type '{manifest_type}'")
 
 

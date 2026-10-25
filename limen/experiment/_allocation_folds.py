@@ -34,6 +34,8 @@ def fit_primary(manifest: object, data: Mapping[str, object], params: Mapping[st
         return RuleBasedStrategy(**manifest.resolve_model_kwargs(dict(params))).train(dict(data))
     primary = deepcopy(manifest)
     primary.allocation_config = None
+    if hasattr(primary, 'objective'):
+        setattr(primary, 'objective', None)
     primary.backtest_config = None
     keys = ('x_train', 'y_train', 'x_val', 'y_val') if isinstance(manifest, MLManifest) else ('train', 'val', 'strategy')
     fitted_data = {key: data[key] for key in keys}
@@ -90,6 +92,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             prefix = raw.head(start - 1)
             clone = deepcopy(manifest)
             clone.allocation_config = None
+            clone.objective = None
             clone.backtest_config = None
             clone.split_dates = None
             clone.split_config = (max(1, int(prefix.height * (1 - validation_fraction))), max(1, int(prefix.height * validation_fraction)), 0)
@@ -233,8 +236,8 @@ def admit(manifest: Manifest, params: Mapping[str, object]) -> None:
     if any(name in vars(manifest) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
         raise ValueError('Allocation cannot refit replaced preparation/model methods')
     if isinstance(manifest, MLManifest):
-        if manifest.objective is not None or manifest.data_dict_extension is not None:
-            raise ValueError('Allocation needs original prefix evidence for custom extensions or economic selection')
+        if manifest.data_dict_extension is not None:
+            raise ValueError('Allocation needs original prefix evidence for custom extensions')
         target = manifest.target_class_config
         if target is not None and getattr(target.target_class, 'requires_trade_context', False):
             raise ValueError('Primary target requires original private prefix trade evidence')
@@ -281,6 +284,8 @@ def attach(manifest: Manifest, raw: pl.DataFrame, params: Mapping[str, object], 
         batches[name] = AllocationBatch(name, partition.partition_start_ns, partition.partition_end_ns, ids, tuple(signals['available_at_ns'].to_list()), primary, meta, stop, ready)
     clone = deepcopy(manifest)
     clone.allocation_config = None
+    if hasattr(clone, 'objective'):
+        setattr(clone, 'objective', None)
     context = AllocationContext(clone, train, dict(params), trade.policy, batches, barriers, trade.partitions[0].initial_equity, trade.partitions[0])
     data['_allocation_context'], data['_allocation_batches'] = context, batches
     return data
