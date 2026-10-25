@@ -42,7 +42,7 @@ def projections(manifest: Manifest, domain: Mapping[str, list[object]]) -> list[
     delivered = manifest.resolve_model_kwargs({name: values[0] for name, values in domain.items()})
     add(manifest.architecture_function, {name: name for name in delivered if name in domain})
     for entry in manifest.feature_transforms:
-        activation = {entry.include_if} & set(domain) if entry.include_if is not None else set()
+        activation: set[str] = {entry.include_if} & set(domain) if entry.include_if is not None else set()
         if entry.group is not None:
             activation.update({'feature_groups'} & set(domain))
         add(entry.func, entry.params, activation=activation)
