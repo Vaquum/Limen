@@ -1413,7 +1413,7 @@ The index follows the current validator, including its conditional rules. `Requi
 | `sfd.manifest.strategy.entry` | Required | `sfd.manifest.type = rule_based` | {"type": "str"} |
 | `sfd.manifest.indicators` | FuncList | `sfd.manifest.type = rule_based` | {} |
 | `sfd.manifest.strategy` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["conditions", "entry"], "severity": "warning"} |
-| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "severity": "warning"} |
+| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "objective", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "severity": "warning"} |
 | `uel.n_permutations` | Required | `always` | {"type": "int"} |
 | `uel.search_strategy.type` | OneOf | `always` | {"choices": ["grid", "random", "sobol"]} |
 | `uel.search_strategy` | NoUnknownKeys | `always` | {"known": ["seed", "shuffle", "type"], "severity": "warning"} |

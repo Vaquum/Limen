@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from copy import deepcopy
 import inspect
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -16,11 +16,9 @@ from limen.backtest.trade_execution import trade_execution
 from limen.calibration.pipeline import CalibrationConfigProtocol
 from limen.experiment._objective_optimizer import check_optimizer
 from limen.experiment._prepare_trade_context import PreparedTradeContext
+from limen.experiment._manifest_preparation import apply_backtest_cost
 from limen.experiment._validation_calibration import ValidationReceipt
-from limen.experiment._validation_decisions import validation_inputs, validation_header, validation_evidence
-
-if TYPE_CHECKING:
-    from limen.experiment.manifest_core import Manifest
+from limen.experiment._validation_decisions import ModelManifest, validation_inputs, validation_header, validation_evidence
 
 
 @dataclass(frozen=True)
@@ -86,6 +84,7 @@ def _validate_funding_coverage(funding: pl.DataFrame, start: int, end: int) -> N
 
 def prepare_objective(data: Mapping[str, object], architecture: object,
                       calibration: CalibrationConfigProtocol | None) -> ValidationScorer:
+    del architecture
     check_calibration(calibration)
     context = data.get('_trade_context')
     if not isinstance(context, PreparedTradeContext):
@@ -139,8 +138,7 @@ def score_objective(data: Mapping[str, object], result: Mapping[str, object], sc
     return scorer(None, predictions)
 
 
-def run_model(manifest: Manifest, data: dict[str, object], round_params: dict[str, object]) -> dict[str, object]:
-    from limen.experiment.manifest_core import MLManifest
+def run_model(manifest: ModelManifest, data: dict[str, object], round_params: dict[str, object]) -> dict[str, object]:
     from limen.experiment._allocation import run as run_allocation
     from limen.experiment._prepare_trade_context import finish_trade_result, resolve_component_kwargs
 
@@ -149,6 +147,8 @@ def run_model(manifest: Manifest, data: dict[str, object], round_params: dict[st
         raise ValueError('Manifest run_model requires a configured architecture_function')
     allocation = manifest.allocation_config is not None
     objective = getattr(manifest, 'objective', None)
+    if objective is not None and not isinstance(objective, ObjectiveConfig):
+        raise TypeError('Manifest objective must be an ObjectiveConfig or None')
     kwargs = {} if allocation else manifest.resolve_model_kwargs(round_params)
     config = None if allocation else getattr(manifest, 'prediction_calibration_config', None)
     if config is not None:
@@ -162,13 +162,13 @@ def run_model(manifest: Manifest, data: dict[str, object], round_params: dict[st
             if not any(name == 'prediction_calibration_config' or parameter.kind == inspect.Parameter.VAR_KEYWORD for name, parameter in inspect.signature(function).parameters.items()):
                 raise ValueError('MLManifest Calibration is configured but the architecture function does not accept `prediction_calibration_config`')
             kwargs['prediction_calibration_config'] = config
-    manifest._apply_backtest_cost(data, round_params)
-    if isinstance(manifest, MLManifest) and not allocation:
+    apply_backtest_cost(manifest, data, round_params)
+    if hasattr(manifest, 'prediction_calibration_config') and not allocation:
         resolve_component_kwargs(function, data, kwargs, round_params)
     scorer = None if objective is None else prepare_objective(data, function, config)
     inputs = None if scorer is None else validation_inputs(data, scorer)
     header = None if scorer is None else validation_header(data, scorer, cast(Mapping[str, object], inputs))
-    receipt = None if scorer is None or config is None else ValidationReceipt(config, scorer, objective, validation_inputs=data['x_val'], validation_labels=data['y_val'])
+    receipt = None if scorer is None or config is None or objective is None else ValidationReceipt(config, scorer, objective.maximize, validation_inputs=data['x_val'], validation_labels=data['y_val'])
     if header is not None:
         data['_validation_context'] = deepcopy(header)
     if receipt is not None:
@@ -176,12 +176,12 @@ def run_model(manifest: Manifest, data: dict[str, object], round_params: dict[st
     result: dict[str, object] = {}
     try:
         result = run_allocation(manifest, data, round_params) if allocation else function(data, **kwargs)
-        if scorer is not None:
+        if scorer is not None and objective is not None:
             result[objective.column] = score_objective(data, result, scorer, receipt=receipt, inputs=inputs, header=header)
-        result.pop('_validation', None)
+        _ = result.pop('_validation', None)
         return result if allocation else finish_trade_result(data, result)
     finally:
-        data.pop('_validation_context', None)
+        _ = data.pop('_validation_context', None)
         if receipt is not None:
             receipt.finish(result.get('_model'))
 

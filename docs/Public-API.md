@@ -73,6 +73,7 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.RuleBasedManifest`](Public-API.md#limenrulebasedmanifest) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.RuleBasedManifest.prepare_data`](Public-API.md#limenrulebasedmanifestprepare_data) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.RuleBasedManifest.sensor_input_prep`](Public-API.md#limenrulebasedmanifestsensor_input_prep) | `signature` | `limen/experiment/manifest_core.py` |
+| [`limen.RuleBasedManifest.set_objective`](Public-API.md#limenrulebasedmanifestset_objective) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.RuleBasedManifest.with_strategy`](Experiment-Manifest.md#with_strategyconditions-entry) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.Sensor`](Public-API.md#limensensor) | `signature` | `limen/inference/sensor.py` |
 | [`limen.Sensor.__call__`](Trainer.md#sensor-inference-api) | `signature` | `limen/inference/sensor.py` |
@@ -258,6 +259,7 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.experiment.RuleBasedManifest`](Public-API.md#limenrulebasedmanifest) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.RuleBasedManifest.prepare_data`](Public-API.md#limenrulebasedmanifestprepare_data) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.RuleBasedManifest.sensor_input_prep`](Public-API.md#limenrulebasedmanifestsensor_input_prep) | `signature` | `limen/experiment/manifest_core.py` |
+| [`limen.experiment.RuleBasedManifest.set_objective`](Public-API.md#limenrulebasedmanifestset_objective) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.RuleBasedManifest.with_strategy`](Experiment-Manifest.md#with_strategyconditions-entry) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.STRATEGY_REGISTRY`](Public-API.md#limenexperimentstrategy_registry) | `definition` | `limen/experiment/param_search/registry.py` |
 | [`limen.experiment.UniversalExperimentLoop`](Public-API.md#limenuniversalexperimentloop) | `signature` | `limen/experiment/experiment_core.py` |
@@ -1197,6 +1199,7 @@ Raised when metric validation detects deviation beyond tolerance.
 @dataclass
 class RuleBasedManifest(Manifest):
     strategy: 'RuleBasedConfig | None' = field(default=None, init=False, repr=False)
+    objective: ObjectiveConfig | None = None
 ```
 
 Manifest for rule-based pipelines with predicate conditions and entry signals.
@@ -1222,6 +1225,14 @@ round_params (Dict[str, Any]): Parameter values for current round
 Returns:
 
 dict: Final data dictionary ready for model training
+
+### `limen.RuleBasedManifest.set_objective`
+
+<!-- reference: public-limen-rulebasedmanifest-set-objective source=limen/experiment/manifest_core.py region=signature:RuleBasedManifest.set_objective role=signature -->
+```python
+def set_objective(self, metric: str='backtest_total_return', direction: str='maximize') -> 'RuleBasedManifest':
+    ...
+```
 
 ### `limen.RuleBasedManifest.sensor_input_prep`
 

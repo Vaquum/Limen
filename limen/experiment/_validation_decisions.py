@@ -1,30 +1,44 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from hashlib import sha256
 import pickle
-from typing import TYPE_CHECKING, cast
+from typing import Protocol, cast
 
 import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.backtest.trade_contract import contract_digest, json_value
+from limen.backtest.trade_contract import TradeInputs, TradePolicy, contract_digest, json_value
 from limen.calibration._objective_threshold import validate_probabilities
 from limen.experiment._allocation import AllocationBatch
 from limen.experiment._prepare_trade_context import PreparedTradeContext
-
-if TYPE_CHECKING:
-    from limen.experiment._objective import ValidationScorer
+from limen.experiment._manifest_preparation import SetupManifest
 
 __all__: list[str] = []
 
 
-def validation_inputs(data: Mapping[str, object], scorer: ValidationScorer) -> dict[str, object]:
+class ModelManifest(SetupManifest, Protocol):
+    @property
+    def architecture_function(self) -> Callable[..., dict[str, object]] | None: ...
+    @property
+    def allocation_config(self) -> object | None: ...
+    def resolve_model_kwargs(self, round_params: dict[str, object]) -> dict[str, object]: ...
+
+
+class Scorer(Protocol):
+    @property
+    def inputs(self) -> TradeInputs: ...
+    @property
+    def policy(self) -> TradePolicy: ...
+    def __call__(self, _labels: object, predictions: object) -> float: ...
+
+
+def validation_inputs(data: Mapping[str, object], scorer: Scorer) -> dict[str, object]:
     batches = data.get('_allocation_batches')
     if isinstance(batches, Mapping):
-        batch = batches.get('val')
+        batch = cast(Mapping[str, object], batches).get('val')
         if not isinstance(batch, AllocationBatch) or (batch.partition_start_ns, batch.partition_end_ns) != (scorer.inputs.partition_start_ns, scorer.inputs.partition_end_ns) or batch.available_at_ns != tuple(scorer.inputs.signals['available_at_ns'].to_list()) or len(batch.row_ids) != scorer.inputs.signals.height:
             raise ValueError('Objective allocation validation batch does not match its outer partition')
         _ = batch.digest()
@@ -36,7 +50,7 @@ def validation_inputs(data: Mapping[str, object], scorer: ValidationScorer) -> d
     return {'test': frame.clone(), 'strategy': deepcopy(strategy), 'x_test': frame.select(predicates).to_numpy()}
 
 
-def validation_header(data: Mapping[str, object], scorer: ValidationScorer, inputs: Mapping[str, object]) -> dict[str, object]:
+def validation_header(data: Mapping[str, object], scorer: Scorer, inputs: Mapping[str, object]) -> dict[str, object]:
     original = cast(PreparedTradeContext, data['_trade_context']).partitions[1]
     checksum = sha256(pickle.dumps((inputs, data.get('y_val')), protocol=5)).hexdigest()
     binding = contract_digest({'partition': [scorer.inputs.partition_start_ns, scorer.inputs.partition_end_ns],
@@ -53,15 +67,16 @@ def _vector(value: object, rows: int) -> npt.NDArray[np.float64]:
     return array.astype(np.float64)
 
 
-def validation_evidence(inputs: Mapping[str, object], result: Mapping[str, object], scorer: ValidationScorer,
+def validation_evidence(inputs: Mapping[str, object], result: Mapping[str, object], scorer: Scorer,
                         header: Mapping[str, object]) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64] | None, Mapping[str, object]]:
     explicit = '_validation' in result
     model = result.get('_model')
+    payload: Mapping[str, object] = {}
     if explicit:
-        payload = result['_validation']
-        if not isinstance(payload, Mapping):
+        supplied = result['_validation']
+        if not isinstance(supplied, Mapping):
             raise ValueError('Objective validation evidence must be a mapping')
-        payload = cast(Mapping[str, object], payload)
+        payload = cast(Mapping[str, object], supplied)
         if any(payload.get(key) != value for key, value in header.items()):
             raise ValueError('Objective validation evidence has stale source, row order or prediction mode')
         prediction, probability = payload.get('predictions'), payload.get('probabilities')
@@ -72,10 +87,11 @@ def validation_evidence(inputs: Mapping[str, object], result: Mapping[str, objec
         first, second = predict(deepcopy(dict(inputs))), predict(deepcopy(dict(inputs)))
         if not isinstance(first, Mapping) or not isinstance(second, Mapping):
             raise ValueError('Objective fitted prediction must return a mapping')
+        first, second = cast(Mapping[str, object], first), cast(Mapping[str, object], second)
         for key in ('_preds', '_probs'):
-            if (first.get(key) is None) != (second.get(key) is None) or (first.get(key) is not None and not np.array_equal(first[key], second[key])):
+            if (first.get(key) is None) != (second.get(key) is None) or (first.get(key) is not None and not np.array_equal(np.asarray(first[key]), np.asarray(second[key]))):
                 raise ValueError('Objective validation predictions must be stable and ordered')
-        prediction, probability, payload = first.get('_preds'), first.get('_probs'), {}
+        prediction, probability = first.get('_preds'), first.get('_probs')
     modes = (result.get('_prediction_mode'), getattr(model, 'prediction_mode', None), payload.get('prediction_mode'))
     if any(mode is not None and mode != scorer.policy.prediction_mode for mode in modes) or not any(mode is not None for mode in modes):
         raise ValueError('Objective prediction mode must match the declared execution policy')

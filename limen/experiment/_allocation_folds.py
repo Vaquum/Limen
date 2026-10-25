@@ -34,8 +34,8 @@ def fit_primary(manifest: object, data: Mapping[str, object], params: Mapping[st
         return RuleBasedStrategy(**manifest.resolve_model_kwargs(dict(params))).train(dict(data))
     primary = deepcopy(manifest)
     primary.allocation_config = None
-    if hasattr(primary, 'objective'):
-        setattr(primary, 'objective', None)
+    if isinstance(primary, (MLManifest, RuleBasedManifest)):
+        primary.objective = None
     primary.backtest_config = None
     keys = ('x_train', 'y_train', 'x_val', 'y_val') if isinstance(manifest, MLManifest) else ('train', 'val', 'strategy')
     fitted_data = {key: data[key] for key in keys}
@@ -284,8 +284,8 @@ def attach(manifest: Manifest, raw: pl.DataFrame, params: Mapping[str, object], 
         batches[name] = AllocationBatch(name, partition.partition_start_ns, partition.partition_end_ns, ids, tuple(signals['available_at_ns'].to_list()), primary, meta, stop, ready)
     clone = deepcopy(manifest)
     clone.allocation_config = None
-    if hasattr(clone, 'objective'):
-        setattr(clone, 'objective', None)
+    if isinstance(clone, (MLManifest, RuleBasedManifest)):
+        clone.objective = None
     context = AllocationContext(clone, train, dict(params), trade.policy, batches, barriers, trade.partitions[0].initial_equity, trade.partitions[0])
     data['_allocation_context'], data['_allocation_batches'] = context, batches
     return data

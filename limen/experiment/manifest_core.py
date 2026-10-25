@@ -6,7 +6,7 @@ from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk
 from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import attach_outcomes, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
-from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
+from limen.experiment._prepare_trade_context import PreparedTradeContext, attach_trade_context as _attach_trade_context
 from limen.experiment._objective import ObjectiveConfig, run_model as _run_objective_model
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, validate_witness as _validate_witness
 from collections.abc import Mapping
@@ -21,7 +21,7 @@ from datetime import date
 from datetime import datetime
 from itertools import pairwise
 from collections.abc import Callable
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 if TYPE_CHECKING:

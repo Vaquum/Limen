@@ -79,6 +79,7 @@ experiment/
 ├── _holdout_source.py
 ├── _manifest_preparation.py
 ├── _objective.py
+├── _objective_optimizer.py
 ├── _objective_run.py
 ├── _parallel_commit.py
 ├── _parallel_resume.py
@@ -95,6 +96,8 @@ experiment/
 ├── _round_storage.py
 ├── _serial_resume.py
 ├── _shim_fractional_diff.py
+├── _validation_calibration.py
+├── _validation_decisions.py
 ├── _walk_forward_run.py
 ├── _walk_forward_split.py
 ├── acceptance_report.py

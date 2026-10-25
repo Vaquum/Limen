@@ -17,7 +17,7 @@ from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.yaml.config import is_list
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
-from limen.yaml._objective_spec import apply_objective, objective_reducer_params, read_objective
+from limen.yaml._objective_spec import apply_objective, objective_reducer_params
 from limen.yaml.resolver import resolve
 
 

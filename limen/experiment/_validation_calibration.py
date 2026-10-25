@@ -1,86 +1,102 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from copy import deepcopy
-from dataclasses import replace
-from typing import TYPE_CHECKING
+from importlib import import_module
+from typing import Protocol, cast
 
 import numpy as np
 import numpy.typing as npt
+import polars as pl
 
 from limen.calibration._objective_threshold import validate_probabilities
 from limen.experiment._objective_optimizer import ObjectiveOptimizer
-
-if TYPE_CHECKING:
-    from limen.experiment._objective import ObjectiveConfig, ValidationScorer
-    from limen.experiment.manifest_core import CalibrationConfig
+from limen.calibration.pipeline import CalibrationConfigProtocol
+from limen.experiment._validation_decisions import Scorer
 
 __all__: list[str] = []
+_DEFAULT_THRESHOLD = 0.5
+
+
+class _Predictor(Protocol):
+    def predict_proba(self, values: object) -> object: ...
+
+
+def _closed_scorer(_labels: object, _predictions: object) -> float:
+    raise ValueError('Objective validation receipt is already finished')
 
 
 class _Calibrated:
     def __init__(self, predictor: object, receipt: ValidationReceipt) -> None:
-        self.predictor, self.receipt = predictor, receipt
+        super().__init__()
+        self.predictor, self.receipt = cast(_Predictor, predictor), receipt
 
     def predict_proba(self, values: object) -> object:
-        output = getattr(self.predictor, 'predict_proba')(values)
+        output = self.predictor.predict_proba(values)
         if self.receipt.inputs is not None and np.array_equal(np.asarray(values), self.receipt.inputs, equal_nan=True):
             self.receipt.probabilities = validate_probabilities(np.asarray(output)[:, 1]).copy()
         return output
 
 
 class ValidationReceipt:
-    def __init__(self, config: CalibrationConfig, scorer: ValidationScorer, objective: ObjectiveConfig,
+    def __init__(self, config: CalibrationConfigProtocol, scorer: Scorer, maximize: bool,
                  *, validation_inputs: object, validation_labels: object) -> None:
+        super().__init__()
         self.config = config
-        self.scorer, self.objective = scorer, objective
+        self.scorer: Callable[[object, object], float] = scorer
+        self.maximize = maximize
         self.inputs: npt.NDArray[np.float64] | None = np.asarray(validation_inputs, dtype=np.float64).copy()
         self.labels: npt.NDArray[np.float64] | None = np.asarray(validation_labels, dtype=np.float64).copy()
         self.probabilities: npt.NDArray[np.float64] | None = None
         self.predictor: _Calibrated | None = None
-        self.optimizer = None if config.threshold_func is None else ObjectiveOptimizer(config.threshold_func, scorer, objective.maximize, scorer.inputs.signals.height)
+        self.optimizer = None if config.threshold_func is None else ObjectiveOptimizer(config.threshold_func, scorer, maximize, scorer.inputs.signals.height)
 
     def calibrate(self, clf: object, x_val: object, y_val: object, **params: object) -> object:
-        if not np.array_equal(np.asarray(x_val), self.inputs, equal_nan=True) or not np.array_equal(np.asarray(y_val), self.labels, equal_nan=True):
+        if self.inputs is None or self.labels is None or not np.array_equal(np.asarray(x_val), self.inputs, equal_nan=True) or not np.array_equal(np.asarray(y_val), self.labels, equal_nan=True):
             raise ValueError('Objective calibration fit must use the original ordered validation features and labels')
         function = self.config.calibration_func
         assert function is not None
-        self.predictor = _Calibrated(function(clf, x_val, y_val, **params), self)
+        self.predictor = _Calibrated(function(clf, cast(npt.NDArray[np.generic] | pl.DataFrame, x_val), cast(npt.NDArray[np.generic] | pl.Series, y_val), **params), self)
         return self.predictor
 
-    def resolved(self) -> CalibrationConfig:
-        from limen.experiment._objective import threshold_params
-        return replace(self.config, calibration_func=self.calibrate if self.config.calibration_func is not None else None,
-                       threshold_func=self.optimizer, threshold_params=threshold_params(self.config, self.scorer, self.objective))
+    def resolved(self) -> CalibrationConfigProtocol:
+        factory = cast(Callable[..., CalibrationConfigProtocol], vars(import_module('limen.experiment.manifest_core'))['CalibrationConfig'])
+        return factory(calibration_func=self.calibrate if self.config.calibration_func is not None else None, calibration_params=self.config.calibration_params,
+                       threshold_func=self.optimizer, threshold_params={**self.config.threshold_params, 'metric': self.scorer, '_objective_maximize': self.maximize})
 
     def verify(self, predictions: object, probabilities: object, payload: Mapping[str, object]) -> None:
         if probabilities is None:
             raise ValueError('Active objective calibration/threshold selection requires validation probabilities')
         values = validate_probabilities(probabilities)
-        if self.config.calibration_func is not None:
-            if self.probabilities is None or not np.array_equal(values, self.probabilities):
-                raise ValueError('Objective validation must use probabilities from its actual fitted calibrator')
+        if self.config.calibration_func is not None and (self.probabilities is None or not np.array_equal(values, self.probabilities)):
+            raise ValueError('Objective validation must use probabilities from its actual fitted calibrator')
         if self.optimizer is not None:
-            if self.optimizer.selection is None or not np.array_equal(values, self.optimizer.selection[0]) or not np.array_equal(predictions, values >= self.optimizer.selection[1]):
+            if self.optimizer.selection is None or not np.array_equal(values, self.optimizer.selection[0]) or not np.array_equal(np.asarray(predictions), values >= self.optimizer.selection[1]):
                 raise ValueError('Objective decisions must use its selected threshold on the original validation probabilities')
         else:
             mapping = payload.get('probability_to_decision')
             if mapping is None:
-                expected = values >= 0.5
+                expected = values >= _DEFAULT_THRESHOLD
             elif callable(mapping):
-                expected = mapping(values.copy())
-                if not np.array_equal(expected, mapping(values.copy())):
+                expected = np.asarray(mapping(values.copy()))
+                if not np.array_equal(expected, np.asarray(mapping(values.copy()))):
                     raise ValueError('Objective calibrated decision mapping must be stable')
             else:
                 raise ValueError('Objective calibrated decision mapping must be callable')
-            if not np.array_equal(predictions, expected):
+            if not np.array_equal(np.asarray(predictions), expected):
                 raise ValueError('Objective decisions must use its calibrated validation probabilities')
 
     def finish(self, model: object) -> None:
+        restored: dict[str, object] = {}
         if self.predictor is not None and getattr(model, '_fitted_calibrator', None) is self.predictor:
-            setattr(model, '_fitted_calibrator', self.predictor.predictor)
+            restored['_fitted_calibrator'] = self.predictor.predictor
         if getattr(model, 'prediction_calibration_config', None) is not None:
-            setattr(model, 'prediction_calibration_config', deepcopy(self.config))
+            restored['prediction_calibration_config'] = deepcopy(self.config)
+        for name, value in restored.items():
+            setattr(model, name, value)
         self.inputs = self.labels = self.probabilities = None
+        self.scorer = _closed_scorer
         if self.optimizer is not None:
             self.optimizer.selection = None
+            self.optimizer.evaluated.clear()
+            self.optimizer.scorer = _closed_scorer

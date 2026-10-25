@@ -15,7 +15,7 @@ import polars as pl
 import limen.experiment.manifest_core as _manifest_core
 
 from limen.backtest.trade_contract import TradeInputs, TradeLedger
-from limen.experiment.manifest_core import Manifest, MLManifest
+from limen.experiment.manifest_core import Manifest
 from limen.experiment._walk_forward_split import WalkForwardConfig, read_walk_forward_config
 from limen.log._permutation_returns import TrialReturnsWriter
 
