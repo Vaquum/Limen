@@ -478,3 +478,27 @@ def test_committed_manifest_preserves_canonical_equivalence(tmp_path: Path, temp
     entry = load_index(root)['manifests'][0]
     assert entry['committed_at'] == document['lineage']['committed_at']
     assert entry['parent_id'] == document['lineage']['parent_id']
+
+
+@pytest.mark.parametrize('damage', ('content', 'lineage', 'coherent-replacement'))
+def test_fork_refuses_changed_committed_source(committed_rule_manifest, damage):
+    root, source, stored, manifest_id = committed_rule_manifest
+    yaml = round_trip_yaml()
+    document = yaml.load(stored.read_text())
+    if damage in ('content', 'coherent-replacement'):
+        document['metadata']['description'] = 'Altered after commit'
+    if damage == 'lineage':
+        document['lineage']['id'] = manifest_id[:-1] + ('0' if manifest_id[-1] != '0' else '1')
+    elif damage == 'coherent-replacement':
+        document['lineage']['id'] = canonical_manifest_id(document)
+        assert document['lineage']['id'] != manifest_id
+    with stored.open('w') as stream:
+        yaml.dump(document, stream)
+    index = stored.parent / 'index.json'
+    before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in (source, stored, index)}
+    destination = root / 'missing/child.yaml'
+    with pytest.raises(ValueError, match='Integrity check failed'):
+        fork_manifest(stored, destination, 'child')
+    assert not destination.exists()
+    assert not destination.parent.exists()
+    assert {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in before} == before
