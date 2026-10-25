@@ -9,6 +9,7 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen.experiment._objective_run import finalize_objective_result
+import limen.experiment._holdout_composition as _protection
 from limen.experiment._objective_run import objective_frame
 from limen.experiment._objective_run import run_objective
 from limen.experiment._objective_run import validate_objective_header
@@ -106,6 +107,7 @@ class ParallelCommit:
         index, identity = round_params['_round_index'], round_params['_id']
         if not isinstance(index, int) or isinstance(index, bool) or not isinstance(identity, str):
             raise ValueError('Parallel occurrence requires an integer index and string identity')
+        _protection.verify_worker(self.manifest, cast(pl.DataFrame, vars(self.host)['data']), payload.alignment, identity)
         parameters = round_params | {key: value for key, value in payload.parameters.items() if not key.startswith('_')}
         validate_result(parameters, payload.results, succeeded=payload.succeeded)
         row = dict(payload.results)

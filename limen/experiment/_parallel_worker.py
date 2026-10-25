@@ -17,6 +17,7 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen.experiment._parallel_sources import SourceSnapshot
+import limen.experiment._holdout_composition as _protection
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, Manifest
@@ -166,6 +167,7 @@ _worker_sources: FrozenRoundSources | None = None
 _worker_record_execution = False
 _worker_record_model_outputs = False
 _worker_fold_promotion: dict[str, object] | None = None
+_worker_authority: _protection.WorkerAuthority | None = None
 
 
 def _native_pools() -> list[dict[str, object]]:
@@ -177,10 +179,11 @@ def _native_pools() -> list[dict[str, object]]:
 
 
 def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
-                record_execution: bool, record_model_outputs: bool, fold_promotion: dict[str, object] | None = None) -> None:
+                record_execution: bool, record_model_outputs: bool, fold_promotion: dict[str, object] | None = None,
+                authority: _protection.WorkerAuthority | None = None) -> None:
     from limen.yaml.compiler import build_manifest
 
-    global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion
+    global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion, _worker_authority
     _ = signal.signal(signal.SIGINT, signal.SIG_IGN)
     _ = signal.signal(signal.SIGTERM, signal.SIG_DFL)
     if os.name == 'posix':
@@ -196,7 +199,7 @@ def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
                                         sources.execution.read() if sources.execution is not None else None,
                                         sources.funding.read() if sources.funding is not None else None)
     _worker_yaml, _worker_sources = yaml_reference, restored
-    _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion = record_execution, record_model_outputs, fold_promotion
+    _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion, _worker_authority = record_execution, record_model_outputs, fold_promotion, authority
 
 
 def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
@@ -215,29 +218,30 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
         with limit(limits=1), warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             manifest = build_manifest(_worker_yaml)
-            _require_cpu({name: [value] for name, value in manifest.resolve_model_kwargs(params).items() if name in _CPU_KNOBS})
-            vars(manifest)['_frozen_trade_sources'] = (_worker_sources.execution, _worker_sources.funding)
-            folds = None
-            if manifest.split_walk_forward is None:
-                data = cast(dict[str, object], manifest.prepare_data(_worker_sources.learning, params))
-            else:
-                folds = WalkForwardRun(manifest, _worker_sources.learning, Path('.'), promotion=_worker_fold_promotion or False)
-                data = folds.prepare(_worker_sources.learning, params)
-            data['_record_execution'] = _worker_record_execution
-            data['_record_model_outputs'] = _worker_record_model_outputs
-            if folds is None:
-                results = cast(dict[str, object], manifest.run_model(data, params))
-            else:
-                results = folds.evaluate(data, params)
-            raw_alignment = data.get('_alignment')
-            if not isinstance(raw_alignment, dict):
-                raise ValueError('Parallel round requires recorded alignment evidence')
-            alignment = {key: value for key, value in cast(dict[str, object], raw_alignment).items()
-                         if not key.startswith('_')}
-            for key in ('_model', 'models', 'extras'):
-                _ = results.pop(key, None)
-            pools = _native_pools()
-            succeeded = True
+            with _protection.worker_operation(manifest, _worker_sources.learning, _worker_authority, round_params.get('_id')):
+                _require_cpu({name: [value] for name, value in manifest.resolve_model_kwargs(params).items() if name in _CPU_KNOBS})
+                vars(manifest)['_frozen_trade_sources'] = (_worker_sources.execution, _worker_sources.funding)
+                folds = None
+                if manifest.split_walk_forward is None:
+                    data = cast(dict[str, object], manifest.prepare_data(_worker_sources.learning, params))
+                else:
+                    folds = WalkForwardRun(manifest, _worker_sources.learning, Path('.'), promotion=_worker_fold_promotion or False)
+                    data = folds.prepare(_worker_sources.learning, params)
+                data['_record_execution'] = _worker_record_execution
+                data['_record_model_outputs'] = _worker_record_model_outputs
+                if folds is None:
+                    results = cast(dict[str, object], manifest.run_model(data, params))
+                else:
+                    results = folds.evaluate(data, params)
+                raw_alignment = data.get('_alignment')
+                if not isinstance(raw_alignment, dict):
+                    raise ValueError('Parallel round requires recorded alignment evidence')
+                alignment = {key: value for key, value in cast(dict[str, object], raw_alignment).items()
+                             if not key.startswith('_')}
+                for key in ('_model', 'models', 'extras'):
+                    _ = results.pop(key, None)
+                pools = _native_pools()
+                succeeded = True
     except StrictModeError as exc:
         results = {'strict_mode_error': str(exc)}
         pools = _native_pools()

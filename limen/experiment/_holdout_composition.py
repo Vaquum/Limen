@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import copy
 import json
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Protocol
 import warnings
@@ -21,6 +22,7 @@ from limen.experiment._holdout_source import frame_evidence
 __all__: list[str] = []
 _T = TypeVar('_T')
 _HEADER = ('project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds')
+WorkerAuthority = tuple[ProjectBinding, dict[str, object] | None, str | None]
 
 
 class _Prepared(Protocol):
@@ -185,3 +187,53 @@ def signal_result(manifest: object, raw: pl.DataFrame, data: dict[str, object],
         op.provenance['reuse'] = {'kind': 'signal', 'source_preparation_record_id': original['research_record_id']}
         _carrier(data, op.provenance)
     return data, result, recorded, converged
+
+
+def worker_authority(manifest: object) -> WorkerAuthority | None:
+    binding = _binding(manifest)
+    if binding is None:
+        return None
+    op = cast(ContextVar[object | None], vars(_holdout)['_CURRENT']).get()
+    source = getattr(manifest, '_holdout_source', None)
+    return binding, None if source is None else copy.deepcopy(dict(_mapping(source))), None if op is None else cast(str, vars(op)['record_id'])
+
+
+@contextmanager
+def worker_operation(manifest: object, raw: pl.DataFrame, authority: WorkerAuthority | None, identity: object) -> Iterator[None]:
+    if authority is None:
+        yield
+        return
+    binding, source, parent = authority
+    check_binding(binding)
+    if not isinstance(identity, str):
+        raise ValueError('Protected worker requires its occurrence identity')
+    vars(manifest)['_holdout_binding'], vars(manifest)['_holdout_interval_seconds'] = binding, binding.interval_seconds
+    vars(manifest)['_holdout_round_id'] = identity
+    with _holdout.operation(manifest, 'experiment') as op:
+        if op is not None:
+            if parent is None:
+                raise ValueError('Protected worker lacks its active coordinator')
+            coordinator = research_record(binding, parent)
+            if coordinator['state'] != 'started' or coordinator['role'] != 'experiment' or coordinator['revision'] != binding.revision or coordinator['round_id'] is not None:
+                raise ValueError('Protected worker coordinator authority changed')
+            admitted, evidence = frame_evidence(raw, binding)
+            if admitted.height != raw.height or any(_mapping(source).get(key) != evidence[key] for key in ('admitted_sha256', 'admitted', 'interval_seconds')):
+                raise ValueError('Protected worker source differs from admitted coordinator input')
+            vars(manifest)['_holdout_source'] = copy.deepcopy(source)
+            op.provenance['experiment_record_id'] = parent
+        yield
+
+
+def verify_worker(manifest: object, raw: pl.DataFrame, alignment: Mapping[str, object], identity: str) -> None:
+    binding = _binding(manifest)
+    if binding is None or binding.cutoff_ns is None:
+        if 'holdout' in alignment:
+            raise ValueError('Unprotected worker returned protected evidence')
+        return
+    proof = _mapping(alignment.get('holdout'))
+    _check(manifest, raw, proof)
+    parent = research_record(binding, cast(str, proof['experiment_record_id']))
+    op = cast(ContextVar[object | None], vars(_holdout)['_CURRENT']).get()
+    if (proof['round_id'] != identity or parent['state'] != 'completed' or parent['role'] != 'experiment'
+            or parent['round_id'] != identity or json.loads(str(parent['provenance_json']))['experiment_record_id'] != vars(op)['record_id']):
+        raise ValueError('Protected worker occurrence or coordinator history changed')

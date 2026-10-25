@@ -19,6 +19,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment._dynamic_barriers import admit_research_run
+from limen.experiment._holdout_composition import worker_authority
 from limen.experiment._parallel_commit import ParallelCommit
 from limen.experiment._parallel_resume import restore_parallel
 from limen.experiment._parallel_sources import snapshot_sources
@@ -172,7 +173,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         pool = ProcessPoolExecutor(max_workers=capacity,
                                    mp_context=multiprocessing.get_context('spawn'),
                                    initializer=worker_init,
-                                   initargs=(reference, snapshot, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), getattr(attributes.get('_walk_forward'), 'promotion', None)))
+                                   initargs=(reference, snapshot, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), getattr(attributes.get('_walk_forward'), 'promotion', None), worker_authority(attributes['manifest'])))
         exhausted = False
         try:
             launch = cast(Callable[[], None], getattr(pool, '_launch_processes', None))
