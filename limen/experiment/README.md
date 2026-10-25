@@ -25,6 +25,7 @@ Does **not** own inference reconstruction (`limen.inference`), model architectur
 | `Manifest`, `MLManifest`, `RuleBasedManifest`, `CalibrationConfig` | Declarative experiment pipelines and calibration configuration | Exported at the package root |
 | `UniversalExperimentLoop` | Run an SFD across parameter permutations | Exported at the package root |
 | `GridStrategy`, `RandomStrategy`, `STRATEGY_REGISTRY` | Built-in advanced-search strategy surface | Exported at the package root |
+| `ReuseContract`, `declare_reuse` | Declare deterministic snapshot reuse | See [reuse declarations](../../docs/Universal-Experiment-Loop.md#reuse-declarations) |
 
 ## Adjacent modules
 
@@ -59,7 +60,13 @@ experiment/
 ├── _column_shims.py
 ├── _dynamic_barriers.py
 ├── _factorize.py
+├── _factorized_admission.py
+├── _factorized_contract.py
+├── _factorized_key.py
+├── _factorized_native.py
 ├── _factorized_prep.py
+├── _factorized_projection.py
+├── _factorized_replay.py
 ├── _family_evidence.py
 ├── _filter_resume.py
 ├── _fixed_trade_sources.py
@@ -80,6 +87,7 @@ experiment/
 ├── _holdout_source.py
 ├── _manifest_preparation.py
 ├── _objective.py
+├── _objective_optimizer.py
 ├── _objective_run.py
 ├── _parallel_commit.py
 ├── _parallel_resume.py

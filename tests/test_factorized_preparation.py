@@ -319,7 +319,7 @@ def test_factorized_preparation_failure_and_isolation(monkeypatch):
                for entry in rounds.preparation.cache.values())
 
 
-@pytest.mark.parametrize('changed', ['economic_target', 'economic_scaler', 'registry_scaler', 'custom_scaler'])
+@pytest.mark.parametrize('changed', ['economic_target', 'economic_scaler'])
 def test_factorized_preparation_admission(tmp_path, changed):
     config = _config()
     manifest = config['sfd']['manifest']

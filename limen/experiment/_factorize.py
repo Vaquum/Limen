@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import copy
-import inspect
-import json
 import warnings
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -17,25 +15,20 @@ import numpy.typing as npt
 import polars as pl
 
 import limen.experiment._holdout_composition as _composition
+from limen.experiment._factorized_admission import validate_candidate, validate_domain
+from limen.experiment._factorized_key import parameter_key
+from limen.experiment._factorized_replay import replay, validate_output
+from limen.experiment._factorized_native import native_threads
 from limen.experiment.errors import StrictModeError
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
 from limen.experiment._factorized_prep import FittedPreparation, supports_preparation
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment._grid_resume import validate_factorized_grid
-from limen.features.dollar_bar_crash_reversal import dollar_bar_crash_reversal
-from limen.features.lagged_features import lag_range
-from limen.indicators.window_return import window_return
-from limen.metrics.rule_based_metrics import rule_based_metrics
-from limen.sfd.reference_architecture import _backtest_evaluation
-from limen.sfd.reference_architecture.base import ReferenceModel
-from limen.sfd.reference_architecture.dlinear_regressor import dlinear_regressor
-from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
-from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_based
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
 
 _BACKTEST_FIELDS = ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
 _RESERVED = frozenset(('bar_type', 'feature_groups', 'use_calibration', 'use_threshold'))
-_FEATURES = frozenset((window_return, lag_range, dollar_bar_crash_reversal))
 _CACHE_LIMIT = 128
 
 
@@ -78,59 +71,6 @@ def _axes(manifest: Manifest, domain: Mapping[str, list[object]]) -> frozenset[s
     return frozenset(axes)
 
 
-def _check_manifest(manifest: Manifest, domain: Mapping[str, list[object]], axes: frozenset[str]) -> None:
-    function = manifest.architecture_function
-    if type(manifest) is MLManifest:
-        if function not in (dlinear_regressor, lightgbm_binary):
-            _fail('unsupported ML architecture')
-        if not supports_preparation(manifest):
-            _fail('unsupported ML target, scaler, feature or preparation configuration')
-    elif type(manifest) is RuleBasedManifest:
-        if function is not rule_based or manifest.target_class_config is not None:
-            _fail('unsupported rule-based architecture')
-        if any(entry.func not in _FEATURES for entry in manifest.feature_transforms):
-            _fail('unrecognized rule-based transform')
-        if manifest.strategy is None:
-            _fail('missing rule-based strategy')
-    else:
-        _fail('only the shipped ML and rule-based manifests are supported')
-    if (manifest.pre_split_data_selector is not None or manifest.bar_formation is not None
-            or manifest.split_walk_forward is not None or manifest.metrics_params):
-        _fail('dynamic preparation, walk-forward or metrics')
-    if any(entry.include_if is not None or entry.group is not None for entry in manifest.feature_transforms):
-        _fail('dynamic feature selection')
-
-    assert function is not None
-    sig = inspect.signature(function)
-    if any(param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()):
-        _fail('opaque architecture kwargs')
-    for key in axes:
-        if key in _RESERVED or key in sig.parameters:
-            _fail(f'backtest parameter {key} affects signal generation')
-        if any(_references(value, key) for attr, value in vars(manifest).items()
-               if attr not in ('backtest_config', 'architecture_function', 'data_source_config')):
-            _fail(f'backtest parameter {key} is also consumed by the manifest')
-        if manifest.data_source_config is not None and _references(manifest.data_source_config.params, key):
-            _fail(f'backtest parameter {key} is also consumed by the source')
-    for params in _candidate_settings(domain, axes):
-        if manifest.resolve_trade_policy(params) is not None:
-            _fail('event execution')
-        if function is lightgbm_binary:
-            opts = manifest.resolve_model_kwargs(params)
-            if (opts['deterministic'] is not True or opts['force_row_wise'] is not True
-                    or opts['boosting_type'] != 'gbdt' or type(opts['random_state']) is not int
-                    or opts['n_jobs'] != 1 or opts['subsample_freq'] != 0
-                    or opts['subsample'] != 1.0 or opts['colsample_bytree'] != 1.0):
-                _fail('unsafe LightGBM settings')
-
-
-def _candidate_settings(domain: Mapping[str, list[object]], axes: frozenset[str]) -> list[dict[str, object]]:
-    """Only values that can change eligibility need a scan, not the Cartesian grid."""
-    settings = {key: values[0] for key, values in domain.items()}
-    return [settings, *({**settings, key: value} for key, values in domain.items()
-                        if key not in axes for value in values[1:])]
-
-
 @dataclass
 class _Cached:
     data: dict[str, object]
@@ -138,6 +78,7 @@ class _Cached:
     warnings: list[str]
     positions: dict[str, npt.NDArray[np.int64]] | None
     convergence: bool
+    derived: dict[str, object]
 
 
 class FactorizedRounds:
@@ -161,7 +102,15 @@ class FactorizedRounds:
         if context and self.axes.intersection(context):
             _fail('context overrides a backtest-only parameter')
         self.domain = {key: list(values) for key, values in domain.items()} | {key: [value] for key, value in (context or {}).items()}
-        _check_manifest(manifest, self.domain, self.axes)
+        for key in self.axes:
+            if key in _RESERVED:
+                _fail(f'backtest parameter {key} affects signal generation')
+            if any(_references(value, key) for attr, value in vars(manifest).items()
+                   if attr not in ('backtest_config', 'architecture_function', 'data_source_config')):
+                _fail(f'backtest parameter {key} is also consumed by the manifest')
+            if manifest.data_source_config is not None and _references(manifest.data_source_config.params, key):
+                _fail(f'backtest parameter {key} is also consumed by the source')
+        self.contract = validate_domain(manifest, self.domain, self.axes)
         self.intervention_path = intervention_path
         self._check_interventions()
         self.manifest = manifest
@@ -169,7 +118,7 @@ class FactorizedRounds:
         self.prep, self.model = prep, model
         self.record_execution, self.record_model_outputs = record_execution, record_model_outputs
         self.cache: dict[str, _Cached] = {}
-        self.preparation = FittedPreparation(manifest, self.domain, self.axes, _references) if isinstance(manifest, MLManifest) else None
+        self.preparation = FittedPreparation(manifest, self.domain, self.axes, _references) if isinstance(manifest, MLManifest) and supports_preparation(manifest) else None
 
     def _check_interventions(self) -> None:
         if self.intervention_path is not None and self.intervention_path.exists():
@@ -179,14 +128,15 @@ class FactorizedRounds:
         self._check_interventions()
         if set(params) != set(self.domain) or any(not any(type(value) is type(admitted) and value == admitted for admitted in self.domain[key]) for key, value in params.items()):
             _fail('candidate is outside the preflight domain')
-        key = json.dumps({k: v for k, v in params.items() if k not in self.axes}, sort_keys=True, default=str)
+        _ = validate_candidate(self.manifest, params, self.axes)
+        key = parameter_key({k: v for k, v in params.items() if k not in self.axes})
         entry = _composition.signal_cache(self.manifest, self.data, self._source, self.cache, key)
         if entry is None:
             prep_key: str | None = None
             fitted: dict[str, object] = {}
             caught: list[warnings.WarningMessage] = []
             try:
-                with warnings.catch_warnings(record=True) as caught:
+                with warnings.catch_warnings(record=True) as caught, native_threads():
                     warnings.simplefilter('always')
                     if self.preparation is None:
                         data = self.prep(self.data, round_params=params)
@@ -198,16 +148,18 @@ class FactorizedRounds:
                         alignment = cast(dict[str, object], data['_alignment'])
                         for field in ('execution', 'market', 'model_outputs'):
                             _ = alignment.pop(field, None)
+                    payload = copy.deepcopy({name: data[name] for name in self.contract.replay_inputs})
                     result = self.model(data=data, round_params=params)
             except StrictModeError:
                 for warning in caught:
                     warnings.warn(str(warning.message), warning.category, stacklevel=2)
                 raise
+            validate_output(self.contract, data, result)
             recorded = list(dict.fromkeys(str(w.message) for w in caught))
             if not isinstance(data.get('price_data_for_backtest'), pl.DataFrame) and type(self.manifest) is MLManifest:
                 _fail('missing snapshot test prices')
             positions: dict[str, npt.NDArray[np.int64]] | None = None
-            if type(self.manifest) is RuleBasedManifest:
+            if type(self.manifest) is RuleBasedManifest and self.contract.replay is None:
                 rule = RuleBasedStrategy()
                 strategy_cfg = cast(dict[str, object], data['strategy'])
                 positions = {}
@@ -218,57 +170,45 @@ class FactorizedRounds:
                         _fail('rule-based split must be a DataFrame')
                     positions[split] = np.asarray(logic(rule, frame, strategy_cfg).fill_null(False).to_numpy(), dtype=np.int64)
             evidence = {name: data[name] for name in ('_alignment', '_backtest_provenance', 'price_data_for_backtest') if name in data}
-            if self.preparation is not None:
-                evidence.update(self.preparation.evidence(fitted))
+            artifacts = cast(dict[str, object], data.get('_fitted_params', {}))
+            evidence.update(copy.deepcopy({'_fitted_params': artifacts, **artifacts}))
+            evidence.update(payload)
             if positions is not None:
                 for split in positions:
                     frame = cast(pl.DataFrame, data[split])
                     evidence[split] = frame.select(col for col in ('datetime', 'open', 'high', 'low', 'close') if col in frame.columns)
-            converged_warning = bool(convergence_warning(caught, True))
+            with warnings.catch_warnings(record=True) as economic, native_threads():
+                warnings.simplefilter('always')
+                _ = replay(self.manifest, self.contract, result, copy.deepcopy(evidence), params.copy(), positions, self.record_execution)
+            scientific_warnings = list(caught)
+            for warning in economic:
+                match = next((item for item in scientific_warnings if item.category is warning.category and str(item.message) == str(warning.message)), None)
+                if match is not None:
+                    scientific_warnings.remove(match)
+            converged_warning = bool(convergence_warning(scientific_warnings, True))
             if self.preparation is not None and prep_key is not None:
                 if prep_key not in self.preparation.cache and len(self.preparation.cache) >= _CACHE_LIMIT:
+                    oldest = next(iter(self.preparation.cache))
+                    del self.preparation.warning_cache[oldest]
                     _composition.evict_fitted(self.preparation.cache, self.preparation.proofs)
                 _composition.remember_fitted(self.preparation, prep_key, fitted, data, self.data)
+                self.preparation.warning_cache[prep_key] = list(self.preparation.pending_warnings)
             if len(self.cache) >= _CACHE_LIMIT:
                 del self.cache[next(iter(self.cache))]
-            self.cache[key] = _Cached(evidence, {name: value for name, value in result.items() if name != '_model'}, recorded, positions, converged_warning)
-            return data, result, recorded, converged_warning
+            derived = {name: value for name, value in params.items() if name not in self.domain}
+            self.cache[key] = _Cached(copy.deepcopy(evidence), copy.deepcopy({name: value for name, value in result.items() if name != '_model'}), list(dict.fromkeys(str(w.message) for w in scientific_warnings)), positions, converged_warning, copy.deepcopy(derived))
+            return data, result, recorded, bool(convergence_warning(caught, True))
 
         self.cache[key] = entry
-        data = dict(entry.data)
+        data = copy.deepcopy(entry.data)
+        params.update(copy.deepcopy(entry.derived))
         if self.preparation is not None:
             data.update(self.preparation.evidence(cast(dict[str, object], entry.data['_fitted_params'])))
         data['_alignment'] = copy.deepcopy(entry.data['_alignment'])
         data['_record_execution'] = self.record_execution
         data['_record_model_outputs'] = self.record_model_outputs
-        apply_costs = cast(Callable[..., None], vars(Manifest)['_apply_backtest_cost'])
-        apply_costs(self.manifest, data, params)
-        with warnings.catch_warnings(record=True) as caught:
+        with warnings.catch_warnings(record=True) as caught, native_threads():
             warnings.simplefilter('always')
-            if entry.positions is None:
-                predictions = np.asarray(entry.result['_preds'])
-                if self.manifest.architecture_function is dlinear_regressor:
-                    predictions = (predictions > 0).astype(int)
-                compute = cast(Callable[[object, Mapping[str, object]], dict[str, float]], vars(_backtest_evaluation)['compute_backtest'])
-                metrics = compute(predictions, data)
-                result = {name: metrics.get(name, value)
-                          for name, value in entry.result.items()}
-            else:
-                rule = RuleBasedStrategy()
-                cost_args = cast(Callable[..., dict[str, object]], vars(ReferenceModel)['_cost_kwargs'])
-                costs = cost_args(rule, data)
-                run_split = cast(Callable[..., dict[str, float]], vars(RuleBasedStrategy)['_backtest_split'])
-                summaries: dict[str, dict[str, float]] = {}
-                for split in ('train', 'val', 'test'):
-                    if split == 'test' and self.record_execution:
-                        costs.update(_record_execution=True, _alignment=data['_alignment'])
-                    frame = data[split]
-                    if not isinstance(frame, pl.DataFrame):
-                        _fail('rule-based split must be a DataFrame')
-                    summaries[split] = run_split(rule, frame, entry.positions[split], costs)
-                summarize = cast(Callable[..., dict[str, object]], rule_based_metrics)
-                fresh = summarize(entry.positions, summaries)
-                result = {name: fresh.get(name, value)
-                          for name, value in entry.result.items()}
+            result = replay(self.manifest, self.contract, entry.result, data, params, entry.positions, self.record_execution)
         recorded = list(dict.fromkeys([*entry.warnings, *(str(w.message) for w in caught)]))
         return _composition.signal_result(self.manifest, self.data, data, result, recorded, entry.convergence, caught)

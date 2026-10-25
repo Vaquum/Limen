@@ -192,7 +192,7 @@ def test_artifacts_and_replay_identical(tmp_path: Path) -> None:
 @pytest.mark.parametrize('case', [
     'no_axes', 'model_overlap', 'feature_braced', 'feature_bare', 'feature_template',
     'feature_format', 'feature_conversion', 'feature_access', 'feature_nested_format',
-    'random', 'pruning', 'callback', 'unsafe_lightgbm_later', 'scaler',
+    'random', 'pruning', 'callback', 'unsafe_lightgbm_later',
     'calibration', 'feature_groups', 'pre_split', 'event', 'unknown_arch',
     'no_strategy', 'walk_forward', 'selector_group', 'source_reference', 'unsafe_seed_later', 'event_axis',
 ])
@@ -253,6 +253,7 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
         pass
     elif case == 'selector_group':
         m['features'][0]['include_if'] = 'use_custom'
+        p['use_custom'] = [False, 'invalid']
     elif case == 'source_reference':
         m['data_source']['params']['kline_size'] = '{fee}'
     params = cfg['sfd']['params']
