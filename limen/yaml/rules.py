@@ -1198,10 +1198,10 @@ class UelSpec:
                     path=f'uel.{field}',
                     suggestion=suggestion,
                 ))
-            elif field == 'workers' and value <= 0:
+            elif field in ('workers', 'feedback_interval', 'checkpoint_interval') and value <= 0:
                 errors.append(YAMLError(
-                    message="'uel.workers' must be a positive integer",
-                    path='uel.workers',
+                    message=f"'uel.{field}' must be a positive integer",
+                    path=f'uel.{field}',
                 ))
 
         strategy = uel.get('search_strategy')
