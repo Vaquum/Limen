@@ -65,8 +65,7 @@ from limen.yaml.schema import SPLIT_DATES_REQUIRED
 from limen.yaml.schema import STRATEGY_REQUIRED
 from limen.yaml.schema import TARGET_OPTIONAL
 from limen.yaml.schema import TARGET_REQUIRED
-from limen.yaml.schema import UEL_OPTIONAL
-from limen.yaml.schema import UEL_YAML_REJECTIONS
+from limen.yaml.schema import UEL_OPTIONAL, UEL_YAML_REJECTIONS
 from limen.yaml.schema import UEL_REQUIRED
 from limen.yaml.schema import VALID_MANIFEST_TYPES
 from limen.yaml.schema import VALID_MODES
