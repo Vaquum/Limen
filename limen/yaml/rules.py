@@ -254,13 +254,14 @@ class NoUnknownKeys:
 
     '''All keys at path must be in the known set; extras become warnings or errors depending on severity.'''
 
-    def __init__(self, path: str, known: set[str], severity: str = 'warning') -> None:
+    def __init__(self, path: str, known: set[str], severity: str = 'warning', *, rejected: dict[str, str] | None = None) -> None:
 
         super().__init__()
 
         self._path = path
         self._known = known
         self._severity = severity
+        self._rejected = rejected or {}
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -271,12 +272,11 @@ class NoUnknownKeys:
         if not found or not is_mapping(value):
             return
         for key in value:
-            if key not in self._known:
+            if key in self._rejected:
+                errors.append(YAMLError(message=self._rejected[key], path=f'{self._path}.{key}'))
+            elif key not in self._known:
                 target = warnings if self._severity == 'warning' else errors
-                target.append(YAMLError(
-                    message=f"Unknown field '{key}'",
-                    path=f"{self._path}.{key}",
-                ))
+                target.append(YAMLError(message=f"Unknown field '{key}'", path=f"{self._path}.{key}"))
 
 
 class When:
