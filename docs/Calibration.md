@@ -27,6 +27,8 @@ The two steps are independent and can be used together or separately.
 
 For a configured Compiled calibration, both flags default to `True`. Register the required calibrator and/or optimizer before calling `.done()`; `with_calibration()` alone does not register either step.
 
+On ML manifests, `use_calibration` and `use_threshold` require actual Booleans wherever supplied: YAML candidate lists, native parameter domains, context overrides and effective rounds. Strings, numeric 0/1 and explicit null are rejected before preparation or fitting, including when the other control is false or no calibration block is declared. YAML Boolean anchors and aliases retain their Boolean meaning through search, saved metadata and Trainer replay. Omitting a control preserves its enabled default; a disabled control does not require registering its component.
+
 When both are `False`, no `prediction_calibration_config` is injected into the architecture and the model behaves exactly as if calibration was never configured.
 
 ## Quick Start
