@@ -210,7 +210,7 @@ def validate_member(sensor: Sensor, locator: Mapping[str, object] | None) -> dic
     effective = fresh if manifest is None else manifest
     unchanged(effective)
     fitted = cast(dict[str, object], vars(sensor)['_fitted_params'])
-    names = {'_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
+    names = {'_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_pca_n_components', '_column_shims', f'_target_cls_{effective.target_column}'}
     if effective.scaler is not None:
         names.update(entry[0] for entry in effective.scaler[0])
     if set(fitted) - names:
