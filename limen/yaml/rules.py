@@ -1,4 +1,5 @@
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
+from limen.yaml._parameter_refs import lookup_references
 from limen.experiment._walk_forward_split import read_walk_forward_config
 import inspect
 import math
@@ -957,14 +958,8 @@ class CalibrationCrossRef:
 
 class ParamCoverage:
 
-    '''
-    Cross-validate sfd.params against manifest {param_name} references.
-
-    Forward check (errors): every {ref} in the manifest must be defined in sfd.params.
-    Reverse check (warnings): every key in sfd.params must be referenced in the manifest,
-    architecture signature, or a meta-param implied by a manifest block.
-
-    NOTE: If the architecture accepts **kwargs coverage cannot be determined — check is skipped.
+    '''Require declared round lookups; warn about provably unused parameters.
+    Unknown or **kwargs signatures suppress only the reverse warning.
     '''
 
     def check(self,
@@ -978,11 +973,9 @@ class ParamCoverage:
         manifest: dict[str, Any] = sfd.get('manifest') or {}
         manifest_refs = self._extract_param_refs(manifest)
 
-        if not sfd_params and not manifest_refs:
-            return
-
         arch_path = manifest.get('reference_architecture')
         arch_params: set[str] = set()
+        open_signature = False
         if isinstance(arch_path, str) and is_resolvable(arch_path):
             try:
                 sig = inspect.signature(resolve(arch_path))
@@ -990,10 +983,10 @@ class ParamCoverage:
                     if name == 'data':
                         continue
                     if param.kind == inspect.Parameter.VAR_KEYWORD:
-                        return
+                        open_signature = True
                     arch_params.add(name)
             except (TypeError, ValueError):
-                return
+                open_signature = True
 
         meta_params: set[str] = set()
         if manifest.get('calibration'):
@@ -1037,14 +1030,16 @@ class ParamCoverage:
                         suggestion=f"Change '{key}' values to [true] or [true, false]",
                     ))
 
-        for ref in sorted(manifest_refs):
-            if ref not in sfd_params and ref not in arch_params and ref not in meta_params:
+        for ref, path in sorted(lookup_references(manifest, sfd_params).items()):
+            if ref not in sfd_params:
                 errors.append(YAMLError(
                     message=f"Manifest references '{{{ref}}}' but '{ref}' is not defined in sfd.params",
-                    path='sfd.manifest',
-                    suggestion=f"Add '{ref}' to sfd.params",
+                    path=path,
+                    suggestion=f"Add '{ref}' to sfd.params" + (f"; this also overrides architecture '{ref}', or use a distinct parameter name" if ref in arch_params else ''),
                 ))
 
+        if open_signature:
+            return
         valid = manifest_refs | arch_params | meta_params
 
         for key in sfd_params:
