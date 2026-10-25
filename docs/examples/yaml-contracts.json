@@ -186,6 +186,11 @@
       "source": "limen/yaml/_boolean_spec.py",
       "symbol": "BooleanControlsSpec"
     },
+    "uel": {
+      "sha256": "bf0e81720b06a91e860226b1acbb3717c1720d291a95cda6cba148fdb570e71e",
+      "source": "limen/yaml/rules.py",
+      "symbol": "UelSpec"
+    },
     "uel.recording": {
       "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d",
       "source": "limen/experiment/_recording.py",

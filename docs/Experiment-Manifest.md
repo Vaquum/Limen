@@ -184,12 +184,12 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `search_strategy.seed` | int | none | candidate-generation seed; required, non-boolean and nonnegative for Sobol |
 | `search_strategy.shuffle` | bool | `false` | grid-only seeded finite permutation; true requires an integer `seed`; see [seeded traversal](Advanced-Search.md#seeded-finite-traversal) |
 | `prep_each_round` | bool | `true` | compatibility setting; ordinary CLI/MSQ execution always prepares each candidate |
-| `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
+| `checkpoint_interval` | int | `1000` | rounds between checkpoint writes; positive non-boolean integer |
 | `record_execution` | bool | `false` | record test snapshot series and unscaled market returns; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `record_model_outputs` | bool | `false` | record test probabilities and boosting iteration counts; see [UEL recording](Universal-Experiment-Loop.md#record-model-outputs) |
 | `recording` | mapping of bool | all groups `false` | choose saved predictions, alignment arrays, event ledger and fold details; resume requires applicable groups; see [UEL recording policy](Universal-Experiment-Loop.md#recording-policy) |
 | `factorize` | bool | `false` | reuse deterministic snapshot signal work across independent backtest-only grid axes; see [UEL](Universal-Experiment-Loop.md) |
-| `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
+| `feedback_interval` | int | `100` | rounds between feedback-controller triggers; positive non-boolean integer |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
 | `output_path` | str | `{name}_{datetime}` | output-directory template; `{name}` and `{datetime}` are substituted, and it is ignored for committed-manifest URI runs |
@@ -1501,6 +1501,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `uel` | Optional field types, positive feedback/checkpoint intervals (including rejection of anchored YAML booleans), search controls and finite execution budgets. | [UelSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
 | `metadata` | Optional string, tag-list, quoted date/time and package-version shapes; null means absence. | [check_metadata](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_metadata_spec.py) |
 | `sfd.manifest.required_columns` | Explicit nonempty list of distinct nonblank strings; omission preserves the default and null is rejected. | [column_issue](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_required_columns.py) |
 | `schema_version` | Required string, exactly `"1.0"`; checked before interpreting the current-schema body. | [schema_errors](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_schema_version.py) |
