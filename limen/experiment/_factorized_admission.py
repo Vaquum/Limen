@@ -69,8 +69,7 @@ def _scaler(manifest: MLManifest, params: dict[str, object], axes: frozenset[str
 
 
 def validate_candidate(manifest: Manifest, params: dict[str, object], axes: frozenset[str]) -> ReuseContract:
-    owner = MLManifest if isinstance(manifest, MLManifest) else RuleBasedManifest
-    if any(getattr(type(manifest), name, None) is not getattr(owner, name, None) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
+    if type(manifest) not in (MLManifest, RuleBasedManifest) or any(name in vars(manifest) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
         raise ValueError('factorize requires the original manifest preparation and model methods')
     if manifest.split_walk_forward is not None or manifest.allocation_config is not None or getattr(manifest, 'objective', None) is not None:
         raise ValueError('factorize requires independent snapshot execution without folds, allocation or objective')
