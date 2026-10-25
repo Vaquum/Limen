@@ -541,13 +541,13 @@ def test_tp_sl_real_fixture_trainer_reconstruction(market, tmp_path, monkeypatch
     }
     config['sfd']['manifest']['backtest'] = {'take_profit_bps': 75.0, 'stop_loss_bps': 50.0, 'fee_bps': 10.0}
     config['sfd']['params'] = {key:[values[0]] for key,values in ridge_sfd.params().items()}
-    config['uel'].update(n_permutations=1, output_path=str(tmp_path/'experiment'))
+    config['uel'].update(n_permutations=1, output_path='experiment')
     yaml_path = tmp_path/'tp-sl.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
     monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_fixture_source))
-    assert run_experiment(yaml_path, progress_bar=False)
-    path = tmp_path/'experiment'
+    assert run_experiment(yaml_path, results_base=tmp_path, progress_bar=False)
+    path = tmp_path/'results/dev/experiment'
     record = json.loads(_storage.text(_storage.round_path(path)).splitlines()[0])
     trainer = Trainer(path, data=market[0])
     sensors = trainer.train([str(record['round_id'])])

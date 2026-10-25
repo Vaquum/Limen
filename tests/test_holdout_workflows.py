@@ -1504,10 +1504,12 @@ def _public_recorded_case(case, root, config, raw, monkeypatch=None):
     if case == 'cli_run':
         from click.testing import CliRunner
         from limen.cli.main import cli
-        reference['uel'].update(output_path=str(root / 'cli-output'), record_model_outputs=True)
+        reference['uel'].update(output_path='cli-output', record_model_outputs=True)
         yaml_path = root / 'research.yaml'
         yaml_path.write_text(json.dumps(reference))
-        invocation = CliRunner().invoke(cli, ['run', str(yaml_path), '--no-progress-bar'])
+        with pytest.MonkeyPatch.context() as context:
+            context.chdir(root)
+            invocation = CliRunner().invoke(cli, ['run', str(yaml_path), '--no-progress-bar'])
         assert invocation.exit_code == 0, invocation.output
         directory = next(root.rglob('round_data.jsonl.gz')).parent
     else:

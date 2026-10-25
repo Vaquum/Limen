@@ -85,7 +85,7 @@ def _yaml(directory, seed, *, narrowed=False):
           checkpoint_interval: 1
           record_execution: true
           output_format: csv
-          output_path: "{directory}"
+          output_path: "{directory.name}"
         ''')
 
 
@@ -97,10 +97,10 @@ def cohort_campaigns(tmp_path_factory):
     campaigns = []
     with patch('requests.sessions.Session.request', side_effect=AssertionError('use recorded market data')):
         for name, seed, narrowed in (('first', 42, False), ('second', 43, False), ('descendant', 43, True)):
-            directory = root / name
+            directory = root / 'results/dev' / name
             yaml_path = root / f'{name}.yaml'
             yaml_path.write_text(_yaml(directory, seed, narrowed=narrowed))
-            assert run_experiment(yaml_path, progress_bar=False)
+            assert run_experiment(yaml_path, results_base=root, progress_bar=False)
             ids = pl.read_csv(directory / 'results.csv')['id'].to_list()
             sensors = Trainer(directory, data=recorded).train(ids)
             campaigns.append(_Campaign(directory, ids, sensors))

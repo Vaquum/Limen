@@ -338,7 +338,7 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
     next commit.
 
     Args:
-        committed_path (Path): Path to the committed manifest file
+        committed_path (Path): Path to the committed <64-hex>.yaml store file
         dest (Path): Destination path for the working copy
         new_name (str): Value to set for metadata.name
 
@@ -347,7 +347,7 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
 
     Raises:
         FileExistsError: If dest already exists
-        ValueError: If the committed manifest has no metadata mapping
+        ValueError: If source identity/lineage integrity fails or metadata is missing
 
     '''
 
@@ -360,6 +360,7 @@ def fork_manifest(committed_path: Path, dest: Path, new_name: str) -> str:
     data = yaml.load(committed_path.read_text(encoding='utf-8'))
     if not is_mapping(data):
         raise ValueError(f"Invalid manifest format in '{committed_path.name}'")
+    _verify_committed_manifest(data, parent_id, committed_path.name)
 
     metadata = data.get('metadata')
     if not is_mapping(metadata):
