@@ -742,10 +742,12 @@ def test_parallel_resume_rejects_null_snapshot_execution(parallel_campaigns, tmp
 def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
     config = parallel_config()
     config['uel'].pop('pruning_strategies')
-    config['sfd']['params']['tag'] = ['001']
-    config['sfd']['params']['empty_tag'] = ['']
-    config['sfd']['params']['numeric_tag'] = ['001']
-    context_params = {'context_tag': '002', 'empty_context': '', 'none_context': None, 'numeric_tag': 2}
+    config['sfd']['manifest']['indicators'][0]['params']['period'] = '{return_period}'
+    config['sfd']['manifest']['features'][0]['params']['col'] = 'ret_{return_period}'
+    config['sfd']['manifest']['target']['fit_params']['source_column'] = 'ret_{return_period}'
+    config['sfd']['params']['return_period'] = ['001']
+    context_params = {'tag': '001', 'empty_tag': '', 'context_tag': '002',
+                      'empty_context': '', 'none_context': None, 'return_period': 2}
     assert validate(config).valid
 
     def recorded_parameter(params):
@@ -797,9 +799,9 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
             assert [row[name] for row in rows] == [value] * 6
             assert [row['round_params'][name] for row in records(parallel)] == [value] * 6
         assert resumed.experiment_log['none_context'].to_list() == [None] * 6
-        assert resumed.experiment_log.schema['numeric_tag'] == pl.Int64
-        assert resumed.experiment_log['numeric_tag'].to_list() == [2] * 6
-        assert [row['round_params']['numeric_tag'] for row in records(parallel)] == [2] * 6
+        assert resumed.experiment_log.schema['return_period'] == pl.Int64
+        assert resumed.experiment_log['return_period'].to_list() == [2] * 6
+        assert [row['round_params']['return_period'] for row in records(parallel)] == [2] * 6
         assert [row['round_params']['none_context'] for row in records(parallel)] == [None] * 6
         assert resumed.experiment_log['strict_mode_error'].null_count() == 6
         assert_runs_equal(parallel, serial)

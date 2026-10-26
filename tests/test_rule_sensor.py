@@ -75,6 +75,7 @@ def rule_campaign(request, tmp_path_factory, admitted_rule_aliases):
         manifest['backtest'].update(product={'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC', 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0}, source_interval_seconds=3600)
     if kind == 'sql-window':
         manifest['strategy'] = {'conditions': [{'id': 'entry', 'type': 'sql_expr', 'expr': 'close > AVG(close)'}], 'entry': 'entry'}
+        config['sfd']['params'] = {'fee': [3.0, 10.0], 'size': [1.0]}
     if kind.endswith('-alias'):
         alias = 'rule_sensor_logreg' if kind == 'logreg-alias' else 'rule_sensor_native'
         manifest['reference_architecture'] = 'limen.sfd.reference_architecture.rule_based.' + alias

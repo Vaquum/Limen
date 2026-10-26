@@ -2,6 +2,7 @@ from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spe
 from ruamel.yaml.scalarbool import ScalarBoolean
 from limen.experiment._required_columns import column_issue
 from limen.yaml._parameter_refs import lookup_references
+from limen.yaml._parameter_usage import declared_keys, used_references
 from limen.experiment._walk_forward_split import read_walk_forward_config
 import inspect
 import math
@@ -936,118 +937,114 @@ class CalibrationCrossRef:
 
 class ParamCoverage:
 
-    '''Require declared round lookups; warn about provably unused parameters.
-    Unknown or **kwargs signatures suppress only the reverse warning.
+    '''Require declared lookups and reject proven unused search axes.
+    Opaque consumers suppress only reverse admission.
     '''
 
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
-              warnings: list[YAMLError]) -> None:
+              _warnings: list[YAMLError], *, forward: bool = True) -> None:
 
         sfd: dict[str, Any] = yaml_dict.get('sfd') or {}
+        if not is_mapping(sfd):
+            return
         sfd_param_values: dict[str, Any] = sfd.get('params') or {}
-        sfd_params = set(sfd_param_values.keys())
+        if not is_mapping(sfd_param_values):
+            return
+        sfd_params = set(sfd_param_values)
         manifest: dict[str, Any] = sfd.get('manifest') or {}
-        manifest_refs = self._extract_param_refs(manifest)
+        if not is_mapping(manifest):
+            return
 
         arch_path = manifest.get('reference_architecture')
         arch_params: set[str] = set()
-        open_signature = False
+        open_signature = True
         if isinstance(arch_path, str) and is_resolvable(arch_path):
+            component = resolve(arch_path)
+            dependencies = declared_keys(component)
+            arch_params.update(dependencies or ())
             try:
-                sig = inspect.signature(resolve(arch_path))
-                for name, param in sig.parameters.items():
-                    if name == 'data':
-                        continue
-                    if param.kind == inspect.Parameter.VAR_KEYWORD:
-                        open_signature = True
-                    else:
-                        arch_params.add(name)
+                sig = inspect.signature(component)
+                open_signature = dependencies is None and any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+                arch_params.update(name for name, p in sig.parameters.items() if name != 'data' and
+                    p.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD, inspect.Parameter.POSITIONAL_ONLY))
             except (TypeError, ValueError):
-                open_signature = True
+                open_signature = dependencies is None
 
         meta_params: set[str] = set()
-        if manifest.get('calibration'):
+        if manifest.get('type') == 'ml' and manifest.get('calibration'):
             meta_params.update({'use_calibration', 'use_threshold'})
-        if manifest.get('indicators') or manifest.get('features'):
-            meta_params.add('feature_groups')
-        if isinstance(manifest.get('feature_ablation'), dict):
+        if manifest.get('type') == 'ml' and manifest.get('bar_formation'):
+            meta_params.add('bar_type')
+        if manifest.get('type') == 'ml' and isinstance(manifest.get('feature_ablation'), dict):
             fa = manifest['feature_ablation']
             meta_params.add(fa.get('drop_count_key') or 'feature_drop_count')
             meta_params.add(fa.get('seed_key') or 'feature_drop_seed')
-        if isinstance(manifest.get('scaler'), dict):
+        if manifest.get('type') == 'ml' and isinstance(manifest.get('scaler'), dict):
             fp = manifest['scaler'].get('from_params')
             if isinstance(fp, str):
                 meta_params.add(fp)
-        if isinstance(manifest.get('pca_compression'), dict):
+        if manifest.get('type') == 'ml' and isinstance(manifest.get('pca_compression'), dict):
             pca = manifest['pca_compression']
             meta_params.add(pca.get('enabled_param') or 'auto_pca')
             meta_params.add(pca.get('n_components_param') or 'pca_k')
 
         include_if_keys: set[str] = set()
-        indicator_items: list[Any] = manifest.get('indicators') or []
-        feature_items: list[Any] = manifest.get('features') or []
-        for item in indicator_items + feature_items:
-            if is_mapping(item) and isinstance(item.get('include_if'), str):
-                include_if_keys.add(item['include_if'])
+        for field in ('indicators', 'features'):
+            items: object = manifest.get(field) or []
+            if not is_list(items):
+                open_signature = True
+                continue
+            for item in items:
+                open_signature = open_signature or not is_mapping(item)
+                if is_mapping(item) and isinstance(item.get('include_if'), str):
+                    include_if_keys.add(item['include_if'])
+                if is_mapping(item) and is_mapping(item.get('params')) and item['params'].get('group') is not None:
+                    meta_params.add('feature_groups')
         meta_params.update(include_if_keys)
 
-        for key in sorted(include_if_keys):
-            if key not in sfd_params:
-                errors.append(YAMLError(
-                    message=f"'include_if: {key}' references '{key}' but '{key}' is not defined in sfd.params",
-                    path='sfd.manifest',
-                    suggestion=f"Add '{key}' to sfd.params",
-                ))
-            else:
-                values: list[Any] = sfd_param_values.get(key) or []
-                if not all(isinstance(v, bool) for v in values):
+        if forward:
+            for key in sorted(include_if_keys):
+                if key not in sfd_params:
                     errors.append(YAMLError(
-                        message=f"'include_if: {key}' — sfd.params['{key}'] must contain only boolean values (true/false)",
-                        path=f'sfd.params.{key}',
-                        suggestion=f"Change '{key}' values to [true] or [true, false]",
+                        message=f"'include_if: {key}' references '{key}' but '{key}' is not defined in sfd.params",
+                        path='sfd.manifest',
+                        suggestion=f"Add '{key}' to sfd.params",
                     ))
+                else:
+                    values: list[Any] = sfd_param_values.get(key) or []
+                    if not all(isinstance(v, bool) for v in values):
+                        errors.append(YAMLError(
+                            message=f"'include_if: {key}' — sfd.params['{key}'] must contain only boolean values (true/false)",
+                            path=f'sfd.params.{key}',
+                            suggestion=f"Change '{key}' values to [true] or [true, false]",
+                        ))
 
-        for ref, path in sorted(lookup_references(manifest, sfd_params).items()):
-            if ref not in sfd_params:
-                errors.append(YAMLError(
-                    message=f"Manifest references '{{{ref}}}' but '{ref}' is not defined in sfd.params",
-                    path=path,
-                    suggestion=f"Add '{ref}' to sfd.params" + (f"; this also overrides architecture '{ref}', or use a distinct parameter name" if ref in arch_params else ''),
-                ))
+            for ref, path in sorted(lookup_references(manifest, sfd_params).items()):
+                if ref not in sfd_params:
+                    errors.append(YAMLError(
+                        message=f"Manifest references '{{{ref}}}' but '{ref}' is not defined in sfd.params",
+                        path=path,
+                        suggestion=f"Add '{ref}' to sfd.params" + (f"; this also overrides architecture '{ref}', or use a distinct parameter name" if ref in arch_params else ''),
+                    ))
 
         if open_signature:
             return
-        valid = manifest_refs | arch_params | meta_params
+        valid = used_references(manifest, sfd_params) | arch_params | meta_params
 
-        for key in sfd_params:
-            if key not in valid:
-                warnings.append(YAMLError(
-                    message=f"Param '{key}' in sfd.params is not referenced in the manifest or architecture",
+        for key in sorted(sfd_params, key=str):
+            if key not in valid and is_list(sfd_param_values[key]):
+                errors.append(YAMLError(
+                    message=f"Unused parameter '{key}': {len(sfd_param_values[key])} declared choice(s) have no consuming binding",
                     path=f'sfd.params.{key}',
-                    suggestion=f"Remove it or add a {{{key}}} reference in the manifest",
+                    suggestion='Remove it or bind it to an executed component; use uel.search_strategy.seed for traversal randomness',
                 ))
 
-    @staticmethod
-    def _extract_param_refs(obj: Any) -> set[str]:
-
-        refs: set[str] = set()
-        ParamCoverage._walk_refs(obj, refs)
-        return refs
-
-    @staticmethod
-    def _walk_refs(obj: Any, refs: set[str]) -> None:
-
-        if isinstance(obj, str):
-            for match in _PARAM_REF_RE.finditer(obj):
-                refs.add(match.group(1))
-        elif is_mapping(obj):
-            for v in obj.values():
-                ParamCoverage._walk_refs(v, refs)
-        elif is_list(obj):
-            for item in obj:
-                ParamCoverage._walk_refs(item, refs)
+    def unused_errors(self, document: dict[str, object]) -> list[YAMLError]:
+        errors: list[YAMLError] = []
+        self.check(document, errors, [], forward=False)
+        return errors
 
 
 class BlockSpec:

@@ -31,19 +31,34 @@ implicit controls such as `feature_groups` or `auto_pca` do not declare a lookup
 For example, an indicator period of `{C}` requires `sfd.params.C`; declaring it
 also overrides the model's `C` setting. Use a distinct name when those settings
 should vary independently. Missing declarations fail validation at the consumer's
-field before data loading or execution. Unknown and `**kwargs` architecture
-signatures suppress only unused-parameter warnings; declaration and `include_if`
-checks still apply.
+field before data loading or execution. A declared axis with no consuming binding
+fails at `sfd.params.<name>`, including singleton axes. The error reports its
+declared choice count. Remove it or supply a real binding; traversal randomness
+belongs at `uel.search_strategy.seed`.
+
+Unknown and `**kwargs` architecture signatures, whole-parameter data extensions
+and allocation context consumers remain indeterminate unless their complete
+explicit reuse contracts declare finite dependencies. This suppresses only the
+reverse unused-axis check; declaration and Boolean `include_if` checks still apply.
+Real model arguments, native exact-name and formatted lookups, nested execution
+and funding references, and applicable meta-controls count as consumers.
+
+Saved CLI resume applies the same narrow unused-axis refusal after schema,
+callback and structural admission, before checkpoint loading or reconstruction.
+Assessment also refuses dead axes. Correct a legacy declaration and run it under
+a new identity; recorded YAML is retained unchanged. Native caller-owned SFDs,
+prevalidated compilation and scientific read-back keep their existing boundaries.
 
 Model-source paths, transform group names and build-time `params_override`
 values retain their literal meaning, including in family evidence. Separate
-execution and funding source parameters use exact `{name}` lookups and require
-declared candidates. Escaped brace pairs remain literal; a live inner field such
+execution and funding source parameters use exact `{name}` lookups, including
+complete keys such as `{file-path}`, and require declared candidates. Native
+formatted bindings preserve escaped brace pairs; a live inner field such
 as `roc_{{{period}}}` still requires `period`. Native transform parameters preserve
 exact parameter-name lookup precedence and underscore-prefixed literals. Direct Python
 Manifest/UEL calls may still supply values through `context_params`; a declared
 YAML experiment must be complete without that external context. The existing
-identifier-reference grammar is unchanged.
+native formatted identifier-reference grammar is unchanged.
 
 This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the YAML supplies every execution choice:
 
@@ -1560,7 +1575,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 | `sfd.manifest.required_columns` | Explicit nonempty list of distinct nonblank strings; omission preserves the default and null is rejected. | [column_issue](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_required_columns.py) |
 | `schema_version` | Required string, exactly `"1.0"`; checked before interpreting the current-schema body. | [schema_errors](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_schema_version.py) |
 | `sfd.manifest` | Actual round-parameter lookup locations; literal fields keep their native meaning. | [lookup_references](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_parameter_refs.py) |
-| `sfd.params` | Forward declarations and Boolean `include_if` domains; unused warnings require a known closed architecture signature. | [ParamCoverage](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
+| `sfd.params` | Forward declarations and Boolean `include_if` domains; proven unused axes are errors, while opaque consumers remain indeterminate. | [ParamCoverage](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
 | `sfd.manifest.strict_mode` | Optional Boolean; explicit null is invalid. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |
 | `sfd.params.use_calibration[]` | Boolean candidates on ML manifests; omitted control defaults to true. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |
 | `sfd.params.use_threshold[]` | Boolean candidates on ML manifests; omitted control defaults to true. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |

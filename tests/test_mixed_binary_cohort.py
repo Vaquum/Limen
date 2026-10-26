@@ -17,7 +17,7 @@ from limen.inference import Trainer
 from limen.inference.sensor import BarPrediction
 from limen.sfd.reference_architecture import LightGBMBinary, LogRegBinary
 from limen.sfd.reference_architecture import lightgbm_binary, logreg_binary
-from limen.yaml import CompiledSFD, build_search_strategy, parse
+from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
 from limen.experiment import UniversalExperimentLoop
 from tests.test_cohort_rounds import _FIXTURE, _after_training, _yaml
 from tests.test_holdout_assessment import assessment_case
@@ -68,6 +68,7 @@ def same_directory(tmp_path_factory):
     reference['metadata']['name'] = 'mixed_dispatch'
     reference['sfd']['params'].update(architecture=['limen.sfd.reference_architecture.logreg_binary', 'limen.sfd.reference_architecture.lightgbm_binary'], n_estimators=[10], n_jobs=[1])
     reference['uel']['n_permutations'] = 2
+    assert [error.path for error in validate(reference).errors] == ['sfd.params.architecture', 'sfd.params.n_estimators']
     original = CompiledSFD.manifest
     def manifest(sfd):
         result = original(sfd)
@@ -75,10 +76,12 @@ def same_directory(tmp_path_factory):
             result.with_reference_architecture(_dispatch)
         return result
     with patch.object(CompiledSFD, 'manifest', manifest):
-        path = root / 'research.yaml'
-        path.write_text(json.dumps(reference))
-        assert run_experiment(path, results_base=root, progress_bar=False)
         directory = root / 'results/dev/mixed'
+        loop = UniversalExperimentLoop(sfd=CompiledSFD(reference), data=HistoricalData().get_any_file(str(_FIXTURE)),
+            experiment_dir=directory, yaml_reference=reference, search_strategy=build_search_strategy(reference))
+        loop.run('mixed_dispatch', n_permutations=2, prep_each_round=True, progress_bar=False,
+            record_execution=True, record_model_outputs=True,
+            recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
         ids = pl.read_csv(directory / 'results.csv')['id'].to_list()
         sensors = Trainer(directory).train(ids)
         assert {type(sensor._model) for sensor in sensors} == {LogRegBinary, LightGBMBinary}

@@ -22,8 +22,7 @@ from limen.yaml.rules import FuncList
 from limen.yaml.rules import NameSlug
 from limen.yaml.rules import NoUnknownKeys
 from limen.yaml.rules import OneOf
-from limen.yaml.rules import ParamCoverage
-from limen.yaml.rules import ParamKeyFields
+from limen.yaml.rules import ParamCoverage, ParamKeyFields
 from limen.yaml.rules import PruningStrategiesSpec
 from limen.yaml.rules import Required
 from limen.yaml.rules import RequiredColumnsSpec
@@ -191,6 +190,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
 
 unknown_errors = _MAIN_ENGINE.unknown_errors
+unused_errors = ParamCoverage().unused_errors
 
 def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 
