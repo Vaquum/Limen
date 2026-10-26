@@ -319,7 +319,9 @@ def test_manifest_callable_boundaries(manifest_type, api):
         def wrapped(_calls=calls, **params):
             return _calls(**params)
 
-        assert _fetch(manifest_type(), api, wrapped, {'rows': 3}) is value
+        with pytest.raises(TypeError, match=r'materialized polars\.DataFrame') as caught:
+            _fetch(manifest_type(), api, wrapped, {'rows': 3})
+        assert type(value).__name__ in str(caught.value)
         calls.assert_called_once_with(rows=3)
 
     failure = RuntimeError('source cannot be copied')
