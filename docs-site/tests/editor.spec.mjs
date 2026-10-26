@@ -70,7 +70,7 @@ test('a failed active conversion blocks Refresh and Commit without losing the pa
   await page.frameLocator('[data-frame]').locator('p[data-edit-id]').first().click();await expect(active).toHaveAttribute('contenteditable','true');
   for(const name of ['Refresh','Commit']){await page.getByRole('button',{name,exact:true}).click();await expect(page.locator('[data-status]')).toContainText('unsupported inline formatting');await expect(active).toContainText('Active unsupported formatting.');await expect(active).toHaveAttribute('contenteditable','true');}
   expect((await (await control(request,{})).json()).counts.commit).toBe(0);
-  await page.locator('[data-edit]').uncheck();await expect(page.locator('[data-edit]')).toBeChecked();await expect(active).toHaveAttribute('contenteditable','true');
+  await page.locator('[data-edit]').click();await expect(page.locator('[data-edit]')).toBeChecked();await expect(active).toHaveAttribute('contenteditable','true');
   await page.getByRole('button',{name:'Undo active edit'}).click();await page.locator('[data-edit]').uncheck();await expect(page.locator('[data-edit]')).not.toBeChecked();
   await page.frameLocator('[data-frame]').locator('p[data-edit-id]').first().click();await expect(page.frameLocator('[data-frame]').locator('[contenteditable="true"]')).toHaveCount(0);
 });
