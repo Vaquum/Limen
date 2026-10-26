@@ -113,13 +113,15 @@ class ParamDomain:
         '''
 
         values = self._params[param]
-        if value not in values:
+        identity = execution_hash({param: value})
+        index = next((i for i, existing in enumerate(values) if execution_hash({param: existing}) == identity), None)
+        if index is None:
             return False
         if len(values) == 1:
             raise ValueError(
                 f"ParamDomain Cannot remove '{value}' from '{param}': would leave domain empty."
             )
-        values.remove(value)
+        del values[index]
         self._notify([param])
         return True
 
@@ -202,7 +204,8 @@ class ParamDomain:
         '''
 
         original = self._params[param]
-        kept = [v for v in original if v in values]
+        identities = {execution_hash({param: value}) for value in values}
+        kept = [v for v in original if execution_hash({param: v}) in identities]
         if len(kept) == 0:
             raise ValueError(
                 f"keep_values({param}, {values}) would remove all values. No overlap with current: {original}"
@@ -259,8 +262,6 @@ class ParamDomain:
         identity = execution_hash({param: value})
         if any(execution_hash({param: existing}) == identity for existing in self._params[param]):
             return False
-        if value in self._params[param]:
-            return False
         self._params[param].append(value)
         self._notify([param])
         return True
@@ -271,7 +272,10 @@ class ParamDomain:
         '''Check whether a combination only uses currently-legal values.'''
 
         for k, v in combo.items():
-            if k not in self._params or v not in self._params[k]:
+            if k not in self._params:
+                return False
+            identity = execution_hash({k: v})
+            if not any(execution_hash({k: existing}) == identity for existing in self._params[k]):
                 return False
         return True
 
