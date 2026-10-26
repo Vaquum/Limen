@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 import sqlite3
 import time
+from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -211,8 +212,16 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, post_processing):
     assert header == checkpoint['holdout_binding'] == metadata['holdout_binding']
     assert len(checkpoint['holdout_population']['prefix']) == 2
     assert len(checkpoint['holdout_population']['completed']) == 2
-    checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, binding,
-                                           vars(loop.manifest)['_holdout_source'])
+    with patch.object(history, '_git', wraps=history._git) as git:
+        checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, binding,
+                                               vars(loop.manifest)['_holdout_source'])
+    assert git.call_count == 2
+    history._git(root, 'add', '--force', history._HISTORY)
+    try:
+        with pytest.raises(ValueError, match='must not be tracked'):
+            checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, binding)
+    finally:
+        history._git(root, 'rm', '--cached', '--', history._HISTORY)
     with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
         rounds = [json.loads(line) for line in stream]
     assert [item['research_record_id'] for item in checkpoint['holdout_population']['completed']] == [
