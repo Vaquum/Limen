@@ -61,6 +61,7 @@ yaml/
 ├── _assessment_spec.py
 ├── _backtest_spec.py
 ├── _boolean_spec.py
+├── _callable_binding.py
 ├── _callback_spec.py
 ├── _feature_shim_spec.py
 ├── _metadata_spec.py
