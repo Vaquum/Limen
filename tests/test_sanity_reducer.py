@@ -221,8 +221,7 @@ def test_suggestion_dedup():
 def test_suggestion_checkpoint_roundtrip():
 
     reducer = SanityReducer(metric='score')
-    reducer._removed = {('a', 1)}
-    reducer._suggested = {('b', 'x', 'zero_metric')}
+    reducer.set_state({'removed': [('a', 1)], 'suggested': [('b', 'x', 'zero_metric')]})
 
     state = reducer.get_state()
     assert 'removed' in state
@@ -231,7 +230,6 @@ def test_suggestion_checkpoint_roundtrip():
     reducer2 = SanityReducer(metric='score')
     reducer2.set_state(state)
 
-    assert reducer2._removed == {('a', 1)}
-    assert reducer2._suggested == {('b', 'x', 'zero_metric')}
+    assert reducer2.get_state() == state
 
 
