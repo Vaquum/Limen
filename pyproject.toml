@@ -99,7 +99,7 @@ include = ["limen*"]
 exclude = ["tests*", "scripts*"]
 
 [tool.setuptools.package-data]
-limen = ["py.typed", "yaml/templates/*.yaml"]
+limen = ["py.typed", "yaml/templates/*.yaml", "yaml/manifest.schema.json"]
 
 [tool.setuptools.data-files]
 "share/limen" = [

@@ -108,10 +108,15 @@ jobs:
           python -m pip install dist/*.whl
           python - <<'PY'
           import sys
+          import json
           import limen
-          from importlib import metadata
+          from importlib import metadata, resources
 
           assert limen.__version__ == metadata.version('vaquum-limen')
+          schema = json.loads((resources.files('limen') / 'yaml' / 'manifest.schema.json').read_text())
+          assert schema['$schema'] == 'http://json-schema.org/draft-07/schema#'
+          assert schema['x-limen-package-version'] == metadata.version('vaquum-limen')
+          assert 'limen.yaml' not in sys.modules
           for name in ('lightgbm', 'pyarrow', 'scipy', 'statsmodels', 'talib', 'tabpfn', 'xgboost'):
               assert name not in sys.modules, name
           PY

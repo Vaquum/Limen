@@ -1,0 +1,1081 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Limen experiment manifest",
+  "description": "Portable structure only. Native Limen admission owns executable references, parameter identity, data evidence and scientific compatibility.",
+  "x-limen-package-version": "5.46.2",
+  "x-limen-contract-inventory-sha256": "4d8e887d3656aab09ed99c0702be6a57b536425cacc1999217e522cde6088309",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "metadata": {
+      "$ref": "#/definitions/metadata"
+    },
+    "sfd": {
+      "type": "object",
+      "properties": {
+        "manifest": {
+          "$ref": "#/definitions/manifest"
+        },
+        "params": {
+          "$ref": "#/definitions/params"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "manifest",
+        "params"
+      ]
+    },
+    "uel": {
+      "$ref": "#/definitions/uel"
+    },
+    "lineage": {
+      "if": {
+        "type": "object"
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "id": {},
+          "committed_at": {},
+          "parent_id": {}
+        },
+        "additionalProperties": false
+      }
+    },
+    "assessment": {
+      "$ref": "#/definitions/assessment"
+    },
+    "holdout": {
+      "$ref": "#/definitions/holdout"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "metadata",
+    "sfd",
+    "uel"
+  ],
+  "definitions": {
+    "arguments": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "function": {
+      "type": "object",
+      "properties": {
+        "func": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "func"
+      ]
+    },
+    "transform": {
+      "type": "object",
+      "properties": {
+        "func": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        },
+        "include_if": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "func"
+      ]
+    },
+    "dataSource": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "method"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "fit_params": {
+          "$ref": "#/definitions/arguments"
+        },
+        "transform_params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "class"
+      ]
+    },
+    "scaler": {
+      "type": "object",
+      "properties": {
+        "class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_params": {
+          "type": "string",
+          "minLength": 1
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "class"
+          ],
+          "not": {
+            "required": [
+              "from_params"
+            ]
+          }
+        },
+        {
+          "required": [
+            "from_params"
+          ],
+          "not": {
+            "required": [
+              "class"
+            ]
+          }
+        }
+      ]
+    },
+    "calibration": {
+      "type": "object",
+      "properties": {
+        "probability_calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "threshold_function": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "probability_calibration"
+          ],
+          "properties": {
+            "probability_calibration": {
+              "not": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "required": [
+            "threshold_function"
+          ],
+          "properties": {
+            "threshold_function": {
+              "not": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "splitDates": {
+      "type": "object",
+      "properties": {
+        "train_start": {
+          "type": "string"
+        },
+        "train_end": {
+          "type": "string"
+        },
+        "val_start": {
+          "type": "string"
+        },
+        "val_end": {
+          "type": "string"
+        },
+        "test_start": {
+          "type": "string"
+        },
+        "test_end": {
+          "type": "string"
+        },
+        "val_predict_guard": {
+          "type": "boolean"
+        },
+        "test_predict_guard": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "train_start",
+        "train_end",
+        "val_start",
+        "val_end",
+        "test_start",
+        "test_end"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "mode": {
+          "enum": [
+            "development",
+            "production"
+          ]
+        },
+        "author": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limen_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "mode"
+      ]
+    },
+    "params": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(?!_)"
+      },
+      "properties": {
+        "use_calibration": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "use_threshold": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "boolean"
+          }
+        }
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "type",
+        "data_source",
+        "reference_architecture"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "ml",
+            "rule_based"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "ml"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/mlManifest"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "rule_based"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/ruleManifest"
+          }
+        }
+      ]
+    },
+    "mlManifest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "ml",
+            "rule_based"
+          ]
+        },
+        "data_source": {
+          "$ref": "#/definitions/dataSource"
+        },
+        "reference_architecture": {
+          "type": "string"
+        },
+        "required_columns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+          }
+        },
+        "split_dates": {
+          "$ref": "#/definitions/splitDates"
+        },
+        "split_walk_forward": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/transform"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "backtest": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "objective": {
+          "type": "object",
+          "properties": {
+            "metric": {
+              "type": "string"
+            },
+            "direction": {
+              "enum": [
+                "maximize",
+                "minimize"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "metric",
+            "direction"
+          ]
+        },
+        "acceptance": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target": {
+          "$ref": "#/definitions/target"
+        },
+        "pre_split_data_selector": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bar_formation": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "features": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/transform"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feature_shims": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scaler": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/scaler"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feature_ablation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "drop_count_key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "seed_key": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_dict_extension": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "func": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "func"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/calibration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pca_compression": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "enabled_param": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "n_components_param": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scaler_param_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "component_prefix": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "params_override": {
+          "$ref": "#/definitions/arguments"
+        },
+        "metrics_params": {
+          "$ref": "#/definitions/arguments"
+        },
+        "decoder_lookback": {},
+        "strict_mode": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "data_source",
+        "reference_architecture",
+        "target"
+      ]
+    },
+    "ruleManifest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "ml",
+            "rule_based"
+          ]
+        },
+        "data_source": {
+          "$ref": "#/definitions/dataSource"
+        },
+        "reference_architecture": {
+          "type": "string"
+        },
+        "required_columns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+          }
+        },
+        "split_dates": {
+          "$ref": "#/definitions/splitDates"
+        },
+        "split_walk_forward": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/transform"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "backtest": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "objective": {
+          "type": "object",
+          "properties": {
+            "metric": {
+              "type": "string"
+            },
+            "direction": {
+              "enum": [
+                "maximize",
+                "minimize"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "metric",
+            "direction"
+          ]
+        },
+        "acceptance": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "strategy": {
+          "type": "object",
+          "properties": {
+            "conditions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "entry": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "conditions",
+            "entry"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "data_source",
+        "reference_architecture",
+        "strategy"
+      ]
+    },
+    "searchStrategy": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "grid",
+            "random",
+            "sobol"
+          ]
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "shuffle": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "sobol"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "seed"
+            ],
+            "properties": {
+              "type": {
+                "const": "sobol"
+              },
+              "seed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "shuffle"
+            ]
+          },
+          "then": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "grid"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "shuffle"
+            ],
+            "properties": {
+              "shuffle": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "seed"
+            ],
+            "properties": {
+              "seed": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "recording": {
+      "type": "object",
+      "properties": {
+        "predictions": {
+          "type": "boolean"
+        },
+        "alignment": {
+          "type": "boolean"
+        },
+        "trade_ledger": {
+          "type": "boolean"
+        },
+        "fold_details": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "uel": {
+      "type": "object",
+      "properties": {
+        "n_permutations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "workers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_execution": {
+          "type": "boolean"
+        },
+        "record_model_outputs": {
+          "type": "boolean"
+        },
+        "recording": {
+          "$ref": "#/definitions/recording"
+        },
+        "factorize": {
+          "type": "boolean"
+        },
+        "search_strategy": {
+          "$ref": "#/definitions/searchStrategy"
+        },
+        "pruning_strategies": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "params": {
+                    "$ref": "#/definitions/arguments"
+                  }
+                },
+                "additionalProperties": false,
+                "required": [
+                  "type"
+                ]
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feedback_interval": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "checkpoint_interval": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "prep_each_round": {
+          "type": "boolean"
+        },
+        "output_format": {
+          "enum": [
+            "csv",
+            "parquet"
+          ]
+        },
+        "output_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "n_permutations"
+      ]
+    },
+    "assessment": {
+      "type": "object",
+      "properties": {
+        "metric": {
+          "type": "string",
+          "pattern": "^val_"
+        },
+        "direction": {
+          "enum": [
+            "maximize",
+            "minimize"
+          ]
+        },
+        "top_k": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "folds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "uniqueItems": true
+        },
+        "predict": {
+          "type": "boolean"
+        },
+        "inference_source": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "metric",
+        "direction",
+        "top_k"
+      ]
+    },
+    "holdout": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "context_start": {
+          "type": "string"
+        },
+        "interval_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "evaluation_target": {
+          "type": "object",
+          "properties": {
+            "class": {
+              "enum": [
+                "limen.targets.NextBarUpTarget",
+                "limen.targets.NextBarDownTarget",
+                "limen.targets.ThresholdBinaryTarget"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "params": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "class",
+            "name"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "context_start",
+        "interval_seconds",
+        "scenarios"
+      ]
+    }
+  }
+}
