@@ -35,7 +35,7 @@ def editor_cases(root):
             if not errors and isinstance(document.get('sfd'), dict):
                 assert validate(document).valid, path
                 cases.append({'id': 'corpus-' + str(len(cases)), 'source': str(path.relative_to(root)), 'yaml': raw})
-    for path in sorted((root / 'docs').rglob('*.md')):
+    for path in sorted({root / 'README.md', *(root / 'docs').rglob('*.md'), *(root / 'limen').rglob('README.md')}):
         for index, token in enumerate(MarkdownIt().parse(path.read_text())):
             if token.type != 'fence' or token.info.strip() != 'yaml':
                 continue

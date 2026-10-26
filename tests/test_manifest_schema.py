@@ -73,7 +73,7 @@ def corpus():
             native = validate(document)
             assert native.valid, (path, native.errors)
             documents.append((path, document))
-    for path in sorted((ROOT / 'docs').rglob('*.md')):
+    for path in sorted({ROOT / 'README.md', *(ROOT / 'docs').rglob('*.md'), *(ROOT / 'limen').rglob('README.md')}):
         for index, token in enumerate(MarkdownIt().parse(path.read_text())):
             if token.type != 'fence' or token.info.strip() != 'yaml':
                 continue
@@ -119,13 +119,17 @@ def test_manifest_schema_owns_the_current_version_and_inventory(schema_validator
     CONTRACTS.validate(ROOT)
 
 
-def test_every_native_inventory_shape_matches_the_schema(schema_validator):
+@pytest.mark.parametrize('manifest_type', ['ml', 'rule_based'])
+def test_every_native_inventory_shape_matches_the_schema(schema_validator, manifest_type):
     schema = schema_validator.schema
     rules = CONTRACTS.inventory(ROOT)['rules']
     for rule in rules:
+        if rule['when'] != 'always' and not rule['when'].endswith(' = ' + manifest_type):
+            continue
         if rule['kind'] in ('Resolvable', 'ParamKeyFields'):
             continue
-        node = schema_node(schema, rule['path'], rule['when'])
+        condition = 'sfd.manifest.type = ' + manifest_type if rule['path'].startswith('sfd.manifest') else rule['when']
+        node = schema_node(schema, rule['path'], condition)
         kind = rule['kind']
         if kind in ('NoUnknownKeys', 'SingleFuncBlock', 'FuncList', 'ConditionsList', 'PruningStrategiesSpec'):
             if kind in ('FuncList', 'ConditionsList', 'PruningStrategiesSpec'):
@@ -139,7 +143,7 @@ def test_every_native_inventory_shape_matches_the_schema(schema_validator):
             assert set(node['enum']) == set(rule['choices']) | (set() if required else {None}), rule
         elif kind == 'Required':
             parent, _, key = rule['path'].rpartition('.')
-            owner = schema_node(schema, parent, rule['when'])
+            owner = schema_node(schema, parent, condition)
             assert key in owner['required'], rule
             expected = {'dict': 'object', 'str': 'string', 'int': 'integer', 'list': 'array'}[rule['type']]
             assert node.get('type') == expected or (expected == 'string' and all(isinstance(value, str) for value in node['enum'])), rule
