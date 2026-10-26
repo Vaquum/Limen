@@ -124,6 +124,11 @@
       "source": "limen/experiment/_column_shims.py",
       "symbol": "_FIELDS"
     },
+    "sfd.manifest.indicators[]": {
+      "sha256": "48cad1af4c770cdbb1be68a9e4b1a5aaad7d6e498b3c957e680e006c200f806e",
+      "source": "limen/yaml/rules.py",
+      "symbol": "_check_func_block"
+    },
     "sfd.manifest.objective": {
       "sha256": "c151d10d8ec78f7696930d8568c499f20144008276a4ad5b8a42b93eb169d3e5",
       "source": "limen/yaml/_objective_spec.py",
@@ -162,7 +167,7 @@
       "symbol": "WalkForwardConfig"
     },
     "sfd.manifest.strategy.conditions[]": {
-      "sha256": "b57f584fbedd713560a6e164324aad50eaa540c5367d9259267651946d60fc0a",
+      "sha256": "66ecc28d690cbaa598de178e2b91041cedf6e35cb56a93683ed5d992bd59234f",
       "source": "limen/yaml/rules.py",
       "symbol": "ConditionsList"
     },
@@ -259,7 +264,7 @@
         "tags"
       ],
       "path": "metadata",
-      "severity": "warning",
+      "severity": "error",
       "when": "always"
     },
     {
@@ -296,7 +301,7 @@
         "params"
       ],
       "path": "sfd.manifest.data_source",
-      "severity": "warning",
+      "severity": "error",
       "when": "always"
     },
     {
@@ -394,27 +399,54 @@
     },
     {
       "kind": "FuncList",
+      "known": [
+        "func",
+        "include_if",
+        "params"
+      ],
       "path": "sfd.manifest.indicators",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
       "kind": "FuncList",
+      "known": [
+        "func",
+        "include_if",
+        "params"
+      ],
       "path": "sfd.manifest.features",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
       "kind": "SingleFuncBlock",
+      "known": [
+        "func",
+        "params"
+      ],
       "path": "sfd.manifest.pre_split_data_selector",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
       "kind": "SingleFuncBlock",
+      "known": [
+        "func",
+        "params"
+      ],
       "path": "sfd.manifest.bar_formation",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
       "kind": "SingleFuncBlock",
+      "known": [
+        "func",
+        "params"
+      ],
       "path": "sfd.manifest.data_dict_extension",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
@@ -433,7 +465,7 @@
         "from_params"
       ],
       "path": "sfd.manifest.scaler",
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
@@ -443,7 +475,7 @@
         "seed_key"
       ],
       "path": "sfd.manifest.feature_ablation",
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
@@ -485,7 +517,7 @@
         "threshold_function"
       ],
       "path": "sfd.manifest.calibration",
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
@@ -495,7 +527,7 @@
         "params"
       ],
       "path": "sfd.manifest.calibration.probability_calibration",
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
@@ -505,7 +537,7 @@
         "params"
       ],
       "path": "sfd.manifest.calibration.threshold_function",
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
@@ -538,7 +570,7 @@
         "type"
       ],
       "path": "sfd.manifest",
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = ml"
     },
     {
@@ -560,8 +592,35 @@
       "when": "sfd.manifest.type = rule_based"
     },
     {
+      "kind": "ConditionsList",
+      "known": [
+        "column",
+        "direction",
+        "expr",
+        "id",
+        "lookback",
+        "name",
+        "operands",
+        "operator",
+        "other_column",
+        "persistence_n",
+        "recency_n",
+        "type",
+        "value"
+      ],
+      "path": "sfd.manifest.strategy.conditions",
+      "severity": "error",
+      "when": "sfd.manifest.type = rule_based"
+    },
+    {
       "kind": "FuncList",
+      "known": [
+        "func",
+        "include_if",
+        "params"
+      ],
       "path": "sfd.manifest.indicators",
+      "severity": "error",
       "when": "sfd.manifest.type = rule_based"
     },
     {
@@ -571,7 +630,7 @@
         "entry"
       ],
       "path": "sfd.manifest.strategy",
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = rule_based"
     },
     {
@@ -595,7 +654,7 @@
         "bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded",
         "target": "Field 'target' is unsupported in rule_based YAML and would be discarded"
       },
-      "severity": "warning",
+      "severity": "error",
       "when": "sfd.manifest.type = rule_based"
     },
     {
@@ -622,7 +681,7 @@
         "type"
       ],
       "path": "uel.search_strategy",
-      "severity": "warning",
+      "severity": "error",
       "when": "always"
     },
     {
@@ -653,9 +712,58 @@
       ],
       "path": "uel",
       "rejected": {
-        "intra_callback": "YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention"
+        "acceptance": "Declare acceptance under sfd.manifest",
+        "feature_shims": "Declare feature_shims only under sfd.manifest",
+        "intra_callback": "YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention",
+        "objective": "Declare the objective only at sfd.manifest.objective"
       },
-      "severity": "warning",
+      "severity": "error",
+      "when": "always"
+    },
+    {
+      "kind": "NoUnknownKeys",
+      "known": [
+        "assessment",
+        "holdout",
+        "lineage",
+        "metadata",
+        "schema_version",
+        "sfd",
+        "uel"
+      ],
+      "path": "",
+      "rejected": {
+        "acceptance": "Declare acceptance under sfd.manifest",
+        "feature_shims": "Declare feature_shims only under sfd.manifest",
+        "objective": "Declare the objective only at sfd.manifest.objective",
+        "recording": "Declare recording only under uel"
+      },
+      "severity": "error",
+      "when": "always"
+    },
+    {
+      "kind": "NoUnknownKeys",
+      "known": [
+        "manifest",
+        "params"
+      ],
+      "path": "sfd",
+      "rejected": {
+        "feature_shims": "Declare feature_shims only under sfd.manifest",
+        "recording": "Declare recording only under uel"
+      },
+      "severity": "error",
+      "when": "always"
+    },
+    {
+      "kind": "NoUnknownKeys",
+      "known": [
+        "committed_at",
+        "id",
+        "parent_id"
+      ],
+      "path": "lineage",
+      "severity": "error",
       "when": "always"
     }
   ]

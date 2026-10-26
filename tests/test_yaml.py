@@ -505,11 +505,12 @@ def test_validate_warning_for_unused_sfd_param() -> None:
     assert any('orphan_param' in w.message for w in result.warnings)
 
 
-def test_validate_warning_for_unknown_key_in_data_source() -> None:
+def test_validate_error_for_unknown_key_in_data_source() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['data_source']['typo_key'] = 'value'
     result = validate(yaml_dict)
-    assert any('typo_key' in w.message for w in result.warnings)
+    assert not result.valid
+    assert [e.path for e in result.errors] == ['sfd.manifest.data_source.typo_key']
 
 
 def test_validate_error_for_unknown_key_in_split_dates() -> None:
@@ -735,11 +736,12 @@ def test_validate_error_for_pca_compression_key_field_invalid_value() -> None:
         assert any(field_name in e.path for e in result.errors)
 
 
-def test_validate_warning_for_unknown_key_in_func_block() -> None:
+def test_validate_error_for_unknown_key_in_func_block() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['manifest']['indicators'][0]['unexpected_key'] = 'value'
     result = validate(yaml_dict)
-    assert any('unexpected_key' in w.message for w in result.warnings)
+    assert not result.valid
+    assert [e.path for e in result.errors] == ['sfd.manifest.indicators[0].unexpected_key']
 
 
 def test_validate_no_warning_for_func_block_with_only_known_keys() -> None:
@@ -919,11 +921,12 @@ def test_validate_error_for_uel_n_permutations_invalid_budget() -> None:
     assert all(e.path != 'uel.n_permutations' for e in result.errors)
 
 
-def test_validate_warns_for_uel_experiment_dir() -> None:
+def test_validate_rejects_uel_experiment_dir_with_output_path_advice() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['uel']['experiment_dir'] = '/some/path'
     result = validate(yaml_dict)
-    assert any('experiment_dir' in w.path for w in result.warnings)
+    assert not result.valid
+    assert [(e.path, e.suggestion) for e in result.errors] == [('uel.experiment_dir', 'Use uel.output_path')]
 
 
 def test_validate_error_for_manifest_ref_not_in_sfd_params() -> None:

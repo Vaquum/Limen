@@ -21,6 +21,7 @@ from limen.yaml.resolver import is_resolvable
 from limen.yaml.resolver import resolve
 from limen.yaml.schema import PRUNING_STRATEGY_OPTIONAL
 from limen.yaml.schema import PRUNING_STRATEGY_REQUIRED
+from limen.yaml.schema import CONDITION_REQUIRED, CONDITION_OPTIONAL
 
 _SPLIT_DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
 _SPLIT_DATE_GUARD_KEYS = ('val_predict_guard', 'test_predict_guard')
@@ -55,25 +56,17 @@ def _get_manifest(yaml_dict: dict[str, Any]) -> dict[str, Any]:
 
 
 _FUNC_BLOCK_KNOWN_KEYS = frozenset({'func', 'params'})
-_FUNC_LIST_EXTRA_KNOWN_KEYS = frozenset({'include_if'})
-_NO_EXTRA_KNOWN_KEYS: frozenset[str] = frozenset()
 
 
 def _check_func_block(block: dict[str, Any],
                       base_path: str,
                       errors: list[YAMLError],
                       warnings: list[YAMLError],
-                      extra_known_keys: frozenset[str] = _NO_EXTRA_KNOWN_KEYS) -> None:
+                      known_keys: frozenset[str] = _FUNC_BLOCK_KNOWN_KEYS) -> None:
 
     '''Validate func (required, callable) and optional params mapping on a {func, params?} block.'''
 
-    known = _FUNC_BLOCK_KNOWN_KEYS | extra_known_keys
-    for key in block:
-        if key not in known:
-            warnings.append(YAMLError(
-                message=f"Unknown field '{key}'",
-                path=f'{base_path}.{key}',
-            ))
+    NoUnknownKeys(base_path, set(known_keys)).check_block(block, errors, warnings)
 
     func = block.get('func')
     if func is None:
@@ -257,7 +250,7 @@ class NoUnknownKeys:
 
     '''All keys at path must be in the known set; extras become warnings or errors depending on severity.'''
 
-    def __init__(self, path: str, known: set[str], severity: str = 'warning', *, rejected: dict[str, str] | None = None) -> None:
+    def __init__(self, path: str, known: set[str], severity: str = 'error', *, rejected: dict[str, str] | None = None) -> None:
 
         super().__init__()
 
@@ -271,15 +264,23 @@ class NoUnknownKeys:
               errors: list[YAMLError],
               warnings: list[YAMLError]) -> None:
 
-        found, value = get_at(yaml_dict, self._path)
+        found, value = (True, yaml_dict) if not self._path else get_at(yaml_dict, self._path)
         if not found or not is_mapping(value):
             return
+        self.check_block(value, errors, warnings)
+
+    def check_block(self, value: dict[str, object], errors: list[YAMLError], warnings: list[YAMLError]) -> None:
+        diagnosed = {error.path for error in errors}
         for key in value:
+            path = f'{self._path}.{key}' if self._path else str(key)
+            if path in diagnosed:
+                continue
             if key in self._rejected:
-                errors.append(YAMLError(message=self._rejected[key], path=f'{self._path}.{key}'))
+                errors.append(YAMLError(message=self._rejected[key], path=path))
             elif key not in self._known:
                 target = warnings if self._severity == 'warning' else errors
-                target.append(YAMLError(message=f"Unknown field '{key}'", path=f"{self._path}.{key}"))
+                target.append(YAMLError(message=f"Unknown field '{key}'", path=path,
+                    suggestion='Use uel.output_path' if path == 'uel.experiment_dir' else None))
 
 
 class When:
@@ -302,38 +303,12 @@ class When:
               errors: list[YAMLError],
               warnings: list[YAMLError]) -> None:
 
+        for rule in self.selected_rules(yaml_dict):
+            rule.check(yaml_dict, errors, warnings)
+
+    def selected_rules(self, yaml_dict: dict[str, object]) -> list[Rule]:
         found, value = get_at(yaml_dict, self._condition_path)
-        if found and value == self._condition_value:
-            for rule in self._rules:
-                rule.check(yaml_dict, errors, warnings)
-
-
-class WarnIfPresent:
-
-    '''Emit a warning for each key in keys that exists at path.'''
-
-    def __init__(self, path: str, keys: set[str], message_template: str) -> None:
-
-        super().__init__()
-
-        self._path = path
-        self._keys = keys
-        self._message_template = message_template
-
-    def check(self,
-              yaml_dict: dict[str, Any],
-              _errors: list[YAMLError],
-              warnings: list[YAMLError]) -> None:
-
-        found, value = get_at(yaml_dict, self._path)
-        if not found or not isinstance(value, dict):
-            return
-        for key in self._keys:
-            if key in value:
-                warnings.append(YAMLError(
-                    message=self._message_template.format(key=key),
-                    path=f"{self._path}.{key}",
-                ))
+        return self._rules if found and value == self._condition_value else []
 
 
 class SchemaVersion:
@@ -440,35 +415,35 @@ class FuncList:
     def __init__(self, path: str) -> None:
         super().__init__()
 
-        self._path = path
+        self.path = path
+        self.known = _FUNC_BLOCK_KNOWN_KEYS | {'include_if'}
 
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
               warnings: list[YAMLError]) -> None:
 
-        found, items = get_at(yaml_dict, self._path)
+        found, items = get_at(yaml_dict, self.path)
         if not found or items is None:
             return
         if not is_list(items):
-            errors.append(YAMLError(message=f"'{self._path}' must be a list", path=self._path))
+            errors.append(YAMLError(message=f"'{self.path}' must be a list", path=self.path))
             return
 
         for i, item in enumerate(items):
             if not is_mapping(item):
                 errors.append(YAMLError(
                     message='Each entry must be a mapping with a func key',
-                    path=f'{self._path}[{i}]',
+                    path=f'{self.path}[{i}]',
                 ))
                 continue
-            _check_func_block(item, f'{self._path}[{i}]', errors, warnings,
-                               extra_known_keys=_FUNC_LIST_EXTRA_KNOWN_KEYS)
+            _check_func_block(item, f'{self.path}[{i}]', errors, warnings, known_keys=self.known)
             if 'include_if' in item:
                 val = item['include_if']
                 if not isinstance(val, str) or not val:
                     errors.append(YAMLError(
                         message="'include_if' must be a non-empty string (a round_params key)",
-                        path=f'{self._path}[{i}].include_if',
+                        path=f'{self.path}[{i}].include_if',
                     ))
 
 
@@ -479,20 +454,21 @@ class SingleFuncBlock:
     def __init__(self, path: str) -> None:
         super().__init__()
 
-        self._path = path
+        self.path = path
+        self.known = _FUNC_BLOCK_KNOWN_KEYS
 
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
               warnings: list[YAMLError]) -> None:
 
-        found, block = get_at(yaml_dict, self._path)
+        found, block = get_at(yaml_dict, self.path)
         if not found or block is None:
             return
         if not is_mapping(block):
-            errors.append(YAMLError(message=f"'{self._path}' must be a mapping", path=self._path))
+            errors.append(YAMLError(message=f"'{self.path}' must be a mapping", path=self.path))
             return
-        _check_func_block(block, self._path, errors, warnings)
+        _check_func_block(block, self.path, errors, warnings, known_keys=self.known)
 
 
 class RequiredColumnsSpec:
@@ -555,6 +531,11 @@ class ConditionsList:
 
     '''Validate the rule_based strategy conditions list structure.'''
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.known = CONDITION_REQUIRED | CONDITION_OPTIONAL | {'type', 'operands', 'operator', 'direction', 'lookback'} | {key for fields in _CONDITION_LEAF_FIELDS.values() for key in fields}
+        self.path = 'sfd.manifest.strategy.conditions'
+
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
@@ -575,6 +556,7 @@ class ConditionsList:
                     path=f'sfd.manifest.strategy.conditions[{i}]',
                 ))
                 continue
+            NoUnknownKeys(f'{self.path}[{i}]', self.known).check_block(cond, errors, _warnings)
             for key in ('id', 'name'):
                 if key not in cond:
                     errors.append(YAMLError(
@@ -1232,3 +1214,28 @@ class RuleEngine:
 
         for rule in self._rules:
             rule.check(yaml_dict, errors, warnings)
+
+    def unknown_errors(self, document: dict[str, object]) -> list[YAMLError]:
+        '''Apply only the existing structural key contracts to a saved declaration.'''
+        errors: list[YAMLError] = []
+        warnings: list[YAMLError] = []
+
+        def visit(rules: list[Rule]) -> None:
+            for rule in rules:
+                if isinstance(rule, When):
+                    visit(rule.selected_rules(document))
+                elif isinstance(rule, NoUnknownKeys):
+                    rule.check(document, errors, warnings)
+                elif isinstance(rule, (FuncList, ConditionsList, SingleFuncBlock)):
+                    found, value = get_at(document, rule.path)
+                    if not found:
+                        continue
+                    blocks: list[tuple[str, object]] = [(rule.path, value)]
+                    if isinstance(rule, (FuncList, ConditionsList)):
+                        blocks = [(f'{rule.path}[{index}]', block) for index, block in enumerate(cast(list[object], value))] if isinstance(value, list) else []
+                    for path, block in blocks:
+                        if is_mapping(block):
+                            NoUnknownKeys(path, set(rule.known)).check_block(block, errors, warnings)
+
+        visit(self._rules)
+        return errors

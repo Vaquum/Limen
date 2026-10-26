@@ -124,6 +124,7 @@ def test_legacy_cli_resume_refuses_before_checkpoint_or_scientific_writes(tmp_pa
     root = tmp_path / 'project'
     reference = _project(root)
     reference['schema_version'] = schema_version
+    reference['uel_typo'] = {}
     reference['uel']['intra_callback'] = value
     reference['uel']['feedback_interval'] = 1
     directory = root / 'saved-native-run'
@@ -155,6 +156,7 @@ def test_legacy_cli_resume_refuses_before_checkpoint_or_scientific_writes(tmp_pa
     monkeypatch.setattr('limen.experiment.checkpoint_manager.CheckpointManager.load', forbidden)
     result = CliRunner().invoke(cli, ['run', '--resume', str(directory), '--no-progress-bar'])
     assert result.exit_code == 1, result.output
+    assert 'uel_typo' not in result.output
     if schema_version == '1.0':
         assert 'uel.intra_callback' in result.output
         assert 'UniversalExperimentLoop(intra_callback=' in result.output

@@ -97,7 +97,7 @@ def test_public_rule_admission_precedes_compilation_and_writes(tmp_path, monkeyp
     assert not (tmp_path / 'manifests').exists()
 
 
-def test_rule_rejections_are_ordered_and_other_warnings_keep_their_severity():
+def test_rule_rejections_are_ordered_and_other_unknown_fields_are_errors():
     config = _config()
     for field in ('target', 'bar_formation'):
         _declare(config, field)
@@ -110,8 +110,8 @@ def test_rule_rejections_are_ordered_and_other_warnings_keep_their_severity():
     config['sfd']['manifest'].update(features=[], strict_mode=False,
         pre_split_data_selector={'func': 'limen.data.selectors.random_slice', 'params': {'n_rows': 100}}, unrelated_rule_field=True)
     result = validate(config)
-    assert result.valid and not result.errors
-    assert {warning.path for warning in result.warnings} == {f'sfd.manifest.{field}' for field in
+    assert not result.valid and not result.warnings
+    assert {error.path for error in result.errors} == {f'sfd.manifest.{field}' for field in
         ('features', 'strict_mode', 'pre_split_data_selector', 'unrelated_rule_field')}
 
 

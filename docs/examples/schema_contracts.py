@@ -24,6 +24,7 @@ NESTED = {
     'sfd.manifest.acceptance': ('limen/experiment/_acceptance_settings.py', 'read_acceptance'),
     'sfd.manifest.strategy.conditions[]': ('limen/yaml/rules.py', 'ConditionsList'),
     'uel.intra_callback': ('limen/yaml/_callback_spec.py', 'callback_error'),
+    'sfd.manifest.indicators[]': ('limen/yaml/rules.py', '_check_func_block'),
     'uel.recording': ('limen/experiment/_recording.py', 'parse_recording'),
     'uel.output_path': ('limen/cli/commands/_results_dir.py', 'admit_output'),
     'assessment': ('limen/yaml/_assessment_spec.py', 'assessment_spec'),
@@ -40,12 +41,15 @@ def inventory(root: Path):
             kind, settings = type(rule).__name__, vars(rule)
             if kind == 'When':
                 visit(settings['_rules'], settings['_condition_path'] + ' = ' + str(settings['_condition_value']))
-            elif kind in ('Required', 'OneOf', 'NoUnknownKeys', 'Resolvable', 'FuncList', 'SingleFuncBlock', 'ParamKeyFields'):
-                entry = {'kind': kind, 'path': settings['_path'], 'when': condition}
+            elif kind in ('Required', 'OneOf', 'NoUnknownKeys', 'Resolvable', 'FuncList', 'SingleFuncBlock', 'ConditionsList', 'ParamKeyFields'):
+                entry = {'kind': kind, 'path': settings.get('_path', settings.get('path')), 'when': condition}
                 for name in ('_known', '_choices', '_fields', '_severity', '_rejected'):
-                    if name in settings and (name != '_rejected' or settings[name]):
-                        value = settings[name]
-                        entry[name[1:]] = sorted(value) if isinstance(value, (set, tuple)) else value
+                    key = name if name in settings else name[1:]
+                    if key in settings and (name != '_rejected' or settings[key]):
+                        value = settings[key]
+                        entry[name[1:]] = sorted(value) if isinstance(value, (set, frozenset, tuple)) else value
+                if kind in ('FuncList', 'SingleFuncBlock', 'ConditionsList'):
+                    entry['severity'] = vars(validator.NoUnknownKeys('', set()))['_severity']
                 if kind == 'Required':
                     entry['type'] = settings['_type'].__name__ if settings['_type'] else None
                 rules.append(entry)
