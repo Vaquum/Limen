@@ -1,6 +1,7 @@
 from collections.abc import Mapping, Sequence
 import hashlib
 import json
+from numbers import Real
 from typing import TypeVar
 
 __all__: list[str] = []
@@ -30,3 +31,12 @@ def admit_choices(params: _Params) -> _Params:
         if issue := choice_issue(param, values):
             raise ValueError(issue[1])
     return params
+
+
+def logged_choices(param: str, value: object, choices: Sequence[object]) -> tuple[object, ...]:
+    identity = execution_hash({param: value})
+    matches = tuple(choice for choice in choices if execution_hash({param: choice}) == identity or
+                    (isinstance(value, float) and isinstance(choice, Real) and choice == value))
+    if len(matches) > 1:
+        raise ValueError(f"Pruning log value {value!r} for '{param}' ambiguously represents distinct execution identities")
+    return matches
