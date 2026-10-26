@@ -126,7 +126,9 @@ def test_extension_consumption_preserves_recorded_preparation_and_model(monkeypa
 
     def extension(data_dict, split_data, round_params, fitted_params):
         observed.append(round_params['extension_window'])
-        data_dict['recorded_close'] = data_dict['x_test'].height
+        for split in ('train', 'val', 'test'):
+            data_dict['x_' + split] = data_dict['x_' + split].with_columns(
+                pl.all().rolling_mean(window_size=round_params['extension_window'], min_samples=1))
         return data_dict
 
     extension.__module__ = module.__name__
@@ -144,9 +146,17 @@ def test_extension_consumption_preserves_recorded_preparation_and_model(monkeypa
     compiled = CompiledSFD(config)
     params = {key: values[0] for key, values in compiled.params().items()}
     manifest = compiled.manifest()
-    data = manifest.prepare_data(pl.read_parquet(FIXTURE), params)
+    raw = pl.read_parquet(FIXTURE)
+    manifest.data_dict_extension = None
+    plain = manifest.prepare_data(raw, params)
+    manifest.data_dict_extension = extension
+    data = manifest.prepare_data(raw, params)
+    for split in ('train', 'val', 'test'):
+        assert data['x_' + split].equals(plain['x_' + split].with_columns(
+            pl.all().rolling_mean(window_size=3, min_samples=1)))
+    assert not data['x_test'].equals(plain['x_test'])
     result = manifest.run_model(data, params)
-    assert observed == [3] and data['recorded_close'] == len(result['_preds']) == 95
+    assert observed == [3] and len(result['_preds']) == 95
     assert result['_model'].model.C == 0.1
 
 
