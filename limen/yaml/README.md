@@ -44,6 +44,7 @@ The package also owns `parser.py`, `schema.py`, `validator.py`, `resolver.py`, `
 |---|---|
 | `parser.py` | YAML text to Python data |
 | `schema.py` | version, modes, manifest types, and allowed values |
+| `manifest.schema.json` | installed editor structure contract; see the [canonical guidance](../../docs/Experiment-Manifest.md#editor-schema) |
 | `rules.py` | validation rule implementations |
 | `validator.py` | validation orchestration and result objects |
 | `resolver.py` | limen.* dotted-reference resolution |
@@ -78,6 +79,7 @@ yaml/
 ├── compiler.py
 ├── config.py
 ├── errors.py
+├── manifest.schema.json
 ├── parser.py
 ├── profiler.py
 ├── resolver.py

@@ -106,12 +106,16 @@ jobs:
       - name: Install and smoke test base wheel
         run: |
           python -m pip install dist/*.whl
-          python - <<'PY'
+          python -I - <<'PY'
           import sys
           import json
+          from pathlib import Path
           import limen
           from importlib import metadata, resources
 
+          location = Path(limen.__file__).resolve()
+          assert not location.is_relative_to(Path.cwd()), location
+          assert 'site-packages' in location.parts, location
           assert limen.__version__ == metadata.version('vaquum-limen')
           schema = json.loads((resources.files('limen') / 'yaml' / 'manifest.schema.json').read_text())
           assert schema['$schema'] == 'http://json-schema.org/draft-07/schema#'
