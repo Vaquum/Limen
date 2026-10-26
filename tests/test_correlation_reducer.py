@@ -135,8 +135,7 @@ def test_insufficient_data_for_correlation():
 def test_state_roundtrip():
 
     reducer = CorrelationReducer(metric='score')
-    reducer._applied = {('a', 1)}
-    reducer._suggested = {'b'}
+    reducer.set_state({'applied': [('a', 1)], 'suggested': ['b']})
 
     state = reducer.get_state()
     assert 'applied' in state
@@ -145,8 +144,7 @@ def test_state_roundtrip():
     reducer2 = CorrelationReducer(metric='score')
     reducer2.set_state(state)
 
-    assert reducer2._applied == {('a', 1)}
-    assert reducer2._suggested == {'b'}
+    assert reducer2.get_state() == state
 
 
 def test_set_state_missing_key():
