@@ -66,7 +66,9 @@ def lookup_references(manifest: Mapping[str, object], declared: Collection[str])
         _collect(value, path, found, embedded=True)
     backtest = _mapping(manifest.get('backtest'))
     for name in (*BACKTEST_KEYS, *TRADE_NUMBERS, 'initial_equity'):
-        _collect(backtest.get(name), f'sfd.manifest.backtest.{name}', found, embedded=False)
+        value = backtest.get(name)
+        _collect(value.strip() if name in BACKTEST_KEYS and isinstance(value, str) else value,
+                 f'sfd.manifest.backtest.{name}', found, embedded=False)
     for name in ('quantity_step', 'min_notional', 'initial_margin_fraction', 'maintenance_margin_fraction'):
         _collect(_mapping(backtest.get('product')).get(name), f'sfd.manifest.backtest.product.{name}', found, embedded=False)
     for path, values in (

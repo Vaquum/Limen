@@ -106,6 +106,18 @@ def test_unresolvable_consumer_cannot_prove_an_axis_unused():
     assert not result.valid and not any('Unused parameter' in error.message for error in result.errors)
 
 
+def test_whitespace_in_json_source_values_remains_literal():
+    from limen.experiment._resolve_trade_policy import resolve_json
+
+    value = ' {axis} '
+    assert resolve_json(value, {'axis': 'recorded.parquet'}) == value
+    config = _config()
+    config['sfd']['params']['axis'] = ['recorded.parquet']
+    config['sfd']['manifest']['backtest']['execution_data_source'] = {
+        'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': value}}
+    assert [error.path for error in unused_errors(config)] == ['sfd.params.axis']
+
+
 @pytest.mark.parametrize('template', ['roc_{}', 'roc_{0}', '{C!z}', 'roc_{{C}'])
 def test_unsupported_native_formatting_is_indeterminate(template):
     from limen.experiment.manifest_core import _resolve_params

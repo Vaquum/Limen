@@ -21,7 +21,7 @@
       "symbol": "schema_errors"
     },
     "sfd.manifest": {
-      "sha256": "8f8cea329702c8e0db3bf1b311f45e7351ef3205896a6949e69314deb215b7c4",
+      "sha256": "1036492557aebd7ff2de63296de6f5379cfddb3c8e1d98e70d7dcc81bc8ef1c2",
       "source": "limen/yaml/_parameter_refs.py",
       "symbol": "lookup_references"
     },
