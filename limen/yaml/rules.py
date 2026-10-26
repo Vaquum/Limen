@@ -1,3 +1,4 @@
+from limen.yaml._callable_binding import check_transform_binding
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
 from ruamel.yaml.scalarbool import ScalarBoolean
 from limen.experiment._required_columns import column_issue
@@ -10,17 +11,14 @@ import math
 import re
 from datetime import date
 from itertools import pairwise
-from typing import Any
-from typing import Protocol
-from typing import cast
+from typing import Any, Protocol, cast
 
 from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.yaml.config import is_list
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
 from limen.yaml.errors import YAMLError
-from limen.yaml.resolver import is_resolvable
-from limen.yaml.resolver import resolve
+from limen.yaml.resolver import is_resolvable, resolve
 from limen.yaml.schema import PRUNING_STRATEGY_OPTIONAL
 from limen.yaml.schema import PRUNING_STRATEGY_REQUIRED
 from limen.yaml.schema import CONDITION_REQUIRED, CONDITION_OPTIONAL
@@ -440,6 +438,7 @@ class FuncList:
                 ))
                 continue
             _check_func_block(item, f'{self.path}[{i}]', errors, warnings, known_keys=self.known)
+            check_transform_binding(item, f'{self.path}[{i}]', errors)
             if 'include_if' in item:
                 val = item['include_if']
                 if not isinstance(val, str) or not val:
@@ -471,6 +470,7 @@ class SingleFuncBlock:
             errors.append(YAMLError(message=f"'{self.path}' must be a mapping", path=self.path))
             return
         _check_func_block(block, self.path, errors, warnings, known_keys=self.known)
+        check_transform_binding(block, self.path, errors)
 
 
 class RequiredColumnsSpec:

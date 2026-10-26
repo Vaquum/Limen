@@ -1,6 +1,7 @@
 from datetime import date, datetime, timezone
 import importlib
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import polars as pl
 import pytest
@@ -12,6 +13,7 @@ from limen.cli.main import cli
 from limen.data.bars import volume_bars
 from limen.experiment import MLManifest, RuleBasedManifest, UniversalExperimentLoop
 from limen.experiment.errors import StrictModeError
+from limen.experiment._manifest_preparation import admit_dated_split
 from limen.indicators import roc
 from limen.log.log import Log
 from limen.scalers import CausalRollingRobustScaler, RobustScaler
@@ -101,6 +103,42 @@ def test_zero_future_does_not_waive_its_independently_empty_positive_neighbor(ba
     dates = (*DATES[:2], DATES[2], DATES[2], *DATES[4:])
     with pytest.raises(ValueError, match=r'test split .*contains no raw rows'):
         _manifest(dates).prepare_data(bars.head(96), {})
+
+
+@pytest.mark.parametrize('stage', ['raw', 'formed', 'retained'])
+@pytest.mark.parametrize('index', [1, 2])
+def test_repeated_local_hour_is_positive_at_every_admission_stage(bars, stage, index):
+    start = datetime(2024, 11, 3, 1, tzinfo=ZoneInfo('America/New_York'), fold=0)
+    end = start.replace(fold=1)
+    dates = [start] * 6
+    dates[index * 2 + 1] = end
+    with pytest.raises(ValueError if stage == 'raw' else StrictModeError, match=('validation' if index == 1 else 'test') + ' split'):
+        admit_dated_split(tuple(dates), bars.head(0), index, stage=stage)
+    # Equal instants remain intentional zero windows, including different zones.
+    dates[index * 2 + 1] = start.astimezone(timezone.utc)
+    empty = bars.head(0)
+    assert admit_dated_split(tuple(dates), empty, index, stage=stage) is empty
+
+
+@pytest.mark.parametrize('rule', [False, True])
+@pytest.mark.parametrize('strict', [False, True])
+@pytest.mark.parametrize('index', [1, 2])
+def test_recorded_fold_hour_cannot_be_erased_from_required_native_split(rule, strict, index):
+    start = datetime(2024, 11, 3, 1, tzinfo=ZoneInfo('America/New_York'), fold=0)
+    end = start.replace(fold=1)
+    before = datetime(2024, 11, 2, tzinfo=timezone.utc)
+    after = datetime(2024, 11, 4, tzinfo=timezone.utc)
+    dates = (before, start, start, end, end, after) if index == 1 else (before, start, start, start, start, end)
+    recorded = pl.read_parquet(FIXTURE).filter(pl.col('datetime').is_between(before, after, closed='left'))
+    window = recorded.filter(pl.col('datetime').is_between(start, end, closed='left'))
+    assert window.height == 1
+    absent = recorded.filter(~pl.col('datetime').is_between(start, end, closed='left'))
+    manifest = _manifest(dates, rule=rule).set_strict_mode(strict)
+    with pytest.raises(ValueError, match=('validation' if index == 1 else 'test') + ' split'):
+        manifest.prepare_data(absent, {})
+    if index == 2:
+        with pytest.raises(ValueError, match='test split'):
+            manifest.compute_test_bars(absent, {})
 
 
 def test_nonempty_natural_gaps_retain_exact_half_open_membership(bars):

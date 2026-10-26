@@ -33,7 +33,7 @@ def native_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, objec
     def arguments(values: object, path: str, *, groups: bool = False) -> Iterator[tuple[str, object, bool]]:
         for key, value in _mapping(values).items():
             if not (groups and key == 'group'):
-                yield path + '.' + key, value, True
+                yield f'{path}.{key}', value, True
 
     ml = manifest.get('type') == 'ml'
     for name in ('indicators', 'features') if ml else ('indicators',):

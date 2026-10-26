@@ -22,7 +22,10 @@ def admit_dated_split(dates: tuple[date, ...] | None, frame: pl.DataFrame, index
                       *, stage: Literal['raw', 'formed', 'retained']) -> pl.DataFrame:
     if dates is not None:
         start, end = dates[index * 2:index * 2 + 2]
-        if (index == 0 or start < end) and frame.is_empty():
+        positive = (start.astimezone(timezone.utc) < end.astimezone(timezone.utc)
+                    if isinstance(start, datetime) and isinstance(end, datetime)
+                    and start.utcoffset() is not None and end.utcoffset() is not None else start < end)
+        if (index == 0 or positive) and frame.is_empty():
             name = ('train', 'validation', 'test')[index]
             message = f'Manifest {name} split [{start}, {end}) contains no {stage} rows'
             if stage == 'raw':

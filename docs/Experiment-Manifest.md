@@ -1509,6 +1509,8 @@ With `uel.recording.fold_details: true`, walk-forward campaigns retain versioned
 
 Unknown structural fields are errors, including root, `sfd`, working/committed `lineage`, function envelopes and rule conditions. CLI saved-YAML resume applies the same narrow admission before checkpoint loading or reconstruction. Direct prevalidated compilation and scientific read-back preserve their existing boundary. Callable/source/allocation argument mappings and arbitrary `sfd.params` axis names retain their existing contracts.
 
+Fresh and saved CLI YAML admission checks declared indicator, feature, bar-formation and pre-split-selector arguments against inspectable signatures, including inactive declarations. The frame is supplied positionally; indicator/feature `group` is consumed by the wrapper. Wrapper argument collisions, unexpected keywords and provably missing required arguments are located at their declaration paths. Defaults and genuine `**kwargs` remain valid; unavailable signatures remain indeterminate. Admission executes neither sources nor transforms.
+
 The index follows the current validator, including its conditional rules. `Required` means presence and the listed type are checked when the condition holds. `NoUnknownKeys` lists admitted children and the actual warning/error severity; it does not imply that every child is mandatory. Open `params` mappings follow the referenced callable’s argument contract. The detailed sections above define units, defaults, timing, compatibility and returned artifacts.
 
 | Path | Rule | Condition | Contract |
