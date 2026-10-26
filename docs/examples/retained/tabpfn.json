@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-26T04:53:11.689098+00:00",
-  "execution_checkout_head": "321d4f80a82ccebb03f8ca90ebbed8c0002cf8fd",
+  "observed_at": "2026-10-26T05:13:33.474253+00:00",
+  "execution_checkout_head": "62bf0228e7da132ffe4b1c0d7a6e93dd339c78bf",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -143,7 +143,7 @@
     "experiment/holdout.py": "e6f6a90b16b47394e09749b94e2af30ddf3cd032e664db7eff8fe845665970d1",
     "experiment/manifest_core.py": "8b1fbc072a4983c7d67a0a2d412fedb5bd72e1d7634377162871b66f2d8f907c",
     "experiment/msq.py": "41ddcb9965d9d029e6074217f748f12bf92a6a27b60f387b0298923ba5a45f90",
-    "experiment/param_domain.py": "4384efea736c53dc398508850b9a04fb5c6fbf9b70148877ab95cf9263cf6453",
+    "experiment/param_domain.py": "cfa186bbd401b7bf995c5f44bef62e0a0725f98422718b6b870fe543fec1ac7b",
     "experiment/param_search/__init__.py": "0428f114569749bd7564043cc36b781576cb0699092ed09504846c5975963a0a",
     "experiment/param_search/_grid_permutation.py": "58f6841d4e201d17c034d6d583906587e5097906ad5a260de825b5eab0d7d79a",
     "experiment/param_search/grid_strategy.py": "cbf9555aec65fae891a862f5a0ca69d1d953ed2c378181974890b9b22aab0671",
