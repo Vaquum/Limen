@@ -15,6 +15,7 @@ from limen.experiment._source_contract import source_parameters
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.yaml.store import commit_manifest
 from limen.yaml._source_binding import source_call_errors
+from limen.yaml import _source_binding
 from tests.test_column_shims import _assert_prepared_equal, _config, FIXTURE
 from tests.test_manifest_data_sources import _NeedsArgument, _Source, _recorded
 from tests.test_fixed_trade_sources import _config as _trade_config
@@ -226,6 +227,61 @@ def test_override_binding_uses_compiler_precedence_and_excludes_split_config():
     errors = source_call_errors(source, {}, dates, overrides={'start_date_limti': '2024-01-02'})
     assert len(errors) == 1 and errors[0].path == 'sfd.manifest.params_override.start_date_limti'
     assert not calls
+
+
+def test_effective_date_override_binding_matches_the_actual_compiler(monkeypatch):
+    config = _config()
+    manifest = config['sfd']['manifest']
+    manifest['data_source'] = {'method': 'limen.data.HistoricalData.get_spot_klines', 'params': {'kline_size': 3600}}
+    manifest['params_override'] = {'start_date_limit': '2024-01-02', 'end_date_limit': '2024-01-11', 'split_config': (1, 0, 0)}
+    captured = []
+    binding = _source_binding.binding_errors
+
+    def observe(component, args, kwargs):
+        if getattr(component, '__name__', None) == 'get_spot_klines':
+            captured.append(dict(kwargs))
+        return binding(component, args, kwargs)
+
+    monkeypatch.setattr(_source_binding, 'binding_errors', observe)
+    assert validate(config).valid
+    actual = CompiledSFD(config).manifest()
+    assert captured and all(values == actual.data_source_config.params for values in captured)
+    assert actual.data_source_config.params['start_date_limit'] == '2024-01-02'
+    assert actual.data_source_config.params['end_date_limit'] == '2024-01-11'
+    assert actual.split_dates is None and 'split_config' not in actual.data_source_config.params
+
+
+@pytest.mark.parametrize('command', [['run'], ['run', '--dry-run']])
+def test_required_source_override_passes_committed_uri_execution(tmp_path, monkeypatch, command):
+    config = _config()
+    config['metadata']['mode'] = 'production'
+    manifest = config['sfd']['manifest']
+    manifest['data_source']['params'] = {}
+    manifest['params_override'] = {'file_path_or_url': str(FIXTURE)}
+    submitted = tmp_path / 'override.yaml'
+    YAML().dump(config, submitted)
+    (tmp_path / 'limen.toml').write_text('')
+    identity, _ = commit_manifest(submitted, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(cli, [*command, 'manifest://' + identity])
+    assert result.exit_code == 0, result.output
+
+
+def test_genuine_saved_source_required_override_preserves_completed_prefix(tmp_path, genuine_saved_source_run):
+    directory = tmp_path / 'override-resume'
+    shutil.copytree(genuine_saved_source_run, directory)
+    path = directory / 'metadata.json'
+    metadata = json.loads(path.read_text())
+    manifest = metadata['yaml_reference']['sfd']['manifest']
+    manifest['params_override'] = dict(manifest['data_source']['params'])
+    manifest['data_source']['params'] = {}
+    path.write_text(json.dumps(metadata))
+    before = pl.read_csv(directory / 'results.csv')
+    result = CliRunner().invoke(cli, ['run', '--resume', str(directory), '--no-progress-bar'])
+    assert result.exit_code == 0, result.output
+    log = pl.read_csv(directory / 'results.csv')
+    assert log.height == 4 and log['strict_mode_error'].null_count() == 4
+    assert log.head(2).equals(before)
 
 
 @pytest.mark.parametrize('opaque', [False, True])

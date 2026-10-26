@@ -1410,7 +1410,7 @@ parameters. Unknown names retain the accepted-name diagnostic; callable instance
 and partials use their type name when they have no function name. Signature and
 deepcopy failures propagate without changing the original configuration.
 
-For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Source parameter names are checked during compilation; source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
+For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Static source binding includes these overrides after date-limit injection; `split_config` remains a manifest control. Compilation still checks the override parameter names, and source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
 
 ## What `prepare_data()` Produces
 
