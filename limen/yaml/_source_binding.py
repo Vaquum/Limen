@@ -52,7 +52,7 @@ def _block_errors(source: object, path: str, dates: object, *, native_dispatch: 
     except ResolutionError:
         return [YAMLError(message=f"Cannot resolve '{name}'", path=path + '.method')]
     if not callable(method):
-        return [YAMLError(message=f"'{name}' is not callable", path=path + '.method')]
+        return [YAMLError(message=f"'{name}' resolves to {type(method).__name__}, not a callable", path=path + '.method')]
     return source_call_errors(method, cast(Mapping[str, object], params) if params is not None else {},
                               cast(Mapping[str, object], dates) if isinstance(dates, Mapping) else None,
                               path=path, native_dispatch=native_dispatch)
