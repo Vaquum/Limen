@@ -27,8 +27,6 @@ def parameter_references(value: object, domain: Mapping[str, list[object]]) -> s
 
 def projections(manifest: Manifest, domain: Mapping[str, list[object]]) -> list[frozenset[str]]:
     groups: list[frozenset[str]] = []
-    selectors = {'feature_groups'} & set(domain)
-    selectors.update(entry.include_if for entry in manifest.feature_transforms if entry.include_if is not None and entry.include_if in domain)
 
     def add(component: object, arguments: Mapping[str, object] | None, *, activation: set[str] | None = None) -> None:
         declaration = contract_for(component)
@@ -39,11 +37,15 @@ def projections(manifest: Manifest, domain: Mapping[str, list[object]]) -> list[
         elif keys is not None and declaration is not None:
             for name in (*keys, *declaration.parameter_keys):
                 names.update(parameter_references(name if arguments is None else arguments.get(name, name), domain))
-        groups.append(frozenset(names | selectors | (activation or set())))
+        groups.append(frozenset(names | (activation or set())))
 
-    add(manifest.architecture_function, None)
+    delivered = manifest.resolve_model_kwargs({name: values[0] for name, values in domain.items()})
+    add(manifest.architecture_function, {name: name for name in delivered if name in domain})
     for entry in manifest.feature_transforms:
-        add(entry.func, entry.params)
+        activation: set[str] = {entry.include_if} & set(domain) if entry.include_if is not None else set()
+        if entry.group is not None:
+            activation.update({'feature_groups'} & set(domain))
+        add(entry.func, entry.params, activation=activation)
     for name in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, name)
         if step is not None:
