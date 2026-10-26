@@ -120,20 +120,26 @@ def test_repeated_local_hour_is_positive_at_every_admission_stage(bars, stage, i
     assert admit_dated_split(tuple(dates), empty, index, stage=stage) is empty
 
 
-@pytest.mark.parametrize('rule', [False, True])
-@pytest.mark.parametrize('strict', [False, True])
+@pytest.mark.parametrize(('rule', 'strict'), [(False, False), (False, True), (True, None)])
 @pytest.mark.parametrize('index', [1, 2])
 def test_recorded_fold_hour_cannot_be_erased_from_required_native_split(rule, strict, index):
     start = datetime(2024, 11, 3, 1, tzinfo=ZoneInfo('America/New_York'), fold=0)
     end = start.replace(fold=1)
-    before = datetime(2024, 11, 2, tzinfo=timezone.utc)
-    after = datetime(2024, 11, 4, tzinfo=timezone.utc)
+    before = datetime(2024, 11, 2, tzinfo=start.tzinfo)
+    after = datetime(2024, 11, 4, tzinfo=start.tzinfo)
     dates = (before, start, start, end, end, after) if index == 1 else (before, start, start, start, start, end)
-    recorded = pl.read_parquet(FIXTURE).filter(pl.col('datetime').is_between(before, after, closed='left'))
+    recorded = (pl.read_parquet(FIXTURE)
+        .filter(pl.col('datetime').is_between(before.astimezone(timezone.utc), after.astimezone(timezone.utc), closed='left'))
+        .with_columns(pl.col('datetime').dt.convert_time_zone('America/New_York')))
     window = recorded.filter(pl.col('datetime').is_between(start, end, closed='left'))
     assert window.height == 1
     absent = recorded.filter(~pl.col('datetime').is_between(start, end, closed='left'))
-    manifest = _manifest(dates, rule=rule).set_strict_mode(strict)
+    manifest = _manifest(dates, rule=rule)
+    if not rule:
+        manifest.set_strict_mode(strict)
+    prepared = manifest.prepare_data(recorded, {})
+    split = 'val' if index == 1 else 'test'
+    assert prepared[split].height == 1 if rule else prepared['y_' + split].equals(window['close'])
     with pytest.raises(ValueError, match=('validation' if index == 1 else 'test') + ' split'):
         manifest.prepare_data(absent, {})
     if index == 2:
