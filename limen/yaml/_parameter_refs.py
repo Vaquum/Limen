@@ -15,9 +15,10 @@ def _mapping(value: object) -> Mapping[str, object]:
 
 def _collect(value: object, path: str, found: dict[str, str], *, embedded: bool) -> None:
     if isinstance(value, str):
-        for match in _REFERENCE.finditer(value):
-            name = match.group(1)
-            if name is not None and (embedded or match.group(0) == value):
+        names = (match.group(1) for match in _REFERENCE.finditer(value)) if embedded else (
+            (value[1:-1],) if value.startswith('{') and value.endswith('}') else ())
+        for name in names:
+            if name is not None:
                 _ = found.setdefault(name, path)
     elif isinstance(value, Mapping):
         for key, item in cast(Mapping[str, object], value).items():
@@ -58,19 +59,13 @@ def native_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, objec
                         yield f'sfd.manifest.strategy.conditions[{index}].{name}', value, False
 
 
-def lookup_references(manifest: Mapping[str, object], declared: Collection[str]) -> dict[str, str]:
-    found: dict[str, str] = {}
-    for path, value, bare in native_bindings(manifest):
-        if bare and (not isinstance(value, str) or value in declared or value.startswith('_')):
-            continue
-        _collect(value, path, found, embedded=True)
+def json_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, object]]:
     backtest = _mapping(manifest.get('backtest'))
     for name in (*BACKTEST_KEYS, *TRADE_NUMBERS, 'initial_equity'):
         value = backtest.get(name)
-        _collect(value.strip() if name in BACKTEST_KEYS and isinstance(value, str) else value,
-                 f'sfd.manifest.backtest.{name}', found, embedded=False)
+        yield f'sfd.manifest.backtest.{name}', value.strip() if name in BACKTEST_KEYS and isinstance(value, str) else value
     for name in ('quantity_step', 'min_notional', 'initial_margin_fraction', 'maintenance_margin_fraction'):
-        _collect(_mapping(backtest.get('product')).get(name), f'sfd.manifest.backtest.product.{name}', found, embedded=False)
+        yield f'sfd.manifest.backtest.product.{name}', _mapping(backtest.get('product')).get(name)
     for path, values in (
         ('allocation.params', _mapping(manifest.get('allocation')).get('params')),
         ('backtest.funding.params', _mapping(backtest.get('funding')).get('params')),
@@ -78,5 +73,15 @@ def lookup_references(manifest: Mapping[str, object], declared: Collection[str])
         ('backtest.funding.data_source.params', _mapping(_mapping(backtest.get('funding')).get('data_source')).get('params')),
         ('backtest.barrier_features.params', _mapping(backtest.get('barrier_features')).get('params')),
     ):
-        _collect(values, f'sfd.manifest.{path}', found, embedded=False)
+        yield f'sfd.manifest.{path}', values
+
+
+def lookup_references(manifest: Mapping[str, object], declared: Collection[str]) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for path, value, bare in native_bindings(manifest):
+        if bare and (not isinstance(value, str) or value in declared or value.startswith('_')):
+            continue
+        _collect(value, path, found, embedded=True)
+    for path, value in json_bindings(manifest):
+        _collect(value, path, found, embedded=False)
     return found

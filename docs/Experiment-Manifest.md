@@ -51,13 +51,14 @@ prevalidated compilation and scientific read-back keep their existing boundaries
 
 Model-source paths, transform group names and build-time `params_override`
 values retain their literal meaning, including in family evidence. Separate
-execution and funding source parameters use exact `{name}` lookups and require
-declared candidates. Escaped brace pairs remain literal; a live inner field such
+execution and funding source parameters use exact `{name}` lookups, including
+complete keys such as `{file-path}`, and require declared candidates. Native
+formatted bindings preserve escaped brace pairs; a live inner field such
 as `roc_{{{period}}}` still requires `period`. Native transform parameters preserve
 exact parameter-name lookup precedence and underscore-prefixed literals. Direct Python
 Manifest/UEL calls may still supply values through `context_params`; a declared
 YAML experiment must be complete without that external context. The existing
-identifier-reference grammar is unchanged.
+native formatted identifier-reference grammar is unchanged.
 
 This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the YAML supplies every execution choice:
 

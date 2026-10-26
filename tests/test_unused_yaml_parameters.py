@@ -118,6 +118,109 @@ def test_whitespace_in_json_source_values_remains_literal():
     assert [error.path for error in unused_errors(config)] == ['sfd.params.axis']
 
 
+@pytest.mark.parametrize('role', ['execution', 'funding'])
+def test_nonword_json_source_keys_load_recorded_observations(tmp_path, role):
+    from tests.test_fixed_trade_sources import _funding_frame
+    from tests.test_forward_parameter_refs import _trade_source_config
+
+    config, _ = _trade_source_config(role)
+    source = tmp_path / (role + '.parquet')
+    raw = pl.read_parquet(FIXTURE)
+    frame = _funding_frame() if role == 'funding' else raw.with_columns(pl.lit(3600).alias('base_interval'))
+    frame.write_parquet(source)
+    backtest = config['sfd']['manifest']['backtest']
+    declaration = backtest['execution_data_source'] if role == 'execution' else backtest['funding']['data_source']
+    declaration['params']['file_path_or_url'] = '{file-path}'
+    missing = validate(config)
+    assert not missing.valid and any("'file-path' is not defined" in error.message for error in missing.errors)
+    config['sfd']['params']['file-path'] = [str(source)]
+    assert validate(config).valid and not unused_errors(config)
+    compiled = CompiledSFD(config)
+    data = compiled.manifest().prepare_data(raw, {key: values[0] for key, values in compiled.params().items()})
+    partition = data['_trade_context'].partitions[2]
+    assert partition.observations.height > 0
+    if role == 'funding':
+        assert partition.funding_events.height > 0
+    else:
+        expected = raw.filter(pl.col('datetime').dt.epoch('ns') == partition.observations['start_ns'][0])
+        assert partition.observations['open'][0] == expected['open'][0]
+
+
+@pytest.mark.parametrize('key', ['file-path', 'file.path', '{file-path}'])
+def test_nested_json_keys_retain_the_native_full_key(key):
+    from limen.experiment._resolve_trade_policy import resolve_json
+
+    value = '{' + key + '}'
+    assert resolve_json({'nested': [value]}, {key: 3}) == {'nested': [3]}
+    config = _config()
+    config['sfd']['params'][key] = [3]
+    config['sfd']['manifest']['backtest']['funding'] = {'params': {'nested': [value]}}
+    assert not unused_errors(config)
+
+
+def test_json_callable_consumers_remain_indeterminate():
+    from limen.experiment._resolve_trade_policy import resolve_json
+
+    def choice(params):
+        return params['axis']
+
+    value = {'nested': [choice]}
+    assert resolve_json(value, {'axis': 3}) == {'nested': [3]}
+    config = _config()
+    config['sfd']['params']['axis'] = [3]
+    config['sfd']['manifest']['backtest']['funding'] = {'params': value}
+    assert not unused_errors(config)
+
+
+@pytest.mark.parametrize('field,value', [('features', 'bad'), ('indicators', {'bad': 'entry'}), ('features', ['bad'])])
+def test_malformed_saved_transform_collections_refuse_without_admission_crashes(tmp_path, monkeypatch, field, value):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'limen.toml').write_text('')
+    config = _config()
+    directory = tmp_path / 'saved'
+
+    def stop(log, _msq):
+        if log.height == 2:
+            loop._shutdown_requested = True
+
+    loop = UniversalExperimentLoop(sfd=CompiledSFD(config), data=pl.read_parquet(FIXTURE),
+        experiment_dir=directory, search_strategy=build_search_strategy(config), yaml_reference=config,
+        feedback_interval=1, checkpoint_interval=1, intra_callback=stop)
+    loop.run('malformed_saved', n_permutations=4, prep_each_round=True, progress_bar=False,
+             recording=config['uel']['recording'])
+    assert loop.interrupted and pl.read_csv(directory / 'results.csv').height == 2
+    path = directory / 'metadata.json'
+    metadata = json.loads(path.read_text())
+    saved = metadata['yaml_reference']
+    saved['sfd']['manifest'][field] = value
+    assert not unused_errors(saved)
+    checked = validate(saved)
+    assert not checked.valid and checked.errors[0].path.startswith('sfd.manifest.' + field)
+    path.write_text(json.dumps(metadata))
+    before = _snapshot(tmp_path)
+    calls = []
+
+    def forbidden(*args, **kwargs):
+        calls.append(args)
+        raise AssertionError('Malformed saved transform reached source access')
+
+    monkeypatch.setattr('limen.experiment.manifest_core.DataSourceResolver.resolve', staticmethod(forbidden))
+    outcome = CliRunner().invoke(cli, ['run', '--resume', str(directory), '--no-progress-bar'])
+    assert outcome.exit_code == 1 and 'Experiment failed:' in outcome.output
+    assert calls == [] and _snapshot(tmp_path) == before
+
+
+def test_malformed_collection_does_not_suppress_other_forward_diagnostics():
+    config = _config()
+    config['sfd']['manifest']['features'] = 'bad'
+    config['sfd']['manifest']['indicators'][0]['include_if'] = 'undeclared'
+    config['sfd']['manifest']['indicators'][0]['params']['period'] = '{missing}'
+    result = validate(config)
+    assert not result.valid
+    assert any("'undeclared' is not defined" in error.message for error in result.errors)
+    assert any("'missing' is not defined" in error.message for error in result.errors)
+
+
 @pytest.mark.parametrize('template', ['roc_{}', 'roc_{0}', '{C!z}', 'roc_{{C}'])
 def test_unsupported_native_formatting_is_indeterminate(template):
     from limen.experiment.manifest_core import _resolve_params

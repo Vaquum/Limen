@@ -991,13 +991,17 @@ class ParamCoverage:
             meta_params.add(pca.get('n_components_param') or 'pca_k')
 
         include_if_keys: set[str] = set()
-        indicator_items: list[Any] = manifest.get('indicators') or []
-        feature_items: list[Any] = manifest.get('features') or []
-        for item in indicator_items + feature_items:
-            if is_mapping(item) and isinstance(item.get('include_if'), str):
-                include_if_keys.add(item['include_if'])
-            if is_mapping(item) and is_mapping(item.get('params')) and item['params'].get('group') is not None:
-                meta_params.add('feature_groups')
+        for field in ('indicators', 'features'):
+            items: object = manifest.get(field) or []
+            if not is_list(items):
+                open_signature = True
+                continue
+            for item in items:
+                open_signature = open_signature or not is_mapping(item)
+                if is_mapping(item) and isinstance(item.get('include_if'), str):
+                    include_if_keys.add(item['include_if'])
+                if is_mapping(item) and is_mapping(item.get('params')) and item['params'].get('group') is not None:
+                    meta_params.add('feature_groups')
         meta_params.update(include_if_keys)
 
         if forward:

@@ -3,7 +3,7 @@ from string import Formatter
 from typing import cast
 
 from limen.experiment._factorized_contract import declared
-from limen.yaml._parameter_refs import lookup_references, native_bindings
+from limen.yaml._parameter_refs import json_bindings, lookup_references, native_bindings
 from limen.yaml.resolver import is_resolvable, resolve
 
 __all__: list[str] = []
@@ -41,8 +41,19 @@ def _format_keys(value: object, keys: Collection[str]) -> set[str]:
     return set()
 
 
+def _opaque_json(value: object) -> bool:
+    if callable(value):
+        return True
+    if isinstance(value, Mapping):
+        value = tuple(cast(Mapping[object, object], value).values())
+    return any(_opaque_json(item) for item in cast(Sequence[object], value)) if isinstance(value, (list, tuple)) else False
+
+
 def used_references(manifest: Mapping[str, object], keys: Collection[str]) -> set[str]:
     found = set(lookup_references(manifest, keys))
+    for path, values in json_bindings(manifest):
+        if _opaque_json(values) or (path == 'sfd.manifest.allocation.params' and isinstance(values, Mapping) and any(isinstance(item, str) and item.startswith('limen.') for item in cast(Mapping[object, object], values).values())):
+            return set(keys)
     for _, value, bare in native_bindings(manifest):
         if bare:
             if not isinstance(value, str):
