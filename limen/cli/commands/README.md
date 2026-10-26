@@ -42,6 +42,7 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 | `_export_results.py` | Shared successful-run Parquet export |
 | `_load_yaml.py` | Shared YAML loading helper |
 | `_results_dir.py` | Direct-YAML output containment |
+| `_resume_admission.py` | Saved schema, callback and structural admission |
 | `run.py` | limen run |
 | `resume.py` | limen run --resume |
 | `validate.py` | limen validate |
@@ -65,6 +66,7 @@ commands/
 ├── _export_results.py
 ├── _load_yaml.py
 ├── _results_dir.py
+├── _resume_admission.py
 ├── backup.py
 ├── commit.py
 ├── fork.py
