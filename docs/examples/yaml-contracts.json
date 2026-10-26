@@ -462,7 +462,8 @@
       "kind": "NoUnknownKeys",
       "known": [
         "class",
-        "from_params"
+        "from_params",
+        "params"
       ],
       "path": "sfd.manifest.scaler",
       "severity": "error",

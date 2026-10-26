@@ -2022,7 +2022,9 @@
         "SCALER_EXPLICIT_REQUIRED": [
           "class"
         ],
-        "SCALER_EXPLICIT_OPTIONAL": [],
+        "SCALER_EXPLICIT_OPTIONAL": [
+          "params"
+        ],
         "SCALER_FROM_PARAMS_REQUIRED": [
           "from_params"
         ],

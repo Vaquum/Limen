@@ -1523,7 +1523,7 @@ The index follows the current validator, including its conditional rules. `Requi
 | `sfd.manifest.bar_formation` | SingleFuncBlock | `sfd.manifest.type = ml` | `{"known": ["func", "params"], "severity": "error"}` |
 | `sfd.manifest.data_dict_extension` | SingleFuncBlock | `sfd.manifest.type = ml` | `{"known": ["func", "params"], "severity": "error"}` |
 | `sfd.manifest.data_dict_extension` | NoUnknownKeys | `sfd.manifest.type = ml` | `{"known": ["func"], "severity": "error"}` |
-| `sfd.manifest.scaler` | NoUnknownKeys | `sfd.manifest.type = ml` | `{"known": ["class", "from_params"], "severity": "error"}` |
+| `sfd.manifest.scaler` | NoUnknownKeys | `sfd.manifest.type = ml` | `{"known": ["class", "from_params", "params"], "severity": "error"}` |
 | `sfd.manifest.feature_ablation` | NoUnknownKeys | `sfd.manifest.type = ml` | `{"known": ["drop_count_key", "seed_key"], "severity": "error"}` |
 | `sfd.manifest.feature_ablation` | ParamKeyFields | `sfd.manifest.type = ml` | `{"fields": ["drop_count_key", "seed_key"]}` |
 | `sfd.manifest.pca_compression` | NoUnknownKeys | `sfd.manifest.type = ml` | `{"known": ["component_prefix", "enabled_param", "n_components_param", "scaler_param_name"], "severity": "error"}` |
