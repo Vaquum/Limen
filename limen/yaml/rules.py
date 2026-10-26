@@ -1158,7 +1158,7 @@ class UelSpec:
         uel: dict[str, Any] = yaml_dict.get('uel') or {}
         if 'n_permutations' in uel:
             value = uel['n_permutations']
-            if not isinstance(value, int) or isinstance(value, bool):
+            if not isinstance(value, int) or isinstance(value, (bool, ScalarBoolean)):
                 errors.append(YAMLError(
                     message=f"'uel.n_permutations' must be an int (got {type(value).__name__})",
                     path='uel.n_permutations',
@@ -1184,7 +1184,7 @@ class UelSpec:
             if field not in uel:
                 continue
             value = uel[field]
-            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)) or (field in _UEL_INTERVALS and isinstance(value, ScalarBoolean)):
+            if not isinstance(value, expected) or (expected is int and isinstance(value, (bool, ScalarBoolean))):
                 errors.append(YAMLError(
                     message=f"'uel.{field}' must be a {expected.__name__} (got {type(value).__name__})",
                     path=f'uel.{field}',

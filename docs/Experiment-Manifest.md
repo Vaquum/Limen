@@ -172,6 +172,8 @@ boundary.
 
 `uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
+YAML anchors and aliases retain their logical type: Boolean values are rejected for `uel.n_permutations` and `uel.workers`, while positive integer spellings and anchored/aliased integers remain supported.
+
 ### The `uel` Execution Block
 
 The `uel` block configures how the experiment runs. `n_permutations` is required; the rest are optional and fall back to the defaults below.

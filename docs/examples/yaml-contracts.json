@@ -187,7 +187,7 @@
       "symbol": "BooleanControlsSpec"
     },
     "uel": {
-      "sha256": "bf0e81720b06a91e860226b1acbb3717c1720d291a95cda6cba148fdb570e71e",
+      "sha256": "9924fee13c196f55738e02adee36608cedbdf8f3817cc0c9045fd79f163decc6",
       "source": "limen/yaml/rules.py",
       "symbol": "UelSpec"
     },

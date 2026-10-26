@@ -51,7 +51,7 @@ def run_experiment(yaml_path: Path,
 
         n_permutations: int = uel_cfg.get('n_permutations', 10000)
         prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
-        effective_workers = uel_cfg.get('workers', 1) if workers is None else workers
+        effective_workers = int(uel_cfg.get('workers', 1)) if workers is None else workers
         feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))
         checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
 
