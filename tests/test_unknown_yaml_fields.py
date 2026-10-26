@@ -10,7 +10,8 @@ from ruamel.yaml import YAML
 from limen.cli.main import cli
 from limen.experiment import UniversalExperimentLoop, _round_storage
 from limen.inference import Trainer
-from limen.yaml import CompiledSFD, build_pruning_strategies, build_search_strategy, parse, validate
+from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
+from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.validator import unknown_errors
 
 ROOT = Path(__file__).resolve().parents[1]
