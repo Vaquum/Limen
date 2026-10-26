@@ -1,4 +1,5 @@
 from limen.yaml._callable_binding import check_transform_binding
+from limen.yaml._source_binding import source_errors
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
 from ruamel.yaml.scalarbool import ScalarBoolean
 from limen.experiment._required_columns import column_issue
@@ -14,10 +15,8 @@ from itertools import pairwise
 from typing import Any, Protocol, cast
 
 from limen.experiment.reducer.registry import REDUCER_REGISTRY
-from limen.yaml.config import is_list
-from limen.yaml.config import is_mapping
-from limen.yaml.errors import ResolutionError
-from limen.yaml.errors import YAMLError
+from limen.yaml.config import is_list, is_mapping
+from limen.yaml.errors import ResolutionError, YAMLError
 from limen.yaml.resolver import is_resolvable, resolve
 from limen.yaml.schema import PRUNING_STRATEGY_OPTIONAL
 from limen.yaml.schema import PRUNING_STRATEGY_REQUIRED
@@ -382,9 +381,7 @@ class DataSource:
             return
 
         method = src['method']
-        if isinstance(method, str):
-            _check_callable_path(method, 'sfd.manifest.data_source.method', errors)
-        else:
+        if not isinstance(method, str):
             errors.append(YAMLError(
                 message=f"'method' must be a string (got {type(method).__name__})",
                 path='sfd.manifest.data_source.method',
@@ -406,6 +403,8 @@ class DataSource:
                         path=f'sfd.manifest.data_source.params.{reserved}',
                         suggestion=f"Remove '{reserved}' from data_source.params and set the date window via split_dates instead",
                     ))
+
+        errors.extend(source_errors(yaml_dict))
 
 
 class FuncList:

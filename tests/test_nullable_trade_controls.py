@@ -38,8 +38,8 @@ def target_exposure(data):
 
 def recorded_yaml_source(config):
     assert config.method is HistoricalData.get_spot_klines
-    klines_size = config.params['klines_size']
-    assert klines_size == 900
+    kline_size = config.params['kline_size']
+    assert kline_size == 900
     return pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(288)
 
 
@@ -100,7 +100,7 @@ def test_nullable_yaml_search_completes_both_rounds(field, candidates, monkeypat
     monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(recorded_yaml_source))
     manifest = {
         'type': 'rule_based',
-        'data_source': {'method': 'limen.data.HistoricalData.get_spot_klines', 'params': {'klines_size': 900}},
+        'data_source': {'method': 'limen.data.HistoricalData.get_spot_klines', 'params': {'kline_size': 900}},
         'split_dates': {'train_start': '2025-01-01', 'train_end': '2025-01-02', 'val_start': '2025-01-02', 'val_end': '2025-01-03', 'test_start': '2025-01-03', 'test_end': '2025-01-04'},
         'strategy': {'conditions': [{'id': 'entry', 'name': 'entry', 'type': 'threshold', 'column': 'close', 'operator': '>', 'value': 0}], 'entry': 'entry'},
         'reference_architecture': 'limen.sfd.reference_architecture.rule_based',

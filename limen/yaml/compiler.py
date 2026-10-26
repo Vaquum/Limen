@@ -1,8 +1,8 @@
+from limen.experiment._source_contract import source_parameters
 from limen.yaml._backtest_spec import apply_backtest
 from limen.yaml._boolean_spec import admit_controls
 from limen.experiment._allocation import apply_yaml as apply_allocation
 from limen.experiment._holdout_research import initialize_compiled, cached_manifest
-import inspect
 from pathlib import Path
 from datetime import date
 from typing import Any, cast
@@ -113,18 +113,8 @@ def _apply_indicators(manifest: Manifest, m: dict[str, Any]) -> None:
 def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
 
     ds = m['data_source']
-    params = dict(ds.get('params') or {})
-    sd = m.get('split_dates')
     method = resolve(ds['method'])
-    sig = inspect.signature(method)
-    sig_params = sig.parameters
-    accepts_var_keyword = any(
-        p.kind == inspect.Parameter.VAR_KEYWORD for p in sig_params.values()
-    )
-    if sd is not None and ('start_date_limit' in sig_params or accepts_var_keyword):
-        params['start_date_limit'] = sd['train_start']
-    if sd is not None and ('end_date_limit' in sig_params or accepts_var_keyword):
-        params['end_date_limit'] = sd['test_end']
+    params = source_parameters(method, dict(ds.get('params') or {}), m.get('split_dates'))
     _ = manifest.set_data_source(method=method, params=params)
 
     _apply_split(manifest, m)

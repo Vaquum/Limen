@@ -1112,7 +1112,8 @@ def test_yaml_params_override_keeps_existing_validation() -> None:
     assert errors == []
     yaml_dict['sfd']['manifest']['params_override'] = {'unknown_source_parameter': 1}
     result = validate(yaml_dict)
-    assert result.valid, [error.message for error in result.errors]
+    assert not result.valid
+    assert any(error.path == 'sfd.manifest.params_override.unknown_source_parameter' for error in result.errors)
     with pytest.raises(ValueError, match='Manifest Unknown data source params'):
         build_manifest(yaml_dict)
 
