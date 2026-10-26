@@ -635,7 +635,7 @@ class Manifest:
             pl.DataFrame: Bar-formed test split data
         '''
 
-        from limen.experiment._manifest_preparation import admit_native_date_ends
+        from limen.experiment._manifest_preparation import admit_dated_split, admit_native_date_ends
         admit_native_date_ends(self.split_dates, self.data_source_config, self.test_data_source_config)
         raw_data = _holdout.admit(self, raw_data)
         if self.pre_split_data_selector:
@@ -658,9 +658,9 @@ class Manifest:
         else:
             test_split = split_sequential(raw_data, self.split_config)[2]
         _holdout.capture_geometry(self, raw_data, {'test': test_split})
-        _, test_bar_data = _process_bars(self, test_split, round_params)
+        _, test_bar_data = _process_bars(self, admit_dated_split(self.split_dates, test_split, 2, stage='raw'), round_params)
 
-        return test_bar_data
+        return admit_dated_split(self.split_dates, test_bar_data, 2, stage='formed')
 
     def prepare_data(
         self,
@@ -991,6 +991,7 @@ class MLManifest(Manifest):
         fitted_params: Mapping[str, object],
     ) -> dict[str, object]:
 
+        from limen.experiment._manifest_preparation import admit_dated_split
         split_data, all_datetimes, price_data_for_backtest, sources, trade = _run_prepare_setup(self, raw_data, round_params)
         outcome_target = self.target_class_config is not None and bool(getattr(self.target_class_config.target_class, 'requires_trade_context', False))
         private_labels: list[OutcomeLabels] = []
@@ -1024,7 +1025,7 @@ class MLManifest(Manifest):
 
             lazy = raw_input.lazy()
             lazy = _apply_feature_transforms(self, lazy, round_params)
-            data = lazy.collect()
+            data = admit_dated_split(self.split_dates, lazy.collect(), i, stage='retained')
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
@@ -1044,7 +1045,7 @@ class MLManifest(Manifest):
 
             feature_surface = data.drop(self.target_column) if outcome_target and self.target_column is not None else data
             n_leading = _count_leading_nulls(feature_surface)
-            data = data.slice(n_leading)
+            data = admit_dated_split(self.split_dates, data.slice(n_leading), i, stage='retained')
 
             n_cco_feature_rows = max(0, len(cco_block) - n_leading) if (not is_train and cco_block is not None) else 0
 
@@ -1060,7 +1061,7 @@ class MLManifest(Manifest):
             _check_unexpected_nulls(self, data, i, 'B')
 
             subset = [name for name in data.columns if name != self.target_column] if outcome_target else data.columns
-            split_data[i] = data.fill_nan(None).drop_nulls(subset=subset)
+            split_data[i] = admit_dated_split(self.split_dates, data.fill_nan(None).drop_nulls(subset=subset), i, stage='retained')
 
             if is_train:
                 cco_indicator_rows = n_leading
@@ -1203,6 +1204,7 @@ class RuleBasedManifest(Manifest):
                 'RuleBasedManifest.prepare_data() called without a strategy. Call with_strategy(conditions, entry=...) before running.'
             )
 
+        from limen.experiment._manifest_preparation import admit_dated_split
         split_data, all_datetimes, _, sources, trade = _run_prepare_setup(self, raw_data, round_params)
 
         all_fitted_params: dict[str, Any] = {}
@@ -1210,14 +1212,14 @@ class RuleBasedManifest(Manifest):
         for i, split in enumerate(split_data):
             lazy = split.lazy()
             lazy = _apply_feature_transforms(self, lazy, round_params)
-            data = lazy.collect()
+            data = admit_dated_split(self.split_dates, lazy.collect(), i, stage='retained')
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
                     self, data, round_params, all_fitted_params, i == 0
                 )
 
-            split_data[i] = data.fill_nan(None).drop_nulls()
+            split_data[i] = admit_dated_split(self.split_dates, data.fill_nan(None).drop_nulls(), i, stage='retained')
 
         split_data = _align_split_columns(split_data)
         if self.split_walk_forward is not None:
@@ -1904,7 +1906,8 @@ def _resolve_split(
         return _walk_forward_split(raw_data, manifest.split_walk_forward, getattr(manifest, '_walk_forward_fold', None),
                                    manifest.split_config, require_validation=require_validation)
     if manifest.split_dates is not None:
-        return split_by_dates(raw_data, *manifest.split_dates)
+        from limen.experiment._manifest_preparation import admit_dated_splits
+        return admit_dated_splits(manifest.split_dates, split_by_dates(raw_data, *manifest.split_dates), stage='raw')
     return split_sequential(raw_data, manifest.split_config)
 
 
