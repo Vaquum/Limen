@@ -206,6 +206,11 @@
       "source": "limen/cli/commands/_results_dir.py",
       "symbol": "admit_output"
     },
+    "uel.pruning_strategies[]": {
+      "sha256": "b103fa31ff6e36d3909f3d90df89e88e610beff0079f01fbaf86f16e7af954c9",
+      "source": "limen/yaml/rules.py",
+      "symbol": "PruningStrategiesSpec"
+    },
     "uel.recording": {
       "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d",
       "source": "limen/experiment/_recording.py",
@@ -692,6 +697,16 @@
       ],
       "kind": "OneOf",
       "path": "uel.output_format",
+      "when": "always"
+    },
+    {
+      "kind": "PruningStrategiesSpec",
+      "known": [
+        "params",
+        "type"
+      ],
+      "path": "uel.pruning_strategies",
+      "severity": "error",
       "when": "always"
     },
     {

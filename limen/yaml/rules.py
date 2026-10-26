@@ -589,6 +589,11 @@ class PruningStrategiesSpec:
 
     '''Validate the uel.pruning_strategies list: reducer types and item structure.'''
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.path = 'uel.pruning_strategies'
+        self.known = PRUNING_STRATEGY_REQUIRED | PRUNING_STRATEGY_OPTIONAL
+
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
@@ -607,7 +612,6 @@ class PruningStrategiesSpec:
             return
 
         valid_types = set(REDUCER_REGISTRY)
-        allowed_keys = PRUNING_STRATEGY_REQUIRED | PRUNING_STRATEGY_OPTIONAL
         for i, spec in enumerate(specs):
             base = f'uel.pruning_strategies[{i}]'
             if not is_mapping(spec):
@@ -627,11 +631,8 @@ class PruningStrategiesSpec:
                     path=f'{base}.type',
                     suggestion=f"Use one of: {', '.join(sorted(valid_types))}",
                 ))
-            for key in sorted(set(spec) - allowed_keys):
-                errors.append(YAMLError(
-                    message=f"Unknown field '{key}'",
-                    path=f'{base}.{key}',
-                ))
+            for key in sorted(set(spec) - self.known):
+                errors.append(YAMLError(message=f"Unknown field '{key}'", path=f'{base}.{key}'))
             if 'params' in spec and not is_mapping(spec['params']):
                 errors.append(YAMLError(
                     message="'params' must be a mapping",
@@ -1226,12 +1227,12 @@ class RuleEngine:
                     visit(rule.selected_rules(document))
                 elif isinstance(rule, NoUnknownKeys):
                     rule.check(document, errors, warnings)
-                elif isinstance(rule, (FuncList, ConditionsList, SingleFuncBlock)):
+                elif isinstance(rule, (FuncList, ConditionsList, SingleFuncBlock, PruningStrategiesSpec)):
                     found, value = get_at(document, rule.path)
                     if not found:
                         continue
                     blocks: list[tuple[str, object]] = [(rule.path, value)]
-                    if isinstance(rule, (FuncList, ConditionsList)):
+                    if isinstance(rule, (FuncList, ConditionsList, PruningStrategiesSpec)):
                         blocks = [(f'{rule.path}[{index}]', block) for index, block in enumerate(cast(list[object], value))] if isinstance(value, list) else []
                     for path, block in blocks:
                         if is_mapping(block):

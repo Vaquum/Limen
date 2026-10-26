@@ -10,7 +10,7 @@ from ruamel.yaml import YAML
 from limen.cli.main import cli
 from limen.experiment import UniversalExperimentLoop, _round_storage
 from limen.inference import Trainer
-from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
+from limen.yaml import CompiledSFD, build_pruning_strategies, build_search_strategy, parse, validate
 from limen.yaml.validator import unknown_errors
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -185,15 +185,17 @@ def test_recorded_commit_uri_fork_recommit_and_native_readback_remain_valid(tmp_
     assert readback['lineage']['parent_id'] == identity
 
 
-@pytest.mark.parametrize('unknown', (False, True))
+@pytest.mark.parametrize('unknown', (False, True, 'pruning'))
 def test_genuine_saved_checkpoint_unknown_admission_preserves_evidence(tmp_path, monkeypatch, unknown):
     monkeypatch.chdir(tmp_path)
     (tmp_path / 'limen.toml').write_text('')
     config, errors = parse(ROOT / RECOVERY)
     assert not errors
     config['sfd']['manifest']['data_source']['params']['file_path_or_url'] = str(FIXTURE)
-    if unknown:
+    if unknown is True:
         config['uel_typo'] = {}
+    parameter_key = 'parmas' if unknown == 'pruning' else 'params'
+    config['uel']['pruning_strategies'] = [{'type': 'budget', parameter_key: {'max_permutations': 10}}]
     raw = pl.read_parquet(FIXTURE)
     directory = tmp_path / 'saved'
 
@@ -204,12 +206,14 @@ def test_genuine_saved_checkpoint_unknown_admission_preserves_evidence(tmp_path,
     # The native prevalidated API produces real legacy evidence without rewriting it.
     loop = UniversalExperimentLoop(sfd=CompiledSFD(config), data=raw, experiment_dir=directory,
         search_strategy=build_search_strategy(config), yaml_reference=config,
+        pruning_strategies=build_pruning_strategies(config),
         feedback_interval=1, checkpoint_interval=1, intra_callback=stop)
     loop.run('legacy_structural', n_permutations=4, prep_each_round=True, progress_bar=False,
              recording=config['uel']['recording'])
     assert loop.interrupted and pl.read_csv(directory / 'results.csv').height == 2
     metadata = json.loads((directory / 'metadata.json').read_text())
-    assert ('uel_typo' in metadata['yaml_reference']) is unknown
+    assert ('uel_typo' in metadata['yaml_reference']) is (unknown is True)
+    assert metadata['yaml_reference']['uel']['pruning_strategies'][0][parameter_key] == {'max_permutations': 10}
     with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
         rounds = [json.loads(line) for line in stream if line.strip()]
     before = _snapshot(tmp_path)
@@ -228,7 +232,12 @@ def test_genuine_saved_checkpoint_unknown_admission_preserves_evidence(tmp_path,
             guard.setattr('limen.experiment.manifest_core.DataSourceResolver.resolve', staticmethod(forbidden))
         result = CliRunner().invoke(cli, ['run', '--resume', str(directory), '--no-progress-bar'])
     if unknown:
-        assert result.exit_code == 1 and "Unknown field 'uel_typo'" in result.output
+        path = 'uel.pruning_strategies[0].parmas' if unknown == 'pruning' else 'uel_typo'
+        key = 'parmas' if unknown == 'pruning' else 'uel_typo'
+        assert [error.path for error in unknown_errors(config)] == [path]
+        assert [error.path for error in validate(config).errors] == [path]
+        assert result.exit_code == 1 and f"Unknown field '{key}'" in result.output
+        assert path in result.output
         assert calls == [] and _snapshot(tmp_path) == before
     else:
         assert result.exit_code == 0, result.output
