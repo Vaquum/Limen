@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import polars as pl
+from limen._parameter_identity import admit_choices
 
 
 SAMPLE_SELECTION_MIN_SIZE = 21
@@ -74,8 +75,7 @@ class ParamSpace:
 
         super().__init__()
 
-        self.params = params
-        self.keys = list(params.keys())
+        self.params, self.keys = admit_choices(params), list(params.keys())
         self._rng = random.Random(seed)
         self.param_sizes = [len(params[k]) for k in self.keys]
         self.total_space = 1

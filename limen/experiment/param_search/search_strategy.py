@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import json
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from collections.abc import Iterator
@@ -10,6 +8,7 @@ from typing import cast
 
 from limen.experiment.param_domain import DomainObserver
 from limen.experiment.param_domain import ParamDomain
+from limen._parameter_identity import execution_hash
 
 
 class SearchStrategy(ABC):
@@ -127,9 +126,7 @@ class SearchStrategy(ABC):
             str: 64-character hex digest
         '''
 
-        clean = {k: v for k, v in combo.items() if not k.startswith('_')}
-        canonical = json.dumps(clean, sort_keys=True, default=str)
-        return hashlib.sha256(canonical.encode()).hexdigest()
+        return execution_hash(combo)
 
 
     def mark_seen(self, combo: dict[str, Any]) -> str:

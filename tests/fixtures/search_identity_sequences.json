@@ -1,0 +1,281 @@
+{
+  "dependencies": {
+    "numpy": "2.5.1",
+    "scipy": "1.18.0"
+  },
+  "observation_checkout": "396c0184a2e39fc27cded7124226460c24451840",
+  "observation_sha256": "4dc9b8b518d34fa5a06536ed0677131e7783023b5317497f923e80dd657de45f",
+  "python": "3.12.12",
+  "records": [
+    {
+      "count": 8,
+      "domain_cardinality": 8,
+      "seed": 42,
+      "sequence_sha256": "a9eb5c161ecbdecd3717cf3929bc24d51ce3e1fd7f2e8a5bf1529b64c99288a5",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/common_strategies.yaml",
+      "template_sha256": "ab4ddd391dccdb6d57d4fee38ebb09d29528623c1516d5352d0f173c50fce325"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 8,
+      "seed": 42,
+      "sequence_sha256": "aaa0f174c928259d526797c67ad114cbf5b5b3d5070db1fcc8d505e4c8c3bcc2",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/common_strategies.yaml",
+      "template_sha256": "ab4ddd391dccdb6d57d4fee38ebb09d29528623c1516d5352d0f173c50fce325"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 8,
+      "seed": 42,
+      "sequence_sha256": "8555ab71132ec9b56f835d61d4197d55337ce18c2864361590f81681adec1d07",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/common_strategies.yaml",
+      "template_sha256": "ab4ddd391dccdb6d57d4fee38ebb09d29528623c1516d5352d0f173c50fce325"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 24,
+      "seed": 42,
+      "sequence_sha256": "a4572d0174a9df8b5506f0d349fc72118c0698c3b448d10128e90a01605407ba",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/dlinear_regressor.yaml",
+      "template_sha256": "e207a6fb8218a428e81dc264f00ac9673a97a7f294e6a3997468ae39ec87e52d"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 24,
+      "seed": 42,
+      "sequence_sha256": "693a26f230dbb6ad71bb49a281a4ed1c6ebfecbc3d7fb04169c3b0ff54a64ab7",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/dlinear_regressor.yaml",
+      "template_sha256": "e207a6fb8218a428e81dc264f00ac9673a97a7f294e6a3997468ae39ec87e52d"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 24,
+      "seed": 42,
+      "sequence_sha256": "65e38e829eb41aea87b797fce7a312b2adca3f9d267dd7ba841f0df7e2d0303f",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/dlinear_regressor.yaml",
+      "template_sha256": "e207a6fb8218a428e81dc264f00ac9673a97a7f294e6a3997468ae39ec87e52d"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 80,
+      "seed": 42,
+      "sequence_sha256": "65f4b863cce6b785dd6957e262975bf721acb72d2feae71e0ccff83af2f16373",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/dollar_bar_crash_reversal.yaml",
+      "template_sha256": "985c45a586a1813ba98ed995c8fcb42e4ec2d3da6749f92e2e809f719e1c0278"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 80,
+      "seed": 42,
+      "sequence_sha256": "459cf43b080c7902cfad99dec0e97e64eb84f42e57ca30280a4d6172ca6c0d3f",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/dollar_bar_crash_reversal.yaml",
+      "template_sha256": "985c45a586a1813ba98ed995c8fcb42e4ec2d3da6749f92e2e809f719e1c0278"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 80,
+      "seed": 42,
+      "sequence_sha256": "a4b91909524f2d5566e19646bddd23527a27aae59de3d044395cb34f4519049f",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/dollar_bar_crash_reversal.yaml",
+      "template_sha256": "985c45a586a1813ba98ed995c8fcb42e4ec2d3da6749f92e2e809f719e1c0278"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 4096,
+      "seed": 42,
+      "sequence_sha256": "25b22728220538234a762ca2280d08248cb01752f66414b3a89a247026a56af2",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/lightgbm_binary.yaml",
+      "template_sha256": "5cae0bdf517fd360c59d9f5bf34c548af10a137604358ceab7856adc09fe8cc9"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 4096,
+      "seed": 42,
+      "sequence_sha256": "d97f09990d02554d8e0976a28708500f352cb63e41d92f2bafda6abebed076c5",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/lightgbm_binary.yaml",
+      "template_sha256": "5cae0bdf517fd360c59d9f5bf34c548af10a137604358ceab7856adc09fe8cc9"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 4096,
+      "seed": 42,
+      "sequence_sha256": "883bccc80b37a6408bee431015945a40ee1ec2156f8daaed5f6321c7ad656923",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/lightgbm_binary.yaml",
+      "template_sha256": "5cae0bdf517fd360c59d9f5bf34c548af10a137604358ceab7856adc09fe8cc9"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 256,
+      "seed": 42,
+      "sequence_sha256": "1b7d199c8f009e4bc47ba9196f76f426ba5cfeaa1fb252017a1b9f1ecec9b478",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/logreg_binary.yaml",
+      "template_sha256": "e5fc37b937edb3db2d48818b148b67d15f6f847e9f72270ec615ebc73e0152c0"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 256,
+      "seed": 42,
+      "sequence_sha256": "20066f3541d9eb74df0f777c22aa6123ffa9f02bbd16956219192c2f2e53bd35",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/logreg_binary.yaml",
+      "template_sha256": "e5fc37b937edb3db2d48818b148b67d15f6f847e9f72270ec615ebc73e0152c0"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 256,
+      "seed": 42,
+      "sequence_sha256": "2b29957667b7f0df7a0ac45df0bc2a51262e1907c95e4b42d39d3d3dbe75320b",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/logreg_binary.yaml",
+      "template_sha256": "e5fc37b937edb3db2d48818b148b67d15f6f847e9f72270ec615ebc73e0152c0"
+    },
+    {
+      "count": 6,
+      "domain_cardinality": 6,
+      "seed": 42,
+      "sequence_sha256": "21909b3ec492883bd6747366efcde948d07e3a909ea5c65ae0bd6628ea9bac53",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/ridge_regressor.yaml",
+      "template_sha256": "530faccc0abef955331244c913d6829f27db7594eda2548cfd8b658a7ff83a94"
+    },
+    {
+      "count": 6,
+      "domain_cardinality": 6,
+      "seed": 42,
+      "sequence_sha256": "8bd9440efe4fc34479c39f7fd5a9aeed8b51a8a40f77fc8fd630a7902bee8e9b",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/ridge_regressor.yaml",
+      "template_sha256": "530faccc0abef955331244c913d6829f27db7594eda2548cfd8b658a7ff83a94"
+    },
+    {
+      "count": 6,
+      "domain_cardinality": 6,
+      "seed": 42,
+      "sequence_sha256": "6cf781e0193282caed9f0f29c25a7c7d8d750278e1c0da4b5fa418d8e0a6432b",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/ridge_regressor.yaml",
+      "template_sha256": "530faccc0abef955331244c913d6829f27db7594eda2548cfd8b658a7ff83a94"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 36,
+      "seed": 42,
+      "sequence_sha256": "f2e1e68f788c8d73e42cdde45366eb3b5950cabad7b2e0524949eac3ae73fd80",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/rule_based.yaml",
+      "template_sha256": "0d60636159dfc94544fb95b46d0fcc1bce6b57f99c8b5d4b954bb0ca441cc7a3"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 36,
+      "seed": 42,
+      "sequence_sha256": "12c946d1d04fe6936535c643c594f02a4d28704742a976309208b2dbf25887b1",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/rule_based.yaml",
+      "template_sha256": "0d60636159dfc94544fb95b46d0fcc1bce6b57f99c8b5d4b954bb0ca441cc7a3"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 36,
+      "seed": 42,
+      "sequence_sha256": "a8b228a3083ad4831c6aa7bd579a9bca2691acc1a630826fa406c374042a7d41",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/rule_based.yaml",
+      "template_sha256": "0d60636159dfc94544fb95b46d0fcc1bce6b57f99c8b5d4b954bb0ca441cc7a3"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 32,
+      "seed": 42,
+      "sequence_sha256": "ed0e27c992f59ef9149978ccc3bfdb7c6df96639e63879a827ad94fc0a17cf88",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/tabpfn_binary.yaml",
+      "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 32,
+      "seed": 42,
+      "sequence_sha256": "b52f86d93a8d0e4cfb6dd5e755701c1027c59029dc7356190ae1d8d4aa54d62a",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/tabpfn_binary.yaml",
+      "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 32,
+      "seed": 42,
+      "sequence_sha256": "92e309050763c7f3f1a040f78ee47fe27fcd38c519bfefbe57fec02ff1cbaf42",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/tabpfn_binary.yaml",
+      "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 128,
+      "seed": 42,
+      "sequence_sha256": "16ed892885948f7ddd1e8aecd2c81ca8d4160a4befb3f153a95afea17f2cc57e",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/xgboost_regressor.yaml",
+      "template_sha256": "735c39ab215ffd58437e5f7e789bfa4fe60846dd3c4b4f70bb2b022efd653069"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 128,
+      "seed": 42,
+      "sequence_sha256": "601767190d87e476e6eb97335a34e7513d04b10413d80b025503fbb697f72a77",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/xgboost_regressor.yaml",
+      "template_sha256": "735c39ab215ffd58437e5f7e789bfa4fe60846dd3c4b4f70bb2b022efd653069"
+    },
+    {
+      "count": 8,
+      "domain_cardinality": 128,
+      "seed": 42,
+      "sequence_sha256": "aa53ae081c8149116ec2597b3902521f0eb82f8ae4b109a1caa7dcdcdcfc6171",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/xgboost_regressor.yaml",
+      "template_sha256": "735c39ab215ffd58437e5f7e789bfa4fe60846dd3c4b4f70bb2b022efd653069"
+    }
+  ]
+}
