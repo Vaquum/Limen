@@ -1,4 +1,5 @@
 from limen.yaml._assessment_spec import check_assessment
+from limen.yaml._fitted_binding import fitted_errors
 from limen.yaml._metadata_spec import check_metadata
 from limen.yaml._schema_version import schema_errors
 from limen.yaml._boolean_spec import BooleanControlsSpec
@@ -13,8 +14,7 @@ from limen.yaml._temporal_spec import TemporalSpec
 from limen.yaml.rules import BacktestCostSpec
 from limen.yaml.rules import AcceptanceSpec
 from limen.yaml.rules import BlockSpec
-from limen.yaml.rules import CalibrationCrossRef
-from limen.yaml.rules import CalibrationPresence
+from limen.yaml.rules import CalibrationCrossRef, CalibrationPresence
 from limen.yaml.rules import ConditionsList
 from limen.yaml.rules import DecoderLookbackSpec
 from limen.yaml.rules import DataSource
@@ -27,8 +27,7 @@ from limen.yaml.rules import PruningStrategiesSpec
 from limen.yaml.rules import Required
 from limen.yaml.rules import RequiredColumnsSpec
 from limen.yaml.rules import Resolvable
-from limen.yaml.rules import Rule
-from limen.yaml.rules import RuleEngine
+from limen.yaml.rules import Rule, RuleEngine
 from limen.yaml.rules import ScalerSpec
 from limen.yaml.rules import SingleFuncBlock
 from limen.yaml.rules import UelSpec
@@ -209,6 +208,7 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
     check_assessment(yaml_dict, errors)
     check_objective_spec(yaml_dict, errors)
     _MAIN_ENGINE.run(yaml_dict, errors, warnings)
+    errors.extend(fitted_errors(yaml_dict))
 
     _, mode = get_at(yaml_dict, 'metadata.mode')
     resolved_mode = str(mode) if mode in VALID_MODES else 'development'
