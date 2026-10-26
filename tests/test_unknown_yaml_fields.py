@@ -286,7 +286,8 @@ def test_optional_control_replacements_refuse_all_fresh_cli_boundaries(
     for component in container:
         block = block[component]
     block[typo] = block.pop(field)
-    assert [error.path for error in validate(config).errors] == [path]
+    expected = [path] + (['sfd.params.enable_lags'] if source == CONDITIONAL else [])
+    assert [error.path for error in validate(config).errors] == expected
     assert [error.path for error in unknown_errors(config)] == [path]
     config['metadata']['mode'] = 'production'
     submitted = tmp_path / 'optional.yaml'

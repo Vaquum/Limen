@@ -102,7 +102,8 @@ def test_rule_rejections_are_ordered_and_other_unknown_fields_are_errors():
     for field in ('target', 'bar_formation'):
         _declare(config, field)
     result = validate(config)
-    assert [error.path for error in result.errors] == ['sfd.manifest.target', 'sfd.manifest.bar_formation']
+    assert [error.path for error in result.errors] == [
+        'sfd.manifest.target', 'sfd.manifest.bar_formation', 'sfd.params.trade_threshold']
     assert not result.warnings
     with pytest.raises(ValueError, match=r'sfd.manifest.target:.*sfd.manifest.bar_formation:'):
         build_manifest(config)

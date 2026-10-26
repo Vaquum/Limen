@@ -21,7 +21,7 @@
       "symbol": "schema_errors"
     },
     "sfd.manifest": {
-      "sha256": "3f027471e8a0cf85171ee38185a2d6e0a459cc8a0249580fdaa7269ae2bb8685",
+      "sha256": "8f8cea329702c8e0db3bf1b311f45e7351ef3205896a6949e69314deb215b7c4",
       "source": "limen/yaml/_parameter_refs.py",
       "symbol": "lookup_references"
     },
@@ -177,7 +177,7 @@
       "symbol": "BooleanControlsSpec"
     },
     "sfd.params": {
-      "sha256": "9c216780eab58e212046df3f3507cc74026e78b8a80e46627d24bb653a7e2947",
+      "sha256": "9ef2da6da63797981459be58dae5482090c797be196214d47a66bcadd3aaa424",
       "source": "limen/yaml/rules.py",
       "symbol": "ParamCoverage"
     },

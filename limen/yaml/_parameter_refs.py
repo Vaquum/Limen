@@ -1,4 +1,4 @@
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Iterator, Mapping, Sequence
 import re
 from typing import cast
 
@@ -27,28 +27,27 @@ def _collect(value: object, path: str, found: dict[str, str], *, embedded: bool)
             _collect(item, f'{path}[{index}]', found, embedded=embedded)
 
 
-def lookup_references(manifest: Mapping[str, object], declared: Collection[str]) -> dict[str, str]:
-    found: dict[str, str] = {}
-
-    def native(values: object, path: str, *, groups: bool = False) -> None:
+def native_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, object, bool]]:
+    '''Yield formatted bindings; the flag identifies native exact-name lookup.'''
+    def arguments(values: object, path: str, *, groups: bool = False) -> Iterator[tuple[str, object, bool]]:
         for key, value in _mapping(values).items():
-            if isinstance(value, str) and value not in declared and not value.startswith('_') and not (groups and key == 'group'):
-                _collect(value, path + '.' + key, found, embedded=True)
+            if not (groups and key == 'group'):
+                yield path + '.' + key, value, True
 
     ml = manifest.get('type') == 'ml'
     for name in ('indicators', 'features') if ml else ('indicators',):
         entries = manifest.get(name)
         if isinstance(entries, list):
             for index, entry in enumerate(cast(list[object], entries)):
-                native(_mapping(entry).get('params'), f'sfd.manifest.{name}[{index}].params', groups=True)
+                yield from arguments(_mapping(entry).get('params'), f'sfd.manifest.{name}[{index}].params', groups=True)
     if ml:
         for name in ('pre_split_data_selector', 'bar_formation', 'scaler'):
-            native(_mapping(manifest.get(name)).get('params'), f'sfd.manifest.{name}.params')
+            yield from arguments(_mapping(manifest.get(name)).get('params'), f'sfd.manifest.{name}.params')
         for name in ('fit_params', 'transform_params'):
-            native(_mapping(manifest.get('target')).get(name), f'sfd.manifest.target.{name}')
+            yield from arguments(_mapping(manifest.get('target')).get(name), f'sfd.manifest.target.{name}')
         for name in ('probability_calibration', 'threshold_function'):
-            native(_mapping(_mapping(manifest.get('calibration')).get(name)).get('params'), f'sfd.manifest.calibration.{name}.params')
-        _collect(manifest.get('feature_shims'), 'sfd.manifest.feature_shims', found, embedded=True)
+            yield from arguments(_mapping(_mapping(manifest.get('calibration')).get(name)).get('params'), f'sfd.manifest.calibration.{name}.params')
+        yield 'sfd.manifest.feature_shims', manifest.get('feature_shims'), False
     else:
         conditions = _mapping(manifest.get('strategy')).get('conditions')
         if isinstance(conditions, list):
@@ -56,7 +55,15 @@ def lookup_references(manifest: Mapping[str, object], declared: Collection[str])
                 for name in ('column', 'other_column', 'value', 'lookback', 'expr', 'persistence_n', 'recency_n'):
                     value = _mapping(condition).get(name)
                     if isinstance(value, str):
-                        _collect(value, f'sfd.manifest.strategy.conditions[{index}].{name}', found, embedded=True)
+                        yield f'sfd.manifest.strategy.conditions[{index}].{name}', value, False
+
+
+def lookup_references(manifest: Mapping[str, object], declared: Collection[str]) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for path, value, bare in native_bindings(manifest):
+        if bare and (not isinstance(value, str) or value in declared or value.startswith('_')):
+            continue
+        _collect(value, path, found, embedded=True)
     backtest = _mapping(manifest.get('backtest'))
     for name in (*BACKTEST_KEYS, *TRADE_NUMBERS, 'initial_equity'):
         _collect(backtest.get(name), f'sfd.manifest.backtest.{name}', found, embedded=False)

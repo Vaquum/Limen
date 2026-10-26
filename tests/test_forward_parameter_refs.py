@@ -127,13 +127,14 @@ def test_include_if_without_any_parameter_or_brace_reference_is_not_skipped():
 
 
 @pytest.mark.parametrize('kind', ['ordinary', 'kwargs', 'unknown'])
-def test_reverse_warnings_require_a_known_closed_signature(kind, architecture, monkeypatch):
+def test_reverse_errors_require_a_known_closed_signature(kind, architecture, monkeypatch):
     config = _config()
     _signature(config, kind, architecture, monkeypatch)
     config['sfd']['params']['unrelated_setting'] = [3]
     result = validate(config)
-    assert result.valid
-    assert any(warning.path == 'sfd.params.unrelated_setting' for warning in result.warnings) is (kind == 'ordinary')
+    assert result.valid is (kind != 'ordinary')
+    assert any(error.path == 'sfd.params.unrelated_setting' for error in result.errors) is (kind == 'ordinary')
+    assert not result.warnings
 
 
 @pytest.mark.parametrize('kind', ['ordinary', 'kwargs'])
@@ -143,6 +144,7 @@ def test_declared_lookup_prepares_recorded_roc_and_trains_real_model(bars, kind,
     config['sfd']['params']['C'] = [3]
     config['sfd']['manifest']['indicators'][0]['params']['period'] = '{C}'
     config['sfd']['manifest'].pop('scaler')
+    config['sfd']['params'].pop('scaler_type')
     assert validate(config).valid
     compiled = CompiledSFD(config)
     manifest = compiled.manifest()

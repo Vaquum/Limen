@@ -93,6 +93,7 @@ _MINIMAL_ML_YAML = dedent('''\
               metric: limen.metrics.balanced_metric.balanced_metric
               threshold_min: "{threshold_min}"
               threshold_max: "{threshold_max}"
+              threshold_step: "{threshold_step}"
       params:
         roc_period: [1, 4]
         frac_diff_d: [0.0]
@@ -159,7 +160,7 @@ _MINIMAL_RULE_BASED_YAML = dedent('''\
           entry: rsi_low
         reference_architecture: limen.sfd.reference_architecture.rule_based
       params:
-        dummy_param: [1, 2]
+        sharpe_std_threshold: [1, 2]
     uel:
       n_permutations: 2
       search_strategy:
@@ -498,11 +499,13 @@ def test_validate_non_string_sfd_param_key_does_not_crash() -> None:
         assert False, 'validate() crashed with AttributeError on non-string key'
 
 
-def test_validate_warning_for_unused_sfd_param() -> None:
+def test_validate_error_for_unused_sfd_param() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     yaml_dict['sfd']['params']['orphan_param'] = [1, 2, 3]
     result = validate(yaml_dict)
-    assert any('orphan_param' in w.message for w in result.warnings)
+    assert not result.valid and not result.warnings
+    assert [(e.path, e.message) for e in result.errors] == [(
+        'sfd.params.orphan_param', "Unused parameter 'orphan_param': 3 declared choice(s) have no consuming binding")]
 
 
 def test_validate_error_for_unknown_key_in_data_source() -> None:
@@ -1032,6 +1035,7 @@ def test_build_manifest_empty_backtest_block_leaves_config_none() -> None:
 def test_build_manifest_rule_based_backtest_config_resolves() -> None:
     yaml_dict, _ = parse(_MINIMAL_RULE_BASED_YAML)
     yaml_dict['sfd']['manifest']['backtest'] = {'fee_bps': '{dummy_param}'}
+    yaml_dict['sfd']['params']['dummy_param'] = [1, 2]
     assert validate(yaml_dict).valid
     manifest = build_manifest(yaml_dict)
     data: dict = {}
