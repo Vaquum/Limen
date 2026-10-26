@@ -305,7 +305,7 @@ def test_known_semantic_regressions_are_absent() -> None:
         'walk-forward validation',
         'statistical acceptance gates',
         'formal research falsification proof',
-        'not a published JSON Schema or editor schema',
+        'the canonical JSON Schema draft-07 artifact for that package version',
         'does not define a tox, nox, or Makefile contract',
         'Trainer rejects malformed JSONL instead of skipping corrupt lines',
         'Sensor callers pass raw klines, not `x_test`',

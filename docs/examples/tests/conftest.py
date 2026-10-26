@@ -123,6 +123,13 @@ def research_proof(python_project, compiled_project, wheel_execution, request):
 
 
 PROOF = pytest.StashKey[dict]()
+
+
+@pytest.fixture(scope='session')
+def installed_wheel(research_proof, request):
+    return request.config.stash[PROOF]
+
+
 REPORTS = []
 
 

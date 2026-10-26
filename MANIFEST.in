@@ -27,6 +27,7 @@ recursive-include docs-site/src *.js *.css *.json
 recursive-include .github *.md *.yml
 recursive-include limen *.md
 include limen/py.typed
+include limen/yaml/manifest.schema.json
 recursive-include limen/yaml/templates *.yaml
 recursive-include requirements *.txt
 recursive-include requirements *.in

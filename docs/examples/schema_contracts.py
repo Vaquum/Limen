@@ -33,6 +33,25 @@ NESTED = {
 }
 
 
+# Whole validation modules bind helpers, constants and field sets omitted by an
+# entry-point AST hash. Callable-specific execution remains native authority.
+_DELEGATED = (
+    'limen/_parameter_identity.py', 'limen/experiment/_required_columns.py',
+    'limen/experiment/_walk_forward_split.py', 'limen/experiment/_resolve_trade_policy.py',
+    'limen/experiment/_resolve_backtest_config.py', 'limen/experiment/_allocation.py',
+    'limen/experiment/_column_shims.py', 'limen/experiment/_acceptance_settings.py',
+    'limen/experiment/_recording.py', 'limen/experiment/_objective.py',
+    'limen/experiment/_boolean_controls.py', 'limen/experiment/_source_contract.py',
+    'limen/experiment/_factorized_contract.py', 'limen/experiment/_dynamic_barriers.py',
+    'limen/experiment/_backtest_provenance.py', 'limen/experiment/_shim_fractional_diff.py',
+    'limen/experiment/_holdout_history.py', 'limen/experiment/_holdout_freeze.py',
+    'limen/experiment/reducer/registry.py', 'limen/scalers/registry.py',
+    'limen/backtest/trade_contract.py', 'limen/backtest/_long_flat_tp_sl.py',
+    'limen/backtest/funding_adapter.py', 'limen/backtest/funding_presets.py',
+    'limen/sfd/rule_based/_temporal.py', 'limen/cli/commands/_results_dir.py',
+)
+
+
 def inventory(root: Path):
     from limen.yaml import validator
     rules = []
@@ -73,7 +92,8 @@ def inventory(root: Path):
         elif isinstance(node, ast.Assign):
             entry['fields'] = sorted(ast.literal_eval(node.value))
         nested[path] = entry
-    return {'rules': rules, 'nested': nested}
+    sources = sorted({*_DELEGATED, *(str(path.relative_to(root)) for path in (root / 'limen/yaml').glob('*.py'))})
+    return {'rules': rules, 'nested': nested, 'sources': {source: hashlib.sha256((root / source).read_bytes()).hexdigest() for source in sources}}
 
 
 def validate(root):

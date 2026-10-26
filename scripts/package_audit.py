@@ -36,6 +36,7 @@ REQUIRED_SDIST_PATHS = {
     'docs/README.md',
     'docs/Developer/Packaging.md',
     'limen/py.typed',
+    'limen/yaml/manifest.schema.json',
     'limen/__main__.py',
     'limen_build_backend.py',
     'requirements/constraints.txt',
@@ -48,6 +49,7 @@ REQUIRED_SDIST_PATHS = {
 }
 REQUIRED_WHEEL_PATHS = {
     'limen/py.typed',
+    'limen/yaml/manifest.schema.json',
     'limen/__main__.py',
     'share/limen/CHANGELOG.md',
     'share/limen/CONTRIBUTING.md',
@@ -129,6 +131,11 @@ def _audit_dist(dist_dir: Path) -> None:
 
     with tarfile.open(sdists[0], 'r:gz') as archive:
         sdist_names = _strip_sdist_prefix(archive.getnames())
+        schema_name = next(name for name in archive.getnames() if name.endswith('/limen/yaml/manifest.schema.json'))
+        stream = archive.extractfile(schema_name)
+        assert stream is not None
+        with stream:
+            assert stream.read() == (ROOT / 'limen/yaml/manifest.schema.json').read_bytes()
     missing_sdist = sorted(path for path in REQUIRED_SDIST_PATHS if path not in sdist_names)
     assert not missing_sdist, f'sdist missing: {missing_sdist}'
 
@@ -136,6 +143,7 @@ def _audit_dist(dist_dir: Path) -> None:
         wheel_names = set(wheel.namelist())
         metadata_name = next(name for name in wheel_names if name.endswith('.dist-info/METADATA'))
         metadata = Parser().parsestr(wheel.read(metadata_name).decode('utf-8'))
+        assert wheel.read('limen/yaml/manifest.schema.json') == (ROOT / 'limen/yaml/manifest.schema.json').read_bytes()
 
     missing_wheel = sorted(path for path in REQUIRED_WHEEL_PATHS if not any(name.endswith(path) for name in wheel_names))
     assert not missing_wheel, f'wheel missing: {missing_wheel}'

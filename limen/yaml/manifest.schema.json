@@ -1,0 +1,2010 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Limen experiment manifest",
+  "description": "Portable structure only. Native Limen admission owns executable references, parameter identity, data evidence and scientific compatibility.",
+  "x-limen-package-version": "5.46.2",
+  "x-limen-contract-inventory-sha256": "c54039c2c273951c2bb7f2e14512ce6f4f129dc31aca3cb50271bb4893b49019",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "metadata": {
+      "$ref": "#/definitions/metadata"
+    },
+    "sfd": {
+      "type": "object",
+      "properties": {
+        "manifest": {
+          "$ref": "#/definitions/manifest"
+        },
+        "params": {
+          "$ref": "#/definitions/params"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "manifest",
+        "params"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "manifest"
+            ],
+            "properties": {
+              "manifest": {
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "ml"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "params": {
+                "properties": {
+                  "use_calibration": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "boolean"
+                    }
+                  },
+                  "use_threshold": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "uel": {
+      "$ref": "#/definitions/uel"
+    },
+    "lineage": {
+      "if": {
+        "type": "object"
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "id": {},
+          "committed_at": {},
+          "parent_id": {}
+        },
+        "additionalProperties": false
+      }
+    },
+    "assessment": {
+      "$ref": "#/definitions/assessment"
+    },
+    "holdout": {
+      "$ref": "#/definitions/holdout"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "metadata",
+    "sfd",
+    "uel"
+  ],
+  "definitions": {
+    "arguments": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "function": {
+      "type": "object",
+      "properties": {
+        "func": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "func"
+      ]
+    },
+    "transform": {
+      "type": "object",
+      "properties": {
+        "func": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        },
+        "include_if": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "func"
+      ]
+    },
+    "dataSource": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "method"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "class": {
+          "type": "string"
+        },
+        "fit_params": {
+          "$ref": "#/definitions/arguments"
+        },
+        "transform_params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "class"
+      ]
+    },
+    "scaler": {
+      "type": "object",
+      "properties": {
+        "class": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from_params": {
+          "type": "string",
+          "minLength": 1
+        },
+        "params": {
+          "$ref": "#/definitions/arguments"
+        }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "class"
+          ],
+          "not": {
+            "required": [
+              "from_params"
+            ]
+          }
+        },
+        {
+          "required": [
+            "from_params"
+          ],
+          "not": {
+            "required": [
+              "class"
+            ]
+          }
+        }
+      ]
+    },
+    "calibration": {
+      "type": "object",
+      "properties": {
+        "probability_calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "threshold_function": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "probability_calibration"
+          ],
+          "properties": {
+            "probability_calibration": {
+              "not": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "required": [
+            "threshold_function"
+          ],
+          "properties": {
+            "threshold_function": {
+              "not": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "splitDates": {
+      "type": "object",
+      "properties": {
+        "train_start": {
+          "type": "string"
+        },
+        "train_end": {
+          "type": "string"
+        },
+        "val_start": {
+          "type": "string"
+        },
+        "val_end": {
+          "type": "string"
+        },
+        "test_start": {
+          "type": "string"
+        },
+        "test_end": {
+          "type": "string"
+        },
+        "val_predict_guard": {
+          "type": "boolean"
+        },
+        "test_predict_guard": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "train_start",
+        "train_end",
+        "val_start",
+        "val_end",
+        "test_start",
+        "test_end"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "mode": {
+          "enum": [
+            "development",
+            "production"
+          ]
+        },
+        "author": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limen_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tags": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "mode"
+      ]
+    },
+    "params": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(?!_)"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "type",
+        "data_source",
+        "reference_architecture"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "ml",
+            "rule_based"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "ml"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/mlManifest"
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "rule_based"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/ruleManifest"
+          }
+        }
+      ]
+    },
+    "mlManifest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "ml",
+            "rule_based"
+          ]
+        },
+        "data_source": {
+          "$ref": "#/definitions/dataSource"
+        },
+        "reference_architecture": {
+          "type": "string"
+        },
+        "required_columns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+          }
+        },
+        "split_dates": {
+          "$ref": "#/definitions/splitDates"
+        },
+        "split_walk_forward": {
+          "$ref": "#/definitions/splitWalkForward"
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/transform"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "backtest": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/backtest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/tradeSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "objective": {
+          "type": "object",
+          "properties": {
+            "metric": {
+              "const": "backtest_total_return"
+            },
+            "direction": {
+              "enum": [
+                "maximize",
+                "minimize"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "metric",
+            "direction"
+          ]
+        },
+        "acceptance": {
+          "$ref": "#/definitions/acceptance"
+        },
+        "target": {
+          "$ref": "#/definitions/target"
+        },
+        "pre_split_data_selector": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bar_formation": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/function"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "features": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/transform"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feature_shims": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/featureShim"
+          }
+        },
+        "scaler": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/scaler"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "feature_ablation": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "drop_count_key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "seed_key": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_dict_extension": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "func": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "func"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/calibration"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pca_compression": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "enabled_param": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "n_components_param": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scaler_param_name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "component_prefix": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "params_override": {
+          "$ref": "#/definitions/arguments"
+        },
+        "metrics_params": {
+          "$ref": "#/definitions/arguments"
+        },
+        "decoder_lookback": {
+          "enum": [
+            null,
+            1
+          ]
+        },
+        "strict_mode": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "data_source",
+        "reference_architecture",
+        "target"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "split_dates"
+          ],
+          "not": {
+            "required": [
+              "split_walk_forward"
+            ]
+          }
+        },
+        {
+          "required": [
+            "split_walk_forward"
+          ],
+          "not": {
+            "required": [
+              "split_dates"
+            ]
+          }
+        }
+      ]
+    },
+    "ruleManifest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "ml",
+            "rule_based"
+          ]
+        },
+        "data_source": {
+          "$ref": "#/definitions/dataSource"
+        },
+        "reference_architecture": {
+          "type": "string"
+        },
+        "required_columns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+          }
+        },
+        "split_dates": {
+          "$ref": "#/definitions/splitDates"
+        },
+        "split_walk_forward": {
+          "$ref": "#/definitions/splitWalkForward"
+        },
+        "indicators": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/transform"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "backtest": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/backtest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "allocation": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/tradeSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "objective": {
+          "type": "object",
+          "properties": {
+            "metric": {
+              "const": "backtest_total_return"
+            },
+            "direction": {
+              "enum": [
+                "maximize",
+                "minimize"
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "metric",
+            "direction"
+          ]
+        },
+        "acceptance": {
+          "$ref": "#/definitions/acceptance"
+        },
+        "strategy": {
+          "type": "object",
+          "properties": {
+            "conditions": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/condition"
+              }
+            },
+            "entry": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "conditions",
+            "entry"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "data_source",
+        "reference_architecture",
+        "strategy"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "split_dates"
+          ],
+          "not": {
+            "required": [
+              "split_walk_forward"
+            ]
+          }
+        },
+        {
+          "required": [
+            "split_walk_forward"
+          ],
+          "not": {
+            "required": [
+              "split_dates"
+            ]
+          }
+        }
+      ]
+    },
+    "searchStrategy": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": [
+            "grid",
+            "random",
+            "sobol",
+            null
+          ]
+        },
+        "seed": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "shuffle": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "sobol"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "seed"
+            ],
+            "properties": {
+              "type": {
+                "const": "sobol"
+              },
+              "seed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "shuffle"
+            ]
+          },
+          "then": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "grid"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "shuffle"
+            ],
+            "properties": {
+              "shuffle": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "seed"
+            ],
+            "properties": {
+              "seed": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "recording": {
+      "type": "object",
+      "properties": {
+        "predictions": {
+          "type": "boolean"
+        },
+        "alignment": {
+          "type": "boolean"
+        },
+        "trade_ledger": {
+          "type": "boolean"
+        },
+        "fold_details": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "uel": {
+      "type": "object",
+      "properties": {
+        "n_permutations": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "workers": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_execution": {
+          "type": "boolean"
+        },
+        "record_model_outputs": {
+          "type": "boolean"
+        },
+        "recording": {
+          "$ref": "#/definitions/recording"
+        },
+        "factorize": {
+          "type": "boolean"
+        },
+        "search_strategy": {
+          "$ref": "#/definitions/searchStrategy"
+        },
+        "pruning_strategies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "budget",
+                  "correlation",
+                  "focus",
+                  "sanity",
+                  "saturation"
+                ]
+              },
+              "params": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ]
+          }
+        },
+        "feedback_interval": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "checkpoint_interval": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "prep_each_round": {
+          "type": "boolean"
+        },
+        "output_format": {
+          "enum": [
+            "csv",
+            "parquet",
+            null
+          ]
+        },
+        "output_path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "n_permutations"
+      ]
+    },
+    "assessment": {
+      "type": "object",
+      "properties": {
+        "metric": {
+          "type": "string",
+          "pattern": "^val_"
+        },
+        "direction": {
+          "enum": [
+            "maximize",
+            "minimize"
+          ]
+        },
+        "top_k": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "folds": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "uniqueItems": true
+        },
+        "predict": {
+          "type": "boolean"
+        },
+        "inference_source": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "metric",
+        "direction",
+        "top_k"
+      ]
+    },
+    "holdout": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        },
+        "context_start": {
+          "type": "string"
+        },
+        "interval_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "scenarios": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/holdoutScenario"
+          }
+        },
+        "evaluation_target": {
+          "type": "object",
+          "properties": {
+            "class": {
+              "enum": [
+                "limen.targets.NextBarUpTarget",
+                "limen.targets.NextBarDownTarget",
+                "limen.targets.ThresholdBinaryTarget"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "params": {
+              "type": "object"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "class",
+            "name"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "context_start",
+        "interval_seconds",
+        "scenarios"
+      ]
+    },
+    "splitWalkForward": {
+      "type": "object",
+      "properties": {
+        "n_folds": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "test_bars": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "purge_bars": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "embargo_bars": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "anchored": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "n_folds",
+        "test_bars",
+        "purge_bars",
+        "embargo_bars",
+        "anchored"
+      ]
+    },
+    "tradeSource": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "method"
+      ]
+    },
+    "product": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "cash_spot",
+            "linear_perpetual"
+          ]
+        },
+        "instrument": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_currency": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quote_currency": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quantity_step": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "min_notional": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "initial_margin_fraction": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "maintenance_margin_fraction": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "minProperties": 1
+      },
+      "then": {
+        "required": [
+          "kind",
+          "instrument",
+          "base_currency",
+          "quote_currency",
+          "quantity_step",
+          "min_notional"
+        ]
+      }
+    },
+    "funding": {
+      "type": "object",
+      "properties": {
+        "adapter": {},
+        "adapter_version": {},
+        "preset": {},
+        "params": {},
+        "data_source": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/tradeSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "backtest": {
+      "type": "object",
+      "properties": {
+        "fee_bps": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*\\{[^{}]+\\}[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*$"
+            }
+          ]
+        },
+        "slip_bps": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*\\{[^{}]+\\}[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*$"
+            }
+          ]
+        },
+        "notional_rate": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*\\{[^{}]+\\}[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*$"
+            }
+          ]
+        },
+        "take_profit_bps": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*\\{[^{}]+\\}[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*$"
+            }
+          ]
+        },
+        "stop_loss_bps": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 10000
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*\\{[^{}]+\\}[\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]*$"
+            }
+          ]
+        },
+        "prediction_mode": {
+          "enum": [
+            "binary",
+            "target_exposure"
+          ]
+        },
+        "product": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/product"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "funding": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/funding"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_timestamp_role": {
+          "enum": [
+            "start",
+            "end"
+          ]
+        },
+        "source_interval_seconds": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "take_profit_bps_column": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stop_loss_bps_column": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "execution_data_source": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/tradeSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "barrier_features": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/tradeSource"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "initial_equity": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "max_exposure": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "signal_change_bps": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 10000
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "flat_threshold": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "max_holding_seconds": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "timer_interval_seconds": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "timer_phase_utc_seconds": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "execution_lag_seconds": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "max_price_gap_seconds": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "acceptance": {
+      "type": "object",
+      "properties": {
+        "min_deflated_sharpe_probability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "max_pbo": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "pbo_blocks": {
+          "type": "integer",
+          "minimum": 2,
+          "multipleOf": 2
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1
+    },
+    "featureShim": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "method": {
+          "anyOf": [
+            {
+              "enum": [
+                "ratio",
+                "scale",
+                "log1p",
+                "fractional_diff"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1
+        },
+        "d": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                {
+                  "type": "string",
+                  "pattern": "^\\{[^{}]+\\}$"
+                }
+              ]
+            },
+            {
+              "const": "auto"
+            }
+          ]
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "significance_level": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "exclusiveMaximum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "columns",
+        "method"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "ratio"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "d"
+                  ]
+                },
+                {
+                  "required": [
+                    "threshold"
+                  ]
+                },
+                {
+                  "required": [
+                    "significance_level"
+                  ]
+                }
+              ]
+            },
+            "required": [
+              "reference"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "scale"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "d"
+                  ]
+                },
+                {
+                  "required": [
+                    "threshold"
+                  ]
+                },
+                {
+                  "required": [
+                    "significance_level"
+                  ]
+                }
+              ]
+            },
+            "required": [
+              "reference"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "log1p"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "reference"
+                  ]
+                },
+                {
+                  "required": [
+                    "d"
+                  ]
+                },
+                {
+                  "required": [
+                    "threshold"
+                  ]
+                },
+                {
+                  "required": [
+                    "significance_level"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "method": {
+                "const": "fractional_diff"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "reference"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "condition": {
+      "type": "object",
+      "properties": {
+        "id": {},
+        "name": {},
+        "persistence_n": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "recency_n": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "string",
+              "pattern": "^\\{[^{}]+\\}$"
+            }
+          ]
+        },
+        "operands": {},
+        "operator": {},
+        "direction": {},
+        "lookback": {},
+        "value": {},
+        "other_column": {},
+        "expr": {},
+        "column": {},
+        "type": {
+          "enum": [
+            "threshold",
+            "relative",
+            "crossover",
+            "slope",
+            "sql_expr"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "required": [
+            "operands"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "threshold"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "column",
+              "operator",
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "relative"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "column",
+              "operator",
+              "other_column"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "crossover"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "column",
+              "other_column"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "slope"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "column"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "sql_expr"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "expr"
+            ]
+          }
+        }
+      ]
+    },
+    "holdoutScenario": {
+      "type": "object",
+      "properties": {
+        "fee_bps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "slip_bps": {
+          "type": "number",
+          "minimum": 0
+        },
+        "notional_rate": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "execution_lag_bars": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "take_profit_bps": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stop_loss_bps": {
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "fee_bps",
+        "slip_bps",
+        "notional_rate",
+        "execution_lag_bars",
+        "take_profit_bps",
+        "stop_loss_bps"
+      ]
+    }
+  }
+}

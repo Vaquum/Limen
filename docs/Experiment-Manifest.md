@@ -152,7 +152,28 @@ assessment:
 # endregion declaration
 ```
 
-`schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema.
+### Editor schema
+
+The installed wheel includes `limen/yaml/manifest.schema.json`, the canonical JSON Schema draft-07 artifact for that package version. The schema uses local definitions and the accepted `schema_version`; package-version and validator-inventory annotations identify its owning source. It flags required fields, wrong scalar/container types, unsupported enums, unknown ML/rule fields, split-mode conflicts and literal-only controls before execution.
+
+From a directory outside the checkout, use the Python environment containing the matching wheel to copy its schema: `python -I -c "from importlib.resources import files; from pathlib import Path; Path('limen-manifest.schema.json').write_bytes((files('limen') / 'yaml' / 'manifest.schema.json').read_bytes())"`.
+
+In an editor using the YAML language server, set `yaml.schemas` to `{"./limen-manifest.schema.json": ["*.yaml"]}` and `yaml.schemaStore.enable` to `false`. Resolve the schema path relative to the workspace containing that copied file. The proof uses pinned `yaml-language-server` 1.25.0, YAML 1.2 core parsing and this installed-copy association; it checks an actual wrong type and an unknown ML field at their editor ranges, with remote schema requests disabled. Recopy the schema when changing the installed package version. There is no mutable remote schema identity to track.
+
+Editor structural success still requires `limen validate` and the ordinary execution checks. Native admission owns callable resolution and keyword binding, parameter references and unused axes, cardinality/execution identity, calendar/order, expanded filesystem destinations, source applicability, fitted rows and scientific compatibility. Acceptance/fold prerequisites, objective/pruning conflicts and holdout/assessment/scenario compatibility remain native. Open callable argument maps stay open; constructor and call signatures decide which arguments they accept. Existing legacy lineage admission is preserved; real commit/fork lineage is tested separately.
+
+The two instance models have tested limits:
+
+- Unquoted dates/timestamps become native date objects where strings are required; the editor treats them as strings. Quote them.
+- An integer-valued float or a lexical integer such as `0x1` can become an ordinary JavaScript integer while native literal checks refuse its original type. Use ordinary decimal integer literals for controls.
+- Non-string keys can become string keys in the editor. Duplicate keys and malformed YAML have parser diagnostics, separate from schema diagnostics. Complex mapping keys may be refused during native parsing; sequence keys also have different native/editor representations. Use string keys.
+- Nonfinite numbers and non-JSON tagged values are outside portable parity. The proof retains nonfinite values explicitly instead of converting them to JSON null; binary tags demonstrate native bytes versus editor strings.
+
+Parameter-choice lists deliberately have no generic `uniqueItems`: native execution distinguishes integer `1` from float `1.0`, while JSON Schema equality does not. Required-column names retain exact Unicode nonblank rules, equality, padding and order; structural admission does not establish that the named data columns exist.
+
+### Contract version
+
+`schema_version` is the internal Limen YAML contract marker.
 Only the exact string `"1.0"` is supported. Missing, null, non-string and unequal values fail at
 `schema_version` before current-schema fields are interpreted. Values are not
 trimmed, coerced or compared as package release versions. No older supported
