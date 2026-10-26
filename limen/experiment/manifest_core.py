@@ -1,3 +1,4 @@
+from limen.experiment._source_contract import DataOwner, source_frame, source_owner
 import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
@@ -215,24 +216,20 @@ class DataSourceResolver:
         if inspect.ismethod(method) or bound_self is not None:
             result = method(**params)
             if bound_self is not None and hasattr(bound_self, 'data'):
-                return bound_self.data
-            return result
+                return source_frame(bound_self.data, method, origin='owner.data')
+            return source_frame(result, method)
 
-        if inspect.isfunction(method) and '.' in method.__qualname__:
-            cls = getattr(inspect.getmodule(method), method.__qualname__.rsplit('.', 1)[0], None)
-            if inspect.isclass(cls) and inspect.getattr_static(cls, method.__name__, None) is method:
-                receiver = next(iter(inspect.signature(method, follow_wrapped=False).parameters.values()), None)
-                if (receiver is None or receiver.name not in params
-                        or receiver.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.VAR_POSITIONAL)):
-                    instance = cls()
-                    method(instance, **params)
-                    if hasattr(instance, 'data'):
-                        return instance.data
-                    raise ValueError(
-                        f"DataSourceResolver Method {method.__qualname__} executed successfully but instance does not have 'data' attribute. Expected data source methods to populate instance.data"
-                    )
+        cls = source_owner(method, params)
+        if cls is not None:
+            instance = cls()
+            method(instance, **params)
+            if hasattr(instance, 'data'):
+                return source_frame(cast(DataOwner, instance).data, method, origin='owner.data')
+            raise ValueError(
+                f"DataSourceResolver Method {method.__qualname__} executed successfully but instance does not have 'data' attribute. Expected data source methods to populate instance.data"
+            )
         if callable(method) and not inspect.isclass(method):
-            return method(**params)
+            return source_frame(method(**params), method)
 
         raise ValueError(f"DataSourceResolver Unsupported callable type: {type(method)}")
 

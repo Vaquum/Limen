@@ -412,11 +412,20 @@ def set_test_data_source(self, method: Callable[..., Any], params: dict[str, Any
 
 Both source setters accept synchronous frame-returning callables, including
 partials, callable instances, local functions and static methods. Fetch invokes
-the configured callable once with its keyword parameters and preserves its result
-and exceptions. From a repository checkout, a partial of `polars.read_parquet`
+the configured callable once with its keyword parameters and preserves its
+exceptions. Its effective materialized Polars `DataFrame` is returned unchanged;
+invalid outputs, including `LazyFrame`, raise a source/type-named `TypeError`
+before preparation. From a repository checkout, a partial of `polars.read_parquet`
 bound to `tests/fixtures/spot_1h_20240101_20241231.parquet` can be passed to
 `set_data_source()` or `set_test_data_source()`; `params={'n_rows': 3}` selects
 the first three recorded rows through that callable's own keyword argument.
+
+Fresh and saved YAML admission reject unsupported source classes and statically
+invalid source arguments or missing owner-constructor arguments before source
+access in the learning, backtest execution and funding loader declarations.
+Saved admission runs before checkpoint loading. Compiler-injected date
+bounds follow the effective source signature; unavailable signatures remain
+indeterminate and are never tested by invoking the source.
 
 Native bound methods retain owner `.data` precedence. Genuine unbound instance
 methods construct an owner only when their receiver is absent from configured
@@ -1401,7 +1410,7 @@ parameters. Unknown names retain the accepted-name diagnostic; callable instance
 and partials use their type name when they have no function name. Signature and
 deepcopy failures propagate without changing the original configuration.
 
-For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Source parameter names are checked during compilation; source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
+For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Static source binding includes these overrides after date-limit injection; `split_config` remains a manifest control. Compilation still checks the override parameter names, and source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
 
 ## What `prepare_data()` Produces
 

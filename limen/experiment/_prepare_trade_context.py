@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from limen.experiment._source_contract import trade_dispatch
+
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from importlib import import_module
-from inspect import isfunction, signature
 from typing import TYPE_CHECKING, cast
 
 import polars as pl
@@ -41,7 +42,7 @@ def source_settings(config: BacktestConfig, params: Mapping[str, object]) -> tup
 def load_source(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     values = cast(dict[str, object], resolve_json(source.params, params))
     method = source.method
-    if isfunction(method) and '.' in method.__qualname__ and '<locals>' not in method.__qualname__ and next(iter(signature(method).parameters), None) == 'self':
+    if trade_dispatch(method):
         module = import_module('limen.experiment.manifest_core')
         configure = cast(Callable[[Callable[..., object], dict[str, object]], SourceConfig], vars(module)['DataSourceConfig'])
         resolve = cast(Callable[[SourceConfig], object], vars(module)['DataSourceResolver'].resolve)
