@@ -1,6 +1,7 @@
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
 from ruamel.yaml.scalarbool import ScalarBoolean
 from limen.experiment._required_columns import column_issue
+from limen._parameter_identity import choice_issue
 from limen.yaml._parameter_refs import lookup_references
 from limen.yaml._parameter_usage import declared_keys, used_references
 from limen.experiment._walk_forward_split import read_walk_forward_config
@@ -829,11 +830,10 @@ class SfdParams:
                     suggestion="The '_' prefix is reserved for framework metadata. Rename the parameter.",
                 ))
             if not is_list(values) or len(values) == 0:
-                errors.append(YAMLError(
-                    message=f"Parameter '{key}' must be a non-empty list of values",
-                    path=f'sfd.params.{key}',
-                    suggestion=f'Add at least one value, e.g. {key}: [1]',
-                ))
+                errors.append(YAMLError(message=f"Parameter '{key}' must be a non-empty list of values", path=f'sfd.params.{key}',
+                    suggestion=f'Add at least one value, e.g. {key}: [1]'))
+            elif issue := choice_issue(key, values):
+                errors.append(YAMLError(message=issue[1], path=f'sfd.params.{key}[{issue[0]}]'))
 
 
 class CalibrationPresence:

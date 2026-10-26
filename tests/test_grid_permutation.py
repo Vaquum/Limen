@@ -154,10 +154,8 @@ def test_legacy_seedless_and_unshuffled_routes_remain_available():
     old = GridStrategy(domain)
     old.set_state({'current_index': 1, 'generated_count': 1, 'shuffle': False, 'seed': None})
     assert len(list(old)) == 3
-    repeated = ParamDomain({'candidate': [1, 1, 2]})
-    rows = list(MSQ(GridStrategy(repeated, shuffle=True, seed=42), repeated, n_permutations=3))
-    assert {row['candidate'] for row in rows} == {1, 2}
-    assert len(rows) == 2
+    with pytest.raises(ValueError, match='choices 0 and 1 collide under the execution identity'):
+        ParamDomain({'candidate': [1, 1, 2]})
 
 
 def test_large_domain_startup_is_lazy():

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from typing import Protocol
+from limen._parameter_identity import admit_choices, execution_hash
 
 
 class DomainObserver(Protocol):
@@ -38,7 +39,7 @@ class ParamDomain:
                     f"ParamDomain Parameter '{k}' must be a non-empty list, got {v!r}"
                 )
 
-        self._params: dict[str, list[Any]] = {k: list(v) for k, v in params.items()}
+        self._params: dict[str, list[Any]] = {k: list(v) for k, v in admit_choices(params).items()}
         self._observers: list[DomainObserver] = []
         self._version: int = 0
 
@@ -255,6 +256,9 @@ class ParamDomain:
 
         '''
 
+        identity = execution_hash({param: value})
+        if any(execution_hash({param: existing}) == identity for existing in self._params[param]):
+            return False
         if value in self._params[param]:
             return False
         self._params[param].append(value)
@@ -303,7 +307,7 @@ class ParamDomain:
             )
         old_params = {k: list(v) for k, v in self._params.items()}
         old_version = self._version
-        self._params = {k: list(v) for k, v in state.items()}
+        self._params = {k: list(v) for k, v in admit_choices(state).items()}
         self._version = 0
         changed_params = list(self._params.keys())
         try:

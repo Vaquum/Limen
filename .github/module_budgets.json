@@ -540,5 +540,6 @@
   "limen/experiment/_required_columns.py": 40,
   "limen/cli/commands/_resume_admission.py": 30,
   "limen/yaml/_structural_keys.py": 30,
-  "limen/yaml/_parameter_usage.py": 70
+  "limen/yaml/_parameter_usage.py": 70,
+  "limen/_parameter_identity.py": 40
 }
