@@ -1,4 +1,5 @@
 from functools import partial
+from copy import deepcopy
 import json
 import shutil
 
@@ -14,7 +15,7 @@ from limen.experiment._source_contract import source_parameters
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.yaml.store import commit_manifest
 from limen.yaml._source_binding import source_call_errors
-from tests.test_column_shims import _config, FIXTURE
+from tests.test_column_shims import _assert_prepared_equal, _config, FIXTURE
 from tests.test_manifest_data_sources import _NeedsArgument, _Source, _recorded
 from tests.test_fixed_trade_sources import _config as _trade_config
 
@@ -154,6 +155,88 @@ def test_uninspectable_source_remains_indeterminate_without_invocation():
             raise AssertionError('Indeterminate source executed')
 
     assert source_call_errors(Source(), {}, None) == []
+
+
+@pytest.mark.parametrize('missing', ['train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'])
+@pytest.mark.parametrize('command', [['validate'], ['profile'], ['run', '--dry-run'], ['run']])
+def test_incomplete_dates_report_split_errors_without_source_or_artifacts(tmp_path, monkeypatch, missing, command):
+    config = _config()
+    manifest = config['sfd']['manifest']
+    manifest['data_source'] = {'method': 'limen.data.HistoricalData.get_spot_klines', 'params': {}}
+    del manifest['split_dates'][missing]
+    expected = 'sfd.manifest.split_dates.' + missing
+    assert any(error.path == expected for error in validate(config).errors)
+    submitted = tmp_path / 'incomplete.yaml'
+    YAML().dump(config, submitted)
+    (tmp_path / 'limen.toml').write_text('')
+    calls = []
+
+    def forbidden(*args, **kwargs):
+        calls.append(1)
+        raise AssertionError('Incomplete dates reached source execution')
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(DataSourceResolver, 'resolve', forbidden)
+    result = CliRunner().invoke(cli, [*command, str(submitted)])
+    assert result.exit_code == 1 and expected in result.output
+    assert not calls and not (tmp_path / 'results').exists()
+
+
+@pytest.mark.parametrize('base_path', [None, 'not-selected.parquet'])
+def test_source_overrides_supply_and_replace_required_arguments_with_recorded_equivalence(base_path):
+    baseline = CompiledSFD(_config()).manifest()
+    config = _config()
+    manifest = config['sfd']['manifest']
+    manifest['data_source']['params'] = {} if base_path is None else {'file_path_or_url': base_path}
+    manifest['params_override'] = {'file_path_or_url': str(FIXTURE)}
+    before = deepcopy(config)
+    result = validate(config)
+    assert result.valid, result.errors
+    actual = CompiledSFD(config).manifest()
+    assert actual.data_source_config.params == baseline.data_source_config.params
+    raw = baseline.fetch_data()
+    assert actual.fetch_data().equals(raw)
+    _assert_prepared_equal(actual.prepare_data(raw, {}), baseline.prepare_data(raw, {}))
+    assert config == before
+
+
+@pytest.mark.parametrize('command', [['validate'], ['profile'], ['run', '--dry-run'], ['run']])
+def test_required_source_override_passes_fresh_cli(tmp_path, monkeypatch, command):
+    config = _config()
+    manifest = config['sfd']['manifest']
+    manifest['data_source']['params'] = {}
+    manifest['params_override'] = {'file_path_or_url': str(FIXTURE)}
+    submitted = tmp_path / 'override.yaml'
+    YAML().dump(config, submitted)
+    (tmp_path / 'limen.toml').write_text('')
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(cli, [*command, str(submitted)])
+    assert result.exit_code == 0, result.output
+
+
+def test_override_binding_uses_compiler_precedence_and_excludes_split_config():
+    calls = []
+
+    def source(*, start_date_limit, end_date_limit):
+        calls.append(1)
+        raise AssertionError('Static admission executed a source')
+
+    dates = {'train_start': '2024-01-01', 'test_end': '2024-01-12'}
+    assert source_call_errors(source, {}, dates, overrides={'start_date_limit': '2024-01-02', 'split_config': (1, 0, 0)}) == []
+    errors = source_call_errors(source, {}, dates, overrides={'start_date_limti': '2024-01-02'})
+    assert len(errors) == 1 and errors[0].path == 'sfd.manifest.params_override.start_date_limti'
+    assert not calls
+
+
+@pytest.mark.parametrize('opaque', [False, True])
+def test_override_keyword_names_refuse_at_their_declaration_even_when_opaque(opaque):
+    def source(**kwargs):
+        pytest.fail('Invalid source override was invoked')
+
+    if opaque:
+        source.__signature__ = 'unavailable'
+    errors = source_call_errors(source, {}, None, overrides={0: 'invalid'})
+    assert len(errors) == 1 and errors[0].path == 'sfd.manifest.params_override.0'
 
 
 @pytest.mark.parametrize('opaque', [False, True])
