@@ -41,17 +41,18 @@ def _plan_key(inputs: TradeInputs, policy: TradePolicy) -> str:
     })
 
 
-def event_plan(inputs: TradeInputs, policy: TradePolicy) -> EventPlan:
+def event_plan(inputs: TradeInputs, policy: TradePolicy, *, cache: bool = True) -> EventPlan:
     validate_initial(inputs)
     validate_signal_barriers(inputs, policy)
     if set(OBSERVATION_COLUMNS) - set(inputs.observations.columns) or set(SIGNAL_COLUMNS) - set(inputs.signals.columns):
         _ = source_execution_events(inputs, policy, include_timers=False)
-    key = _plan_key(inputs, policy)
-    with _PLAN_LOCK:
-        existing = _PLANS.get(key)
-        if existing is not None:
-            _PLANS.move_to_end(key)
-            return replace(existing, binding=contract_digest(export_trade_contract(policy, inputs))) if policy.take_profit_bps_column or policy.stop_loss_bps_column else existing
+    key = _plan_key(inputs, policy) if cache else None
+    if key is not None:
+        with _PLAN_LOCK:
+            existing = _PLANS.get(key)
+            if existing is not None:
+                _PLANS.move_to_end(key)
+                return replace(existing, binding=contract_digest(export_trade_contract(policy, inputs))) if policy.take_profit_bps_column or policy.stop_loss_bps_column else existing
     events = source_execution_events(inputs, policy, include_timers=False)
     observation_ids = {event.source_row_id for event in events if event.kind == 'observation'}
     funding_ids = {event.source_row_id for event in events if event.kind == 'funding'}
@@ -63,7 +64,7 @@ def event_plan(inputs: TradeInputs, policy: TradePolicy) -> EventPlan:
         {str(identity): index for index, identity in enumerate(inputs.signals['row_id'])},
         contract_digest(export_trade_contract(policy, inputs)),
     )
-    if len(events) <= _MAX_EVENTS:
+    if key is not None and len(events) <= _MAX_EVENTS:
         with _PLAN_LOCK:
             _PLANS[key] = plan
             while len(_PLANS) > _MAX_PLANS or sum(len(item.events) for item in _PLANS.values()) > _MAX_EVENTS:

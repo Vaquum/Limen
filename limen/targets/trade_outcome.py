@@ -88,7 +88,7 @@ def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float
         if funding is not None:
             sources.append(source_binding(funding, 'candidate:funding', start, end, 1, 'bound_candidate_funding'))
         candidate = replace(inputs, partition_start_ns=start, partition_end_ns=end, signals=signals, observations=observations, funding_events=funding, sources=tuple(sources))
-        plan = event_plan(candidate, policy)
+        plan = event_plan(candidate, policy, cache=False)
         # Only the immediately paired long/short labels share this source plan.
         timeline.candidates.clear()
         timeline.candidates[index] = plan

@@ -143,10 +143,12 @@ def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
             expected.append(row)
     engine = import_module('limen.backtest.trade_execution')
     ADAPTER_CALLS.clear()
-    with patch.object(module, 'event_plan', wraps=module.event_plan) as compile_plan, patch.object(engine, '_metrics', side_effect=AssertionError('unnecessary full ledger')):
+    plans = import_module('limen.backtest._event_plan')
+    with patch.object(module, 'event_plan', wraps=module.event_plan) as compile_plan, patch.object(engine, '_metrics', side_effect=AssertionError('unnecessary full ledger')), patch.object(plans, '_plan_key', wraps=plans._plan_key) as cache_key:
         target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)
         target.transform(frame, trade_context=context)
     assert compile_plan.call_count == 1 + frame.height
+    assert cache_key.call_count == 1
     assert calls == ADAPTER_CALLS
     assert_frame_equal(target.outcomes.rows, pl.DataFrame(expected, schema=target.outcomes.rows.schema), check_exact=True)
 
