@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-26T01:03:04.662304+00:00",
-  "execution_checkout_head": "bfdd67f55cda6b8a8cdfc6e63f6f15349908e725",
+  "observed_at": "2026-10-26T01:22:57.202861+00:00",
+  "execution_checkout_head": "47f8fdfa845f018708753fd72041aa72b547389a",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -36,6 +36,7 @@
     "cli/commands/_export_results.py": "ec79a6896bfb4aa108480a07c394b1e0e3e7a09623fa54ca8992e79b85e8559a",
     "cli/commands/_load_yaml.py": "92334bba45edcd272af275f137eecc0b6da6ab8346b90bfb7b81aed387b96888",
     "cli/commands/_results_dir.py": "12bdc44dd828189673d154906ee3d52d4a1cd8e4471bf12ccde8eda333cef05a",
+    "cli/commands/_resume_admission.py": "b0122a46bde3c4da60ec71dbba67ed8d15b5ca39fcd066ae9aefd2bdf36cea31",
     "cli/commands/backup.py": "3e5efc8c0dc89ef1ef3e7595efda27e52483e92019c88fa8fbceff0c580272e6",
     "cli/commands/commit.py": "07462a0bc4dcef1cafe0d3cd009d247ed02067a776415e2f7bca42851be3c839",
     "cli/commands/fork.py": "26369039f3f02df8b72745ccb65c9c56a6c27bc0a5d907a5ab3d4728d2027211",
@@ -46,7 +47,7 @@
     "cli/commands/new.py": "d6d8db0154ab1e5e2ca4a08bc842e1bbec3d77e1c72df80bbe58416feb412b4f",
     "cli/commands/profile.py": "aaf7add55e599c33871ec3d19a4986468f1bab5dd5840251e882c03c8365749d",
     "cli/commands/reindex.py": "4ac839506e36ae597661cc7a680f6a0cdfb5702c918d9ba756badf9357dade33",
-    "cli/commands/resume.py": "038c581c6f9e52f48f6332ae688f9afd130ceeb2aca1b5469b35cc8147b602b7",
+    "cli/commands/resume.py": "872784ceb41c8a229c47e2464a80b31d86c5acc7aaa84edcbb7ac47027e592b3",
     "cli/commands/run.py": "caada15d60793bca5143c867fdcb9416842c436fc68b3a6dd2bbd4eb95c019f7",
     "cli/commands/validate.py": "8bd94801a0311e91321c6bfc98c190e1c0037651243ced7210e9f74c058c0408",
     "cli/git_utils.py": "e8fe61990930832ada420152afb06a31e1091c9dc1b834a88a981701d6b7884a",
@@ -511,6 +512,7 @@
     "yaml/_parser_yaml.py": "6a0813bead7e69136d3ea635884cd024e81d0d8e6b8ea41190d6c7eda791659a",
     "yaml/_recording_spec.py": "2bce42e979d2ae59f633f418b60c526d09609269243a4c1493d6c8b2be954ad3",
     "yaml/_schema_version.py": "0ce83b5905094c3250e81dd2512a15598fec8cbcbf42fd0d96e9512142a939f9",
+    "yaml/_structural_keys.py": "c5f84656d54761d50acf349fbe8158807a0c3dadf88b4ef1c27b618682a930fd",
     "yaml/_temporal_spec.py": "25a2be761c47bca3a7f79e4dbd9d557c94b60e2fc64605a91e0805327db83cc5",
     "yaml/compiler.py": "ea1b4bf031eb46851595490577eee1140bc7601ac54705d1ad11e08154e0bfef",
     "yaml/config.py": "55c80a4704450766c1015602b1d97e83298f8907dfaef092938717cf7e0fb4f3",
@@ -518,10 +520,10 @@
     "yaml/parser.py": "2fa2c1ab9192ce75779cd8844f204faee29731e1e3d4ac53318fd688a4451ed2",
     "yaml/profiler.py": "1e412c4ca48fc0d67fcf05ec6ec7811cdd37d256273af3833a56895a1931dd5d",
     "yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
-    "yaml/rules.py": "67a7e92cff8301df83ee4650063febb12824fef7bb4f948637b09c0bd275deb6",
-    "yaml/schema.py": "7313ed325f66bf597b496b25884a020203535292be976a651e12f818a15d181b",
+    "yaml/rules.py": "d8edd8143ca5d4ef05bc644f09dad5ecb0a9e6993277476b1f34570af98c2fe8",
+    "yaml/schema.py": "29c23589de9f6abe8880662667b88e99e8fcb3d0d6f6bc02acd1931f28263096",
     "yaml/store.py": "53e4eb7724597f09c7bf71739996b5fb854d07950720868d6d93b125b6d3ac0c",
-    "yaml/validator.py": "69343b7bdf7d70cb65b7e2af9c2f866f4ffde221d67e8728acbab18acf47eb8b"
+    "yaml/validator.py": "8f778c986f2bce7f957a7dbfd17ed2dd84d72ac2b40c6962eddaf98c352f49b4"
   },
   "sources": {
     "compiled-research/tabpfn.yaml": "9ee486a940ad9da6f86d161cebfbf17c1d84d1d7333e31acc2fd9f7fe402254a",
