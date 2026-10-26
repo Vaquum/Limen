@@ -35,7 +35,6 @@ from limen.yaml.rules import SingleFuncBlock
 from limen.yaml.rules import UelSpec
 from limen.yaml.rules import SfdParams
 from limen.yaml.rules import SplitSpec
-from limen.yaml.rules import WarnIfPresent
 from limen.yaml.rules import When
 from limen.yaml.rules import get_at
 from limen.yaml.schema import BACKTEST_OPTIONAL
@@ -60,6 +59,8 @@ from limen.yaml.schema import SCALER_EXPLICIT_REQUIRED
 from limen.yaml.schema import SCALER_FROM_PARAMS_REQUIRED
 from limen.yaml.schema import SEARCH_STRATEGY_OPTIONAL
 from limen.yaml.schema import SEARCH_STRATEGY_REQUIRED
+from limen.yaml.schema import SFD_REQUIRED, TOP_LEVEL_REQUIRED
+from limen.yaml._structural_keys import PLACEMENT_REJECTIONS
 from limen.yaml.schema import SPLIT_DATES_OPTIONAL
 from limen.yaml.schema import SPLIT_DATES_REQUIRED
 from limen.yaml.schema import STRATEGY_REQUIRED
@@ -164,11 +165,6 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
         TemporalSpec(),
         FuncList('sfd.manifest.indicators'),
         NoUnknownKeys('sfd.manifest.strategy', STRATEGY_REQUIRED),
-        WarnIfPresent(
-            'sfd.manifest',
-            (ML_MANIFEST_REQUIRED | ML_MANIFEST_OPTIONAL) - RULE_YAML_REJECTIONS.keys(),
-            message_template="Field '{key}' is not used in rule_based manifests",
-        ),
         NoUnknownKeys(
             'sfd.manifest',
             MANIFEST_REQUIRED | MANIFEST_OPTIONAL_SHARED | RULE_BASED_MANIFEST_REQUIRED | RULE_BASED_MANIFEST_OPTIONAL | {'acceptance'}, rejected=RULE_YAML_REJECTIONS,
@@ -184,12 +180,17 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
     OneOf('uel.search_strategy.type', VALID_SEARCH_STRATEGY_TYPES),
     NoUnknownKeys('uel.search_strategy', SEARCH_STRATEGY_REQUIRED | SEARCH_STRATEGY_OPTIONAL),
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
-    NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL, rejected=UEL_YAML_REJECTIONS),
     UelSpec(),
     RecordingSpec(),
     PruningStrategiesSpec(),
+    NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL, rejected=UEL_YAML_REJECTIONS | PLACEMENT_REJECTIONS['uel']),
+    NoUnknownKeys('', TOP_LEVEL_REQUIRED | {'assessment', 'holdout', 'lineage'}, rejected=PLACEMENT_REJECTIONS['']),
+    NoUnknownKeys('sfd', SFD_REQUIRED, rejected=PLACEMENT_REJECTIONS['sfd']),
+    NoUnknownKeys('lineage', {'id', 'committed_at', 'parent_id'}),
 ]))
 
+
+unknown_errors = _MAIN_ENGINE.unknown_errors
 
 def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 

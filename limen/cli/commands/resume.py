@@ -9,8 +9,7 @@ from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD, build_pruning_strategies, build_search_strategy
 from limen.yaml.config import is_mapping
-from limen.yaml._callback_spec import callback_error
-from limen.yaml._schema_version import schema_errors
+from limen.cli.commands._resume_admission import admit_saved_yaml
 
 
 def run_resume(results_dir: Path, progress_bar: bool = True,
@@ -25,10 +24,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
     if metadata is None:
         return False
     yaml_reference = metadata['yaml_reference']
-    version_errors = schema_errors(yaml_reference)
-    error = f'schema_version: {version_errors[0].message}' if version_errors else callback_error(yaml_reference)
-    if error:
-        click.secho(f'  ✗ {error}', fg='red')
+    if not admit_saved_yaml(yaml_reference):
         return False
     effective_workers = metadata.get('workers', 1) if workers is None else workers
 

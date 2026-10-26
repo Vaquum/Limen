@@ -49,10 +49,10 @@ TARGET_OPTIONAL = {'fit_params', 'transform_params'}
 
 STRATEGY_REQUIRED = {'conditions', 'entry'}
 CONDITION_REQUIRED = {'id', 'name'}
-CONDITION_OPTIONAL = {'params', 'persistence_n', 'recency_n'}
+CONDITION_OPTIONAL = {'persistence_n', 'recency_n'}
 
 SCALER_EXPLICIT_REQUIRED = {'class'}
-SCALER_EXPLICIT_OPTIONAL: set[str] = set()
+SCALER_EXPLICIT_OPTIONAL = {'params'}
 SCALER_FROM_PARAMS_REQUIRED = {'from_params'}
 
 FEATURE_ABLATION_OPTIONAL = {'drop_count_key', 'seed_key'}
