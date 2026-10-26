@@ -6,12 +6,13 @@ import shlex
 from pathlib import Path
 import subprocess
 
-from conftest import PROOF, ROOT
 from jsonschema import Draft7Validator
 from markdown_it import MarkdownIt
 import pytest
 
 from limen.yaml import parse, validate
+
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def json_compatible(value):
@@ -93,8 +94,8 @@ def run_editor(root, schema_path, cases, temporary):
 
 
 @pytest.fixture(scope='session')
-def editor_proof(research_proof, request, tmp_path_factory):
-    wheel = request.config.stash[PROOF]
+def editor_proof(installed_wheel, tmp_path_factory):
+    wheel = installed_wheel
     location = Path(wheel['installed']['import_location'])
     assert not location.is_relative_to(ROOT) and 'site-packages' in location.parts
     python = location.parents[4] / 'bin/python'
