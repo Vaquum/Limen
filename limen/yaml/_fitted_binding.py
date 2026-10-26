@@ -106,7 +106,8 @@ def _calibration(block: Mapping[str, object], manifest: Mapping[str, object], er
             logger.debug('Calibration architecture acceptance is indeterminate: %s', error)
         else:
             accepted = any(p.kind == inspect.Parameter.VAR_KEYWORD or
-                           (name == 'prediction_calibration_config' and p.kind != inspect.Parameter.POSITIONAL_ONLY)
+                           (name == 'prediction_calibration_config' and p.kind in (
+                               inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY))
                            for name, p in parameters.items())
             if not accepted:
                 errors.append(YAMLError(message='Architecture does not accept prediction_calibration_config', path=path))

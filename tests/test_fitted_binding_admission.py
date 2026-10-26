@@ -162,6 +162,31 @@ def test_declared_calibration_requires_architecture_keyword_acceptance():
     assert any(e.path == 'sfd.manifest.calibration' and 'prediction_calibration_config' in e.message for e in binding.fitted_errors(config))
 
 
+@pytest.mark.parametrize(('architecture', 'accepted'), [
+    (lambda *prediction_calibration_config: None, False),
+    (lambda prediction_calibration_config, /: None, False),
+    (lambda prediction_calibration_config: None, True),
+    (lambda *, prediction_calibration_config: None, True),
+    (lambda **prediction_calibration_config: None, True),
+    (lambda *prediction_calibration_config, **kwargs: None, True),
+])
+def test_calibration_architecture_parameter_kind_matches_real_keyword_call(monkeypatch, architecture, accepted):
+    config = _config()
+    original = binding._resolve
+
+    def resolve(name, path, errors, **kwargs):
+        return architecture if path.endswith('reference_architecture') else original(name, path, errors, **kwargs)
+
+    monkeypatch.setattr(binding, '_resolve', resolve)
+    errors = binding.fitted_errors(config)
+    assert not errors if accepted else any(e.path == 'sfd.manifest.calibration' for e in errors)
+    if accepted:
+        architecture(prediction_calibration_config=object())
+    else:
+        with pytest.raises(TypeError):
+            architecture(prediction_calibration_config=object())
+
+
 @pytest.mark.parametrize('key', ['metric', '_objective_maximize', 'y_val', 'val_proba'])
 def test_objective_threshold_operands_are_framework_owned(key):
     config = _config()
