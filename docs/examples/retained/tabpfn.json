@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-26T07:29:29.442695+00:00",
-  "execution_checkout_head": "3459c53c57dad6a04e2658b0f41f0dc96b0d0402",
+  "observed_at": "2026-10-26T16:55:36.959316+00:00",
+  "execution_checkout_head": "4a63743e395c00e461b1ac64a01e24a20b750d78",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -13,7 +13,7 @@
     "backtest/_cost_identity.py": "2f9467cfc50ecacca7a4cf926913f16a380004a109a3b56a3d652877056350a1",
     "backtest/_cost_statistics.py": "68bc84acbf72ff375b48e53052eb45a7840bea86493f1dc3d7a27e2355216dba",
     "backtest/_event_clock.py": "4d0505b0b531763c930963b90a597eeae0226994a3c4d78f9acab5e653ce51fb",
-    "backtest/_event_plan.py": "6df63b01595bbb0883428113ac57d885b7ceb4dba5072ccd742cbb9de5001151",
+    "backtest/_event_plan.py": "4f71080b249ebc4970fe6e611ff84c9042c0d8e48989eac5f244c0c0bda6deab",
     "backtest/_long_flat_tp_sl.py": "b2802f3940a11694c830f8320ccd3f56fff3f4aa1acfcbcab42d09c4612abee3",
     "backtest/_snapshot_execution.py": "0d64bfac719d5e47caefd0e9c6ff8892bc665f108faf0a889c7e6a9f57209737",
     "backtest/_snapshot_ledger.py": "11746e677bf32309311a00aaab656f2d4339619c16e4614e9ef8d3758701ffed",
@@ -481,7 +481,7 @@
     "targets/random_binary.py": "918b649f54e9e9a1d37296ac23b6e05a3c7b3dd540c3250354df89c2d76b39da",
     "targets/risk_reward_ratio.py": "f089d4e8aec22fe8da2b12267c17597e97efadf3f4e2849d73b2e2e24ed4b01f",
     "targets/threshold_binary.py": "0ec67e7c3358f1a2b4daebcc807693b6c9b7acd951f972f8b9343a46f38eb840",
-    "targets/trade_outcome.py": "fb726034941ff02487453a62e91f5fe7b1e07379907883dde4abc0c78ea04f81",
+    "targets/trade_outcome.py": "ad4f5dadee38bdcc68e2e5fbb29d26bbea7a5e0725379dd3cae4d528ce2477b5",
     "targets/tradeline_long_binary.py": "102d6c3c4cd7ce277c69312e14bf56f7ae168c58a7d55bb76f81ecb27189b846",
     "targets/triple_barrier.py": "91457e862737ef52f622fa07cac30cc0b160dc0dc17c9d41b98387023029b2b4",
     "targets/vol_normalized_return.py": "0d19ef9f38267ff5117b53a0a3e47f0357ab4be700ec56526c7827ae9d28e7fb",
