@@ -11,7 +11,7 @@ import polars as pl
 
 from limen.data.historical_data import HistoricalData
 import limen.experiment._round_storage as _storage
-from limen.experiment._holdout_history import HoldoutEvidenceError, ProjectBinding, check_binding, research_record
+from limen.experiment._holdout_history import HoldoutEvidenceError, ProjectBinding, admission, check_binding, research_record
 
 __all__: list[str] = []
 
@@ -96,8 +96,7 @@ def _rows(directory: Path, count: int) -> list[dict[str, str | None]]:
     return rows
 
 
-def validate_live(manifest: object, raw: pl.DataFrame, binding: ProjectBinding,
-                  entry: Mapping[str, object]) -> None:
+def validate_live(manifest: object, raw: pl.DataFrame, binding: ProjectBinding, entry: Mapping[str, object]) -> None:
     from limen.experiment._holdout_folds import live
     live(manifest, raw, binding, entry)
 
@@ -121,8 +120,7 @@ def _population(directory: Path, frontier: int, binding: ProjectBinding, source:
                 if proof and raw is not None:
                     validate_live(manifest, raw, binding, entry)
                 completed.append({'index': index, 'round_id': identity, 'research_record_id': proof.get('research_record_id'), 'holdout': dict(proof)})
-    terminal = [{'index': index, 'round_id': row['id'], 'failed': bool(row['strict_mode_error'])} for index, row in enumerate(rows)]
-    return {'source': source, 'prefix': terminal, 'completed': completed}
+    return {'source': source, 'prefix': [{'index': index, 'round_id': row['id'], 'failed': bool(row['strict_mode_error'])} for index, row in enumerate(rows)], 'completed': completed}
 
 
 def checkpoint_state(directory: Path, frontier: int, binding: ProjectBinding | None,
@@ -148,13 +146,14 @@ def validate_checkpoint(directory: Path, checkpoint: Mapping[str, object], metad
     if binding is None or any(not isinstance(item, Mapping) or dict(cast(Mapping[str, object], item)) != binding_header(binding)
                               or not _same_header(cast(Mapping[str, object], item), binding) for item in (checkpoint.get('holdout_binding'), metadata.get('holdout_binding'))):
         raise HoldoutEvidenceError('Protected checkpoint binding/revision changed or its envelope is missing')
-    check_binding(binding)
-    validate_trainer(binding, metadata, {})
-    frontier = _mapping(checkpoint.get('metadata')).get('experiment_round')
-    if type(frontier) is not int or frontier < -1:
-        raise HoldoutEvidenceError('Protected checkpoint lacks a terminal round frontier')
-    if checkpoint.get('holdout_population') != _population(directory, frontier, binding, source, manifest, raw):
-        raise HoldoutEvidenceError('Protected checkpoint research population differs from its saved history')
+    with admission(binding.root):
+        check_binding(binding)
+        validate_trainer(binding, metadata, {})
+        frontier = _mapping(checkpoint.get('metadata')).get('experiment_round')
+        if type(frontier) is not int or frontier < -1:
+            raise HoldoutEvidenceError('Protected checkpoint lacks a terminal round frontier')
+        if checkpoint.get('holdout_population') != _population(directory, frontier, binding, source, manifest, raw):
+            raise HoldoutEvidenceError('Protected checkpoint research population differs from its saved history')
 
 
 def validate_trainer(binding: ProjectBinding | None, metadata: Mapping[str, object], rounds: Mapping[str, object],
@@ -169,12 +168,13 @@ def validate_trainer(binding: ProjectBinding | None, metadata: Mapping[str, obje
         raise HoldoutEvidenceError('Protected Trainer requires original saved project/population evidence')
     if 'holdout_binding' in metadata and metadata['holdout_binding'] != binding_header(binding):
         raise HoldoutEvidenceError('Protected Trainer metadata binding/revision changed')
-    _ = _parent(binding, cast(Mapping[str, object], saved).get('research_record_id'))
-    for identity, entry in rounds.items():
-        record = _mapping(entry)
-        _ = _record(binding, identity, record.get('holdout'), source)
-        if raw is not None:
-            validate_live(manifest, raw, binding, record)
+    with admission(binding.root):
+        _ = _parent(binding, cast(Mapping[str, object], saved).get('research_record_id'))
+        for identity, entry in rounds.items():
+            record = _mapping(entry)
+            _ = _record(binding, identity, record.get('holdout'), source)
+            if raw is not None:
+                validate_live(manifest, raw, binding, record)
 
 
 def validate_trainer_round(binding: ProjectBinding, identity: object, proof: object) -> str:
