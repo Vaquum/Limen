@@ -227,6 +227,15 @@ whose legacy YAML contains an absolute template. The copied YAML, metadata and
 manifest identity retain the declared template. Occupied-run refusal still
 precedes YAML copying.
 
+`uel.intra_callback` is unsupported in YAML and rejected whenever present,
+including null or a resolvable callable name. Use the Python
+`UniversalExperimentLoop(intra_callback=callback)` argument with a callable
+receiving `(log, msq)`; see [manual intervention](Developer/Pruning-Strategies.md#manual-intervention).
+Fresh CLI commands and `limen run --resume` reject saved declarations containing
+the key after schema-version admission and before construction or scientific
+writes. Native callable callbacks and scientific read-back remain supported;
+no YAML import or callback registry exists.
+
 ### Parallel rounds
 
 Set `uel.workers: 4` or run `limen run experiment.yaml --workers 4` to evaluate
@@ -1529,7 +1538,7 @@ The index follows the current validator, including its conditional rules. `Requi
 | `uel.search_strategy.type` | OneOf | `always` | {"choices": ["grid", "random", "sobol"]} |
 | `uel.search_strategy` | NoUnknownKeys | `always` | {"known": ["seed", "shuffle", "type"], "severity": "warning"} |
 | `uel.output_format` | OneOf | `always` | {"choices": ["csv", "parquet"]} |
-| `uel` | NoUnknownKeys | `always` | {"known": ["checkpoint_interval", "factorize", "feedback_interval", "intra_callback", "n_permutations", "output_format", "output_path", "prep_each_round", "pruning_strategies", "record_execution", "record_model_outputs", "recording", "search_strategy", "workers"], "severity": "warning"} |
+| `uel` | NoUnknownKeys | `always` | `{"known": ["checkpoint_interval", "factorize", "feedback_interval", "n_permutations", "output_format", "output_path", "prep_each_round", "pruning_strategies", "record_execution", "record_model_outputs", "recording", "search_strategy", "workers"], "rejected": {"intra_callback": "YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention"}, "severity": "warning"}` |
 
 ### Nested contracts
 
@@ -1554,6 +1563,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 | `sfd.manifest.objective` | Conditional validation in `_read_objective`; see its subject section above. | [_read_objective](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_objective_spec.py) |
 | `sfd.manifest.acceptance` | Conditional validation in `read_acceptance`; see its subject section above. | [read_acceptance](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_acceptance_settings.py) |
 | `sfd.manifest.strategy.conditions[]` | Conditional validation in `ConditionsList`; see its subject section above. | [ConditionsList](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
+| `uel.intra_callback` | Unsupported YAML key; use the native callable API. | [callback_error](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_callback_spec.py) |
 | `uel.recording` | Conditional validation in `parse_recording`; see its subject section above. | [parse_recording](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_recording.py) |
 | `assessment` | Conditional validation in `assessment_spec`; see its subject section above. | [assessment_spec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_assessment_spec.py) |
 | `holdout` | Conditional validation in `holdout_spec`; see its subject section above. | [holdout_spec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_assessment_spec.py) |

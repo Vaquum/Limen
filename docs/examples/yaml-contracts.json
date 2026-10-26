@@ -191,6 +191,11 @@
       "source": "limen/yaml/rules.py",
       "symbol": "UelSpec"
     },
+    "uel.intra_callback": {
+      "sha256": "48785c958e64c6c0654e95c5e4ab69d86869485e8862ff0a53ec80bbbe348547",
+      "source": "limen/yaml/_callback_spec.py",
+      "symbol": "callback_error"
+    },
     "uel.output_path": {
       "sha256": "047d83f057f1bb74ff52544cb6ae36bcae71207a95714c961d26aafbd3cafd7d",
       "source": "limen/cli/commands/_results_dir.py",
@@ -635,7 +640,6 @@
         "checkpoint_interval",
         "factorize",
         "feedback_interval",
-        "intra_callback",
         "n_permutations",
         "output_format",
         "output_path",
@@ -648,6 +652,9 @@
         "workers"
       ],
       "path": "uel",
+      "rejected": {
+        "intra_callback": "YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention"
+      },
       "severity": "warning",
       "when": "always"
     }

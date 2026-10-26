@@ -23,6 +23,7 @@ NESTED = {
     'sfd.manifest.objective': ('limen/yaml/_objective_spec.py', '_read_objective'),
     'sfd.manifest.acceptance': ('limen/experiment/_acceptance_settings.py', 'read_acceptance'),
     'sfd.manifest.strategy.conditions[]': ('limen/yaml/rules.py', 'ConditionsList'),
+    'uel.intra_callback': ('limen/yaml/_callback_spec.py', 'callback_error'),
     'uel.recording': ('limen/experiment/_recording.py', 'parse_recording'),
     'uel.output_path': ('limen/cli/commands/_results_dir.py', 'admit_output'),
     'assessment': ('limen/yaml/_assessment_spec.py', 'assessment_spec'),

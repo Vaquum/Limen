@@ -9,6 +9,7 @@ from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD, build_pruning_strategies, build_search_strategy
 from limen.yaml.config import is_mapping
+from limen.yaml._callback_spec import callback_error
 from limen.yaml._schema_version import schema_errors
 
 
@@ -24,8 +25,10 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
     if metadata is None:
         return False
     yaml_reference = metadata['yaml_reference']
-    if version_errors := schema_errors(yaml_reference):
-        click.secho(f'  ✗ schema_version: {version_errors[0].message}', fg='red')
+    version_errors = schema_errors(yaml_reference)
+    error = f'schema_version: {version_errors[0].message}' if version_errors else callback_error(yaml_reference)
+    if error:
+        click.secho(f'  ✗ {error}', fg='red')
         return False
     effective_workers = metadata.get('workers', 1) if workers is None else workers
 
@@ -109,17 +112,11 @@ def _load_resume_metadata(results_dir: Path) -> dict[str, Any] | None:
     yaml_reference = metadata.get('yaml_reference')
 
     if not is_mapping(yaml_reference):
-        click.secho(
-            "  ✗ metadata.json has no valid 'yaml_reference' — experiment was not started from a YAML file.",
-            fg='red',
-        )
+        click.secho("  ✗ metadata.json has no valid 'yaml_reference' — experiment was not started from a YAML file.", fg='red')
         return None
 
     if not isinstance(yaml_reference.get('metadata'), dict) or 'name' not in yaml_reference['metadata']:
-        click.secho(
-            "  ✗ 'yaml_reference' is missing 'metadata.name' — cannot identify experiment.",
-            fg='red',
-        )
+        click.secho("  ✗ 'yaml_reference' is missing 'metadata.name' — cannot identify experiment.", fg='red')
         return None
 
     return metadata

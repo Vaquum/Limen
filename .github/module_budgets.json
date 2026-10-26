@@ -415,6 +415,7 @@
   "limen/utils/param_space.py": 110,
   "limen/utils/reporting.py": 40,
   "limen/yaml/__init__.py": 40,
+  "limen/yaml/_callback_spec.py": 20,
   "limen/yaml/compiler.py": 320,
   "limen/yaml/_parser_yaml.py": 30,
   "limen/yaml/config.py": 100,

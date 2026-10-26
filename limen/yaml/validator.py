@@ -65,7 +65,7 @@ from limen.yaml.schema import SPLIT_DATES_REQUIRED
 from limen.yaml.schema import STRATEGY_REQUIRED
 from limen.yaml.schema import TARGET_OPTIONAL
 from limen.yaml.schema import TARGET_REQUIRED
-from limen.yaml.schema import UEL_OPTIONAL
+from limen.yaml.schema import UEL_OPTIONAL, UEL_YAML_REJECTIONS
 from limen.yaml.schema import UEL_REQUIRED
 from limen.yaml.schema import VALID_MANIFEST_TYPES
 from limen.yaml.schema import VALID_MODES
@@ -184,7 +184,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
     OneOf('uel.search_strategy.type', VALID_SEARCH_STRATEGY_TYPES),
     NoUnknownKeys('uel.search_strategy', SEARCH_STRATEGY_REQUIRED | SEARCH_STRATEGY_OPTIONAL),
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
-    NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL),
+    NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL, rejected=UEL_YAML_REJECTIONS),
     UelSpec(),
     RecordingSpec(),
     PruningStrategiesSpec(),
