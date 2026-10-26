@@ -245,7 +245,8 @@ class BudgetReducer(PruningStrategy):
                 continue
 
             worst_row = grouped.row(0, named=True)
-            worst_values.append((param, worst_row[param]))
+            if choices := msq._logged_choices(param, worst_row[param]):
+                worst_values.append((param, choices[0]))
 
         if not worst_values:
             return []

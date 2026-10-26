@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from limen.experiment.param_domain import ParamDomain
+from limen._parameter_identity import logged_choices
 from limen.experiment._filter_resume import restore_filters
 from limen.experiment.reducer.filter_types import FILTER_SAMPLE, SAMPLE_HASH_RULE
 from limen.experiment.param_search.search_strategy import SearchStrategy
@@ -406,6 +407,10 @@ class MSQ:
     def domain_keys(self) -> list[str]:
 
         return self._domain.keys
+
+
+    def _logged_choices(self, param: str, value: object) -> tuple[object, ...]:
+        return logged_choices(param, value, self._domain.values_for(param))
 
 
     def get_state(self) -> dict[str, Any]:
