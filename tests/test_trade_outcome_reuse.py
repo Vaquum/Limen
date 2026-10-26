@@ -113,8 +113,10 @@ def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
     original_execute = module.execute_event_plan
     expected = []
     calls = []
+    required_plans = []
 
     def full_ledger(account, plan, signals, start, end, adapter, **kwargs):
+        required_plans.append(any(row['kind'] == 'accrual' for row in inputs.funding_events.iter_rows(named=True)))
         observations = inputs.observations.filter(pl.col('row_id').is_in(plan.observation_order))
         funding = inputs.funding_events.filter(pl.col('event_id').is_in(plan.funding))
         selected = inputs.signals.filter(pl.col('row_id').is_in(plan.signal_order)).with_columns(pl.Series('target', [signals[str(identity)]['target'] if isinstance(signals[str(identity)], dict) else signals[str(identity)] for identity in inputs.signals['row_id'] if str(identity) in plan.signal_order]))
@@ -135,7 +137,7 @@ def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
 
     plan = event_plan(inputs, policy)
     timeline = _Timeline(sorted({event.time_ns for event in plan.events if event.kind == 'observation'}), inputs.signals['available_at_ns'].to_list(), inputs.observations['start_ns'].to_list(), inputs.observations['available_at_ns'].to_list(), plan)
-    with patch.object(module, 'execute_event_plan', side_effect=full_ledger):
+    with patch.object(_Timeline, 'has_accrual', True), patch.object(module, 'execute_event_plan', side_effect=full_ledger):
         for index, identity in enumerate(inputs.signals['row_id']):
             row = {'row_id': identity}
             for side, sign in [('long', 1.0), ('short', -1.0)]:
@@ -147,7 +149,7 @@ def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
     with patch.object(module, 'event_plan', wraps=module.event_plan) as compile_plan, patch.object(engine, '_metrics', side_effect=AssertionError('unnecessary full ledger')), patch.object(plans, '_plan_key', wraps=plans._plan_key) as cache_key:
         target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)
         target.transform(frame, trade_context=context)
-    assert compile_plan.call_count == 1 + frame.height
+    assert compile_plan.call_count == 1 + sum(required_plans) // 2
     assert cache_key.call_count == 1
     assert calls == ADAPTER_CALLS
     assert_frame_equal(target.outcomes.rows, pl.DataFrame(expected, schema=target.outcomes.rows.schema), check_exact=True)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass, field, replace
+from functools import cached_property
 from typing import ClassVar, Literal
 
 import polars as pl
@@ -36,6 +37,10 @@ class _Timeline:
     plan: EventPlan
     candidates: dict[int, EventPlan] = field(default_factory=dict[int, EventPlan])
 
+    @cached_property
+    def has_accrual(self) -> bool:
+        return any(row['kind'] == 'accrual' for row in self.plan.funding.values())
+
 
 def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float, timeline: _Timeline) -> dict[str, object]:
     available = timeline.signals[index]
@@ -57,8 +62,11 @@ def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float
                     end = min(end, timeline.prices[exit_index])
     first = max(0, bisect_left(timeline.available, available) - 1)
     last = bisect_right(timeline.starts, end)
-    if inputs.funding_events is None and policy.funding is None:
-        start = max(inputs.partition_start_ns, timeline.starts[first])
+    adapter = resolve_adapter(policy.funding) if policy.funding is not None else None
+    if (adapter is not None) != (inputs.funding_events is not None):
+        raise ValueError('Funding policy and normalized events must be supplied together')
+    start = max(inputs.partition_start_ns, timeline.starts[first])
+    if not timeline.has_accrual:
         plan = timeline.plan
         def selected(event: ExecutionEvent) -> bool:
             if event.kind == 'observation':
@@ -66,17 +74,13 @@ def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float
             return event.kind != 'signal' or plan.signal_order[str(event.source_row_id)] >= index
         account = Account(policy, inputs.initial_equity, plan.binding[:16])
         signals = {str(row['row_id']): {**row, 'target': side} for row in inputs.signals.iter_rows(named=True)} if policy.take_profit_bps_column or policy.stop_loss_bps_column else side
-        execute_event_plan(account, plan, signals, start, end, None, selected=selected, stop_at_close=True, keep_states=False)
+        execute_event_plan(account, plan, signals, start, end, adapter, selected=selected, stop_at_close=adapter is None, keep_states=False)
         episodes = account.episodes
         if not episodes or episodes[0]['closed_at_ns'] is None:
             return {'return': None, 'available': False, 'entry_ns': None if not episodes else episodes[0]['first_fill_ns'], 'exit_ns': None, 'label_available_ns': None, 'exit_reason': None}
         episode = episodes[0]
         net_return = finite_number(episode['net_pnl'], 'completed candidate PnL') / finite_number(episode['entry_equity'], 'candidate entry equity')
         return {'return': net_return, 'available': True, 'entry_ns': episode['first_fill_ns'], 'exit_ns': episode['closed_at_ns'], 'label_available_ns': episode['closed_at_ns'], 'exit_reason': episode['exit_reason']}
-    adapter = resolve_adapter(policy.funding) if policy.funding is not None else None
-    if (adapter is not None) != (inputs.funding_events is not None):
-        raise ValueError('Funding policy and normalized events must be supplied together')
-    start = max(inputs.partition_start_ns, timeline.starts[first])
     signals = inputs.signals.slice(index, bisect_right(timeline.signals, end) - index).with_columns(pl.lit(side).alias('target'))
     plan = timeline.candidates.get(index)
     if plan is None:
