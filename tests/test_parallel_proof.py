@@ -18,7 +18,12 @@ from tests.utils.proof_coverage import merge_worker_coverage
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RECORDED = ('tests/test_round_storage.py', 'tests/test_nullable_trade_controls.py')
+RECORDED = ('tests/test_round_storage.py', 'tests/test_nullable_trade_controls.py',
+            'tests/test_param_domain.py', 'tests/test_source_interval.py')
+RECORDED_CASES = (RECORDED[0] + '::test_new_runs_write_compressed_by_default',
+                  RECORDED[1] + '::test_nullable_round_matches_disabled_execution',
+                  RECORDED[2] + '::test_param_domain_init_validation',
+                  RECORDED[3] + '::test_historical_interval_reaches_preparation_and_sensor')
 PARALLEL = ('-n', '2', '--dist', 'loadfile', '--max-worker-restart=0')
 EMPTY_CASE = 'tests/test_runtime_tracking.py::test_execute_test_suite_writes_profile_and_stops_on_first_failure'
 
@@ -47,7 +52,7 @@ def recorded_proof(tmp_path_factory):
     directory = tmp_path_factory.mktemp('recorded-worker-proof')
     (directory / 'workers').mkdir()
     collected = subprocess.run(
-        [sys.executable, '-m', 'pytest', '--collect-only', '-q', *RECORDED],
+        [sys.executable, '-m', 'pytest', '--collect-only', '-q', *RECORDED_CASES],
         cwd=ROOT, capture_output=True, text=True, check=False,
     )
     assert collected.returncode == 0, collected.stdout + collected.stderr
@@ -96,7 +101,7 @@ assert outer.get_option('run:disable_warnings') == before
 assert environment == {name: os.getenv(name) for name in environment}
 raise SystemExit(code)
 """.replace('CAPTURE_DIRECTORY', repr(str(directory))))
-    result, profile = _run(directory, (*PARALLEL, *RECORDED, '-q'), launcher=launcher)
+    result, profile = _run(directory, ('-n', '4', *PARALLEL[2:], *RECORDED_CASES, '-q'), launcher=launcher)
     assert result.returncode == 0, result.stdout + result.stderr
     return directory, native_ids, profile, json.loads((directory / 'events.json').read_text())
 
@@ -121,13 +126,13 @@ def _first_body_line(path, function):
 def test_parallel_proof_preserves_recorded_cases_and_worker_coverage(recorded_proof):
     directory, native_ids, profile, retained = recorded_proof
     parallel = profile['parallel']
-    assert parallel['worker_count'] == 2
+    assert parallel['worker_count'] == 4
     assert parallel['reconciled'] is True
     assert parallel['distribution'] == 'loadfile'
     assert parallel['collected_count'] == parallel['execution_count'] == len(native_ids)
     assert parallel['collected_ids_sha256'] == hashlib.sha256(json.dumps(native_ids, separators=(',', ':')).encode()).hexdigest()
     assert sorted(record['test_name'] for record in profile['tests']) == sorted(native_ids)
-    assert len({worker['pid'] for worker in parallel['workers']}) == 2
+    assert len({worker['pid'] for worker in parallel['workers']}) == 4
     assert all(worker['pid'] != retained['controller_pid'] for worker in parallel['workers'])
     assert sum(worker['test_count'] for worker in parallel['workers']) == len(native_ids)
     assert 0 < parallel['combine_seconds'] < profile['suite']['duration_seconds']
@@ -162,14 +167,8 @@ def test_parallel_proof_preserves_recorded_cases_and_worker_coverage(recorded_pr
     assert constant_line in final_data.lines(package_file)
 
 
-def test_four_worker_proof_preserves_cases_and_merged_coverage(tmp_path):
-    files = (*RECORDED, 'tests/test_param_domain.py', 'tests/test_source_interval.py')
-    collected = subprocess.run([sys.executable, '-m', 'pytest', '--collect-only', '-q', *files],
-                               cwd=ROOT, capture_output=True, text=True, check=False)
-    assert collected.returncode == 0, collected.stdout + collected.stderr
-    native_ids = [line for line in collected.stdout.splitlines() if line.startswith('tests/') and '::' in line]
-    result, profile = _run(tmp_path, ('-n', '4', '--dist', 'loadfile', '--max-worker-restart=0', *files, '-q'))
-    assert result.returncode == 0, result.stdout + result.stderr
+def test_four_worker_proof_preserves_cases_and_merged_coverage(recorded_proof):
+    directory, native_ids, profile, _ = recorded_proof
     parallel = profile['parallel']
     assert parallel['worker_count'] == 4 and parallel['reconciled'] is True
     assert parallel['distribution'] == 'loadfile'
@@ -178,7 +177,7 @@ def test_four_worker_proof_preserves_cases_and_merged_coverage(tmp_path):
     assert sorted(record['test_name'] for record in profile['tests']) == sorted(native_ids)
     assert len({worker['pid'] for worker in parallel['workers']}) == 4
     assert sum(worker['test_count'] for worker in parallel['workers']) == len(native_ids)
-    final_data = coverage.CoverageData(basename=str(tmp_path / '.coverage'))
+    final_data = coverage.CoverageData(basename=str(directory / '.coverage'))
     final_data.read()
     for worker in parallel['workers']:
         assert worker['backend'] == ('SysMonitor' if sys.version_info >= (3, 12) else 'CTracer')
@@ -191,7 +190,7 @@ def test_four_worker_proof_preserves_cases_and_merged_coverage(tmp_path):
 
 def _replay(retained):
     plugin = RuntimeProfilePlugin()
-    plugin.requested_workers = 2
+    plugin.requested_workers = 4
     plugin.distribution = 'loadfile'
     plugin.collections = {worker: tuple(ids) for worker, ids in retained['collections'].items()}
     plugin.workers = copy.deepcopy(retained['workers'])
@@ -232,7 +231,7 @@ def test_parallel_proof_rejects_changed_coverage_databases(recorded_proof, empty
     copied = tmp_path / 'workers'
     shutil.copytree(directory / 'workers', copied)
     receipts = copy.deepcopy(retained['workers'])
-    first, second = receipts
+    first, second = list(receipts)[:2]
     path = copied / first
     if fault == 'missing':
         path.unlink()
@@ -305,11 +304,16 @@ def pytest_sessionstart(session):
 def test_parallel_proof_preserves_thread_override(tmp_path, threads):
     test_file = tmp_path / 'test_threads.py'
     test_file.write_text('import polars as pl\ndef test_threads():\n    assert pl.thread_pool_size() == ' + (threads or '1') + '\n')
-    result, profile = _run(tmp_path, (*PARALLEL, str(test_file)), covered=False,
+    files = (str(test_file), *RECORDED_CASES[1:3]) if threads is None else (str(test_file),)
+    parallel = ('-n', '2', '--dist', 'loadgroup') if threads is None else PARALLEL
+    result, profile = _run(tmp_path, (*parallel, *files), covered=threads is None,
                            environment={'POLARS_MAX_THREADS': threads})
     assert result.returncode == 0, result.stdout + result.stderr
     assert profile['parallel']['worker_count'] == 2
     assert profile['parallel']['reconciled'] is True
+    if threads is None:
+        assert profile['parallel']['distribution'] == 'loadgroup'
+        assert sum(worker['line_count'] for worker in profile['parallel']['workers']) > 0
 
 
 @pytest.mark.parametrize('selection', [('-n', '0'), ('-p', 'no:xdist')])

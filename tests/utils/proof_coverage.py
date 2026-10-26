@@ -33,6 +33,16 @@ class _Worker:
 _WORKER = pytest.StashKey[_Worker]()
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    if config.getoption('loadgroup', False):
+        shared = {item.path for item in items if 'fold_campaigns' in item.fixturenames}
+        for item in items:
+            if item.get_closest_marker('xdist_group') is None:
+                group = 'fold-campaigns' if item.path in shared else item.nodeid.split('::', 1)[0]
+                item.add_marker(pytest.mark.xdist_group(group))
+
+
 def _require_backend(backend: str) -> None:
     if backend not in ('SysMonitor', 'CTracer', 'PyTracer'):
         raise ValueError(f'Unrecognized worker coverage backend: {backend}')

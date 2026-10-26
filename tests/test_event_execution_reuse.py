@@ -196,3 +196,19 @@ def test_warm_plan_rejects_changed_recorded_funding():
     assert events is not None
     events.replace_column(events.get_column_index('rate_decimal'), events['rate_decimal'].reverse())
     assert_rejected_like_reference(inputs, policy)
+
+
+@pytest.mark.parametrize('source_index', [0, 1])
+def test_uncached_plan_preserves_source_validation_and_existing_cache(source_index):
+    inputs, policy = recorded_funded_inputs()
+    module = import_module('limen.backtest._event_plan')
+    expected = event_plan(inputs, policy)
+    cached = list(module._PLANS.items())
+    with patch.object(module, '_plan_key', side_effect=AssertionError('single-use plan hashed for caching')):
+        actual = event_plan(inputs, policy, cache=False)
+        assert actual == expected and actual is not expected
+        sources = tuple(replace(source, checksum='changed') if index == source_index else source
+                        for index, source in enumerate(inputs.sources))
+        with pytest.raises(ValueError, match='fingerprint changed'):
+            event_plan(replace(inputs, sources=sources), policy, cache=False)
+    assert list(module._PLANS.items()) == cached
