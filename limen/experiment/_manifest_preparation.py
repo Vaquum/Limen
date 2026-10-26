@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from datetime import date, datetime, timezone
-from typing import Protocol, TypeVar, cast
+from typing import Literal, Protocol, TypeVar, cast
 import polars as pl
 
 from limen.backtest.trade_contract import TradePolicy
@@ -13,8 +13,29 @@ from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig
 
 from limen.sfd.rule_based.config import RuleBasedConfig
 from limen.experiment._walk_forward_split import WalkForwardConfig
+from limen.experiment.errors import StrictModeError
 
 _M = TypeVar('_M')
+
+
+def admit_dated_split(dates: tuple[date, ...] | None, frame: pl.DataFrame, index: int,
+                      *, stage: Literal['raw', 'formed', 'retained']) -> pl.DataFrame:
+    if dates is not None:
+        start, end = dates[index * 2:index * 2 + 2]
+        if (index == 0 or start < end) and frame.is_empty():
+            name = ('train', 'validation', 'test')[index]
+            message = f'Manifest {name} split [{start}, {end}) contains no {stage} rows'
+            if stage == 'raw':
+                raise ValueError(message)
+            raise StrictModeError(message)
+    return frame
+
+
+def admit_dated_splits(dates: tuple[date, ...] | None, frames: list[pl.DataFrame],
+                       *, stage: Literal['raw', 'formed', 'retained']) -> list[pl.DataFrame]:
+    for index, frame in enumerate(frames):
+        _ = admit_dated_split(dates, frame, index, stage=stage)
+    return frames
 
 
 def admit_native_date_ends(dates: tuple[date, ...] | None,
@@ -50,6 +71,8 @@ class RulePreparation(Protocol):
 
 class SetupManifest(Protocol):
     @property
+    def split_dates(self) -> tuple[date, ...] | None: ...
+    @property
     def backtest_config(self) -> BacktestConfig | None: ...
     @property
     def data_source_config(self) -> SourceConfig | None: ...
@@ -61,7 +84,7 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
                          pairs: list[tuple[list[datetime] | list[int], pl.DataFrame]],
                          round_params: dict[str, object], *, raw_history: pl.DataFrame | None = None) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
     all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in pairs for dt in datetimes])
-    splits = [frame for _, frame in pairs]
+    splits = admit_dated_splits(manifest.split_dates, [frame for _, frame in pairs], stage='formed')
     policy = manifest.resolve_trade_policy(round_params)
     frozen = cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None))
     if callable(frozen):
