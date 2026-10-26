@@ -21,6 +21,14 @@ The run writes a result directory containing the copied YAML manifest, `metadata
 
 ## YAML Shape
 
+Declared target, scaler, probability-calibration and threshold arguments are
+checked against their actual calls before fresh CLI work or saved reconstruction,
+including inactive declarations and every declared scaler candidate. Framework
+frame, target, trade-context and objective operands are reserved; defaults and
+valid `**kwargs` remain supported. Unavailable signatures stay indeterminate
+without constructing or invoking components. These checks establish call binding,
+not the callable's body semantics or future data sufficiency.
+
 Mappings used as YAML keys are rejected during parsing, with the key's line and
 column in the parse error. Manifest fields use named keys; nested mappings remain
 available as values.

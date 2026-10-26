@@ -64,6 +64,7 @@ yaml/
 ├── _callable_binding.py
 ├── _callback_spec.py
 ├── _feature_shim_spec.py
+├── _fitted_binding.py
 ├── _metadata_spec.py
 ├── _objective_spec.py
 ├── _parameter_refs.py
