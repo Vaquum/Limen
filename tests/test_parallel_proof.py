@@ -305,12 +305,14 @@ def test_parallel_proof_preserves_thread_override(tmp_path, threads):
     test_file = tmp_path / 'test_threads.py'
     test_file.write_text('import polars as pl\ndef test_threads():\n    assert pl.thread_pool_size() == ' + (threads or '1') + '\n')
     files = (str(test_file), *RECORDED_CASES[1:3]) if threads is None else (str(test_file),)
-    result, profile = _run(tmp_path, (*PARALLEL, *files), covered=threads is None,
+    parallel = ('-n', '2', '--dist', 'loadgroup') if threads is None else PARALLEL
+    result, profile = _run(tmp_path, (*parallel, *files), covered=threads is None,
                            environment={'POLARS_MAX_THREADS': threads})
     assert result.returncode == 0, result.stdout + result.stderr
     assert profile['parallel']['worker_count'] == 2
     assert profile['parallel']['reconciled'] is True
     if threads is None:
+        assert profile['parallel']['distribution'] == 'loadgroup'
         assert sum(worker['line_count'] for worker in profile['parallel']['workers']) > 0
 
 
