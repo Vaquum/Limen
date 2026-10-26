@@ -3,8 +3,8 @@ from typing import Any
 import polars as pl
 from typing_extensions import override
 
-from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
-from limen.experiment.reducer.pruning_strategy import PruningStrategy
+from limen._parameter_identity import execution_hash
+from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST, PruningStrategy
 
 
 class SanityReducer(PruningStrategy):
@@ -90,8 +90,8 @@ class SanityReducer(PruningStrategy):
         self._execution_time_threshold = execution_time_threshold
         self._timeout_rate_threshold = timeout_rate_threshold
         self._warning_threshold = warning_threshold
-        self._removed: set[tuple[str, Any]] = set()
-        self._suggested: set[tuple[str, Any, str]] = set()
+        self._removed: dict[str, tuple[str, Any]] = {}
+        self._suggested: dict[tuple[str, str], tuple[str, Any, str]] = {}
 
 
     @override
@@ -158,14 +158,16 @@ class SanityReducer(PruningStrategy):
             stats = df.group_by(param).agg(*base_exprs)
 
             for row in stats.iter_rows(named=True):
-                value = row[param]
+                if not (choices := msq._logged_choices(param, row[param])):
+                    continue
+                value = choices[0]
 
                 if row['_total'] < self._min_observations:
                     continue
 
-                if ((param, value) not in self._removed
+                if ((identity := execution_hash({param: value})) not in self._removed
                         and row['_nan_count'] / row['_total'] > self._nan_threshold):
-                    self._removed.add((param, value))
+                    self._removed[identity] = (param, value)
                     interventions.append({
                         'op': 'remove_is',
                         'param': param,
@@ -190,15 +192,15 @@ class SanityReducer(PruningStrategy):
 
         '''Emit a suggestion if the rate exceeds the threshold.'''
 
-        if (param, value) in self._removed:
+        if execution_hash({param: value}) in self._removed:
             return []
 
-        if (param, value, reason_label) in self._suggested:
+        if (identity := (execution_hash({param: value}), reason_label)) in self._suggested:
             return []
 
         rate = row[count_col] / row['_total']
         if rate > threshold:
-            self._suggested.add((param, value, reason_label))
+            self._suggested[identity] = (param, value, reason_label)
             return [{
                 'op': 'remove_is',
                 'param': param,
@@ -216,8 +218,8 @@ class SanityReducer(PruningStrategy):
         '''Export state for checkpointing.'''
 
         return {
-            'removed': list(self._removed),
-            'suggested': list(self._suggested),
+            'removed': list(self._removed.values()),
+            'suggested': list(self._suggested.values()),
         }
 
 
@@ -229,5 +231,5 @@ class SanityReducer(PruningStrategy):
         if 'removed' not in state:
             raise ValueError("Invalid SanityReducer state: missing required key 'removed'.")
 
-        self._removed = set(tuple(x) for x in state['removed'])
-        self._suggested = set(tuple(x) for x in state.get('suggested', []))
+        self._removed = {execution_hash({param: value}): (param, value) for param, value in state['removed']}
+        self._suggested = {(execution_hash({param: value}), label): (param, value, label) for param, value, label in state.get('suggested', [])}

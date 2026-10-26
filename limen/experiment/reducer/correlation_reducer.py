@@ -4,8 +4,8 @@ from typing import Any, Literal
 import polars as pl
 from typing_extensions import override
 
-from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
-from limen.experiment.reducer.pruning_strategy import PruningStrategy
+from limen._parameter_identity import execution_hash
+from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST, PruningStrategy
 from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
 
 _CorrelationMethod = Literal['pearson', 'kendall', 'spearman']
@@ -114,7 +114,7 @@ class CorrelationReducer(PruningStrategy):
         self._negative_correlation_threshold = negative_correlation_threshold
         self._maximize = maximize
         self._random_state = random_state
-        self._applied: set[tuple[str, Any]] = set()
+        self._applied: dict[str, tuple[str, Any]] = {}
         self._suggested: set[str] = set()
 
 
@@ -168,7 +168,8 @@ class CorrelationReducer(PruningStrategy):
             if sign_stability < self._sign_stability_threshold:
                 continue
 
-            value_means = self._value_means(filtered, param)
+            value_means = {choices[0]: mean for value, mean in self._value_means(filtered, param).items()
+                           if (choices := msq._logged_choices(param, value))}
             if not value_means:
                 continue
 
@@ -236,10 +237,10 @@ class CorrelationReducer(PruningStrategy):
         else:
             worst_value = max(value_means, key=lambda v: value_means[v])
 
-        if (param, worst_value) in self._applied:
+        if (identity := execution_hash({param: worst_value})) in self._applied:
             return []
 
-        self._applied.add((param, worst_value))
+        self._applied[identity] = (param, worst_value)
         direction = 'negative' if self._maximize else 'positive'
         return [{
             'op': 'remove_is',
@@ -315,7 +316,7 @@ class CorrelationReducer(PruningStrategy):
         '''Export state for checkpointing.'''
 
         return {
-            'applied': list(self._applied),
+            'applied': list(self._applied.values()),
             'suggested': list(self._suggested),
         }
 
@@ -332,5 +333,5 @@ class CorrelationReducer(PruningStrategy):
                     f"Invalid CorrelationReducer state: missing required key '{key}'."
                 )
 
-        self._applied = set(tuple(x) for x in state['applied'])
+        self._applied = {execution_hash({param: value}): (param, value) for param, value in state['applied']}
         self._suggested = set(state['suggested'])
