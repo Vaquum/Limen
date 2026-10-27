@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -16,6 +17,8 @@ def trend_strength(data: pl.DataFrame, fast_period: int = 20, slow_period: int =
     Returns:
         pl.DataFrame: The input data with a new column 'trend_strength'
     '''
+
+    _check.integers(lower=1, fast_period=fast_period, slow_period=slow_period)
 
     return (
         data

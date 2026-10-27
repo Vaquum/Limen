@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def is_us_open_hour(
@@ -8,8 +9,7 @@ def is_us_open_hour(
     output_col: str = 'is_us_open_hour',
 ) -> pl.DataFrame:
 
-    '''
-    Mark rows whose hour matches the configured US open hour.
+    '''Mark rows whose hour matches the configured US open hour.
 
     Args:
         data (pl.DataFrame): Dataset with a datetime-like column
@@ -21,6 +21,7 @@ def is_us_open_hour(
         pl.DataFrame: The input data with an Int8 US-open-hour flag appended
     '''
 
-    return data.with_columns(
-        (pl.col(datetime_col).dt.hour() == hour).cast(pl.Int8).alias(output_col)
-    )
+    _check.integers(lower=0, upper=23, hour=hour)
+    _check.names(datetime_col=datetime_col, output_col=output_col)
+
+    return data.with_columns((pl.col(datetime_col).dt.hour() == hour).cast(pl.Int8).alias(output_col))

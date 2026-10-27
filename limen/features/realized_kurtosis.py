@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def realized_kurtosis(
@@ -18,6 +19,9 @@ def realized_kurtosis(
     Returns:
         pl.DataFrame: The input data with a new column 'realized_kurtosis'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col)
 
     return (
         data

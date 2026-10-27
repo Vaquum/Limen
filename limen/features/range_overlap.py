@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -20,6 +21,8 @@ def range_overlap(
     Returns:
         pl.DataFrame: The input data with a new column 'range_overlap'
     '''
+
+    _check.names(high_col=high_col, low_col=low_col)
 
     overlap = (
         pl.min_horizontal(pl.col(high_col), pl.col(high_col).shift(1))

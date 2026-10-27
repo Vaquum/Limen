@@ -4,6 +4,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import phase_weights as _phase_weights, do_hilbert_transform, init_hilbert_state
+import limen._feature_constraints as _check
 
 CMP_N_0_01 = 0.01
 CMP_N_3 = 3
@@ -253,6 +254,8 @@ def ht_dcphase(
     Returns:
         pl.DataFrame: The input data with a new column 'ht_dcphase'
     '''
+
+    _check.names(price_col=price_col)
 
     return data.with_columns(
         pl.col(price_col).map_batches(

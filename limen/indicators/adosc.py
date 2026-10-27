@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -29,6 +30,9 @@ def adosc(
     Returns:
         pl.DataFrame: The input data with a new column 'adosc_{fast_period}_{slow_period}'
     '''
+
+    _check.integers(fast_period=fast_period, slow_period=slow_period)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col, volume_col=volume_col)
 
     if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
         raise ValueError('adosc fast_period must be between 2 and 100000')

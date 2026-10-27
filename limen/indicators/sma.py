@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
@@ -51,6 +52,11 @@ def sma(
         pl.DataFrame: Input data with a new column 'sma_{period}'.
             Also includes '{price_col}_sma_{period}' as a compatibility alias.
     '''
+
+    if column is not None:
+        _check.names(column=column)
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
 
     if column is not None:
         price_col = column

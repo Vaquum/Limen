@@ -545,5 +545,6 @@
   "limen/experiment/_source_contract.py": 60,
   "limen/yaml/_source_binding.py": 100,
   "limen/yaml/_callable_binding.py": 90,
-  "limen/yaml/_fitted_binding.py": 155
+  "limen/yaml/_fitted_binding.py": 155,
+  "limen/_feature_constraints.py": 110
 }

@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.indicators.ma import ma
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -30,6 +31,9 @@ def apo(
         pl.DataFrame: The input data with a new column 'apo_{fast_period}_{slow_period}_{ma_type}'
     '''
 
+    _check.integers(fast_period=fast_period, slow_period=slow_period, ma_type=ma_type)
+    _check.names(price_col=price_col)
+
     if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
         raise ValueError('apo fast_period must be between 2 and 100000')
     if slow_period < CMP_N_2 or slow_period > CMP_N_100000:
@@ -56,6 +60,4 @@ def apo(
     else:
         frame = ma(frame, price_col=price_col, period=slow_period, ma_type=ma_type)
 
-    return frame.with_columns(
-        (pl.col(fast_col) - pl.col(slow_col)).alias(out_col)
-    ).drop([fast_col, slow_col])
+    return frame.with_columns((pl.col(fast_col) - pl.col(slow_col)).alias(out_col)).drop([fast_col, slow_col])

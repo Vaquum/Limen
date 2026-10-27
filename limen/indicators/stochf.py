@@ -3,6 +3,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators.ma import ma
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -109,12 +110,7 @@ def stochf_from_arrays(
 
     fastk_df = pl.DataFrame({'_x': fastk_buffer})
     fastd_col = f"ma_{fastd_period}_{fastd_ma_type}"
-    fastd_full = ma(
-        fastk_df,
-        price_col='_x',
-        period=fastd_period,
-        ma_type=fastd_ma_type,
-    )[fastd_col].to_numpy().astype(float, copy=False)
+    fastd_full = ma(fastk_df, price_col='_x', period=fastd_period, ma_type=fastd_ma_type)[fastd_col].to_numpy().astype(float, copy=False)
 
     fastd_valid = fastd_full[lookback_fastd:]
     fastk_out = fastk_buffer[lookback_fastd:]
@@ -152,6 +148,9 @@ def stochf(
     Returns:
         pl.DataFrame: The input data with 'stochf_fastk' and 'stochf_fastd'
     '''
+
+    _check.integers(fastk_period=fastk_period, fastd_period=fastd_period, fastd_ma_type=fastd_ma_type)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     if fastk_period < 1 or fastk_period > CMP_N_100000:
         raise ValueError('stochf fastk_period must be between 1 and 100000')

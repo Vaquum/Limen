@@ -1,5 +1,7 @@
 # Indicators
 
+The [configuration constraints](Features.md#configuration-constraints) apply to direct indicator calls as well as feature helpers.
+
 Indicators are Limen's lowest-level signal helpers. They take a kline-style `pl.DataFrame`, append one or more derived columns, and return the resulting frame for ordinary Python preparation or the declared Compiled pipeline.
 
 This page covers indicator selection, naming conventions, and default added columns. For higher-level derived signals, see [Features](Features.md).

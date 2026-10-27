@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.indicators.ma import ma
+import limen._feature_constraints as _check
 
 BBANDS_PERIOD_MIN = 2
 BBANDS_PERIOD_MAX = 100000
@@ -56,6 +57,10 @@ def bbands(
     Returns:
         pl.DataFrame: Input data with 'bbands_upper', 'bbands_middle', 'bbands_lower'
     '''
+
+    _check.integers(period=period, ma_type=ma_type)
+    _check.numbers(nb_dev_up=nb_dev_up, nb_dev_dn=nb_dev_dn)
+    _check.names(price_col=price_col)
 
     if period < BBANDS_PERIOD_MIN or period > BBANDS_PERIOD_MAX:
         raise ValueError(f"bbands period must be between {BBANDS_PERIOD_MIN} and {BBANDS_PERIOD_MAX}")

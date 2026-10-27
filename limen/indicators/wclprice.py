@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def wclprice(
@@ -20,6 +21,8 @@ def wclprice(
     Returns:
         pl.DataFrame: The input data with a new column 'wclprice'
     '''
+
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     wcl_price = (
         pl.col(high_col).cast(pl.Float64)

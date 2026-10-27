@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDLSEPARATINGLINES_BODY_LONG_AVG_PERIOD = 10
 CDLSEPARATINGLINES_BODY_LONG_PERIOD_TOTAL = 0.0
@@ -126,16 +127,16 @@ def cdlseparatinglines(
     close_col: str = 'close',
 ) -> pl.DataFrame:
 
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
+
     out_col = 'cdlseparatinglines'
     input_cols = [open_col, high_col, low_col, close_col]
     return data.with_columns(
         pl.struct(input_cols).map_batches(
             lambda s: _cdlseparatinglines_impl(
                 pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
-                open_col=open_col,
-                high_col=high_col,
-                low_col=low_col,
-                close_col=close_col,
+                open_col=open_col, high_col=high_col,
+                low_col=low_col, close_col=close_col,
             ).get_column(out_col),
             return_dtype=pl.Int32,
         ).alias(out_col)

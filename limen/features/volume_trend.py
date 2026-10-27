@@ -1,5 +1,6 @@
 import polars as pl
 from limen.indicators.sma import sma
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -19,6 +20,8 @@ def volume_trend(data: pl.DataFrame, short_period: int = 12, long_period: int = 
     '''
 
     # Calculate volume SMAs if not already present
+    _check.integers(lower=1, short_period=short_period, long_period=long_period)
+
     short_sma_col = f'volume_sma_{short_period}'
     long_sma_col = f'volume_sma_{long_period}'
 

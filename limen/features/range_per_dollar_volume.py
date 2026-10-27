@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -24,6 +25,8 @@ def range_per_dollar_volume(
     Returns:
         pl.DataFrame: The input data with a new column 'range_per_dollar_volume'
     '''
+
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col, volume_col=volume_col)
 
     range_pct = (pl.col(high_col) - pl.col(low_col)) / (pl.col(close_col) + EPSILON)
     dollar_volume_expr = pl.col(close_col) * pl.col(volume_col)

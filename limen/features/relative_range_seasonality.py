@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -24,6 +25,8 @@ def relative_range_seasonality(
     Returns:
         pl.DataFrame: The input data with a new column 'relative_range_seasonality'
     '''
+
+    _check.names(datetime_col=datetime_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     range_pct = ((pl.col(high_col) - pl.col(low_col)) / (pl.col(close_col) + EPSILON)).alias('_seasonality_value')
     hour_of_week = (((pl.col(datetime_col).dt.weekday() - 1) * 24) + pl.col(datetime_col).dt.hour()).alias('_seasonality_hour_of_week')

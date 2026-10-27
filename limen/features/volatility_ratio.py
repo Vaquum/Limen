@@ -1,6 +1,7 @@
 import math
 
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -9,9 +10,7 @@ PARKINSON_SCALE = 4.0 * math.log(2.0)
 
 def _safe_divide(numerator: pl.Expr, denominator: pl.Expr) -> pl.Expr:
     return (
-        pl.when(denominator.is_null() | (denominator.abs() <= EPSILON))
-        .then(None)
-        .otherwise(numerator / denominator)
+        pl.when(denominator.is_null() | (denominator.abs() <= EPSILON)).then(None).otherwise(numerator / denominator)
     )
 
 
@@ -42,6 +41,9 @@ def volatility_ratio(
     Returns:
         pl.DataFrame: The input data with the volatility-ratio column appended
     '''
+
+    _check.integers(lower=1, short_window=short_window, long_window=long_window)
+    _check.names(high_col=high_col, low_col=low_col, output_col=output_col)
 
     variance = _parkinson_variance(high_col, low_col)
 

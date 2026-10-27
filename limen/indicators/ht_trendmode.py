@@ -4,6 +4,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import phase_weights as _phase_weights, do_hilbert_transform, init_hilbert_state
+import limen._feature_constraints as _check
 
 CMP_N_0_01 = 0.01
 CMP_N_0_015 = 0.015
@@ -135,13 +136,7 @@ def _ht_trendmode_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np
                 hilbert_idx,
                 True,
             )
-            jq = do_hilbert_transform(
-                jq_state,
-                q1,
-                adjusted_prev_period,
-                hilbert_idx,
-                True,
-            )
+            jq = do_hilbert_transform(jq_state, q1, adjusted_prev_period, hilbert_idx, True)
 
             hilbert_idx += 1
             if hilbert_idx == CMP_N_3:
@@ -315,6 +310,8 @@ def ht_trendmode(
     Returns:
         pl.DataFrame: The input data with a new column 'ht_trendmode'
     '''
+
+    _check.names(price_col=price_col)
 
     return data.with_columns(
         pl.col(price_col).map_batches(

@@ -12,6 +12,14 @@ This page covers feature-helper selection, input requirements, and added columns
 - Regime helpers output compact categorical-style columns such as `regime_ma_slope` or `regime_price_band`.
 - `find_min_d` returns a scalar value instead of a frame; it searches for a stationarity-preserving fractional-differentiation order.
 
+## Configuration constraints
+
+Features and indicators validate configuration before computing their output, including on empty input. Periods and windows require integers; Boolean values and floats (including integer-valued floats) are rejected. Periods are never silently truncated. Rolling windows are positive, with existing TA-compatible bounds retained. Causal shifts may be zero: lag helpers, momentum periods, `micro_momentum`, `window_return`, `price_change_pct`, and Ichimoku displacement preserve that behavior. Negative shifts are rejected.
+
+Real coefficients must be finite, Boolean options require `bool`, and column names must be non-empty strings. Closed choices such as `price_vs_band_regime.band` reject unknown values. Period/hour sequences validate every element; calendar hours are `0..23`. Missing input columns still raise native Polars schema errors.
+
+Clip lower bounds cannot exceed their upper bounds. Breakout percentiles and momentum blend weights are in `[0,1]`; percentile and return thresholds are ordered. Fractional differentiation requires non-negative orders and positive truncation thresholds/steps. `breakout_features.lookback` is at least two because its ROC compares adjacent lags. Existing function-specific restrictions remain in force; there is no general requirement that a fast window precede a slow window.
+
 ## A feature in each project
 
 The [Python project](examples/python-research/README.md) computes decimal momentum in caller-owned preparation. The same expression runs before fitting and during inference. Changing the expression changes the meaning of the model's input; retain that equality when extending it.

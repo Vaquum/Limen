@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 
@@ -19,6 +20,8 @@ def regime_multiplier(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'regime_multiplier'
     '''
+
+    _check.numbers(regime_low_volatility_multiplier=regime_low_volatility_multiplier, regime_normal_volatility_multiplier=regime_normal_volatility_multiplier, regime_high_volatility_multiplier=regime_high_volatility_multiplier)
 
     return data.with_columns([
         pl.when(pl.col('volatility_regime') == 'low')

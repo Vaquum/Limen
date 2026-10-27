@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.indicators._atr import atr_from_true_range_expr
+import limen._feature_constraints as _check
 
 NATR_PERIOD_MIN = 1
 NATR_PERIOD_MAX = 100000
@@ -31,6 +32,9 @@ def natr(
     Returns:
         pl.DataFrame: The input data with a new column 'natr_{period}'
     '''
+
+    _check.integers(period=period)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     if period < NATR_PERIOD_MIN or period > NATR_PERIOD_MAX:
         raise ValueError(f"natr period must be between {NATR_PERIOD_MIN} and {NATR_PERIOD_MAX}")

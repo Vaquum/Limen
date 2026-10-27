@@ -1,6 +1,7 @@
 import math
 
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def garman_klass_volatility(
@@ -27,13 +28,15 @@ def garman_klass_volatility(
         pl.DataFrame: The input data with a new column 'garman_klass_volatility'
     '''
 
+    _check.integers(lower=1, window=window)
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
+
     close_open = pl.col(close_col).log() - pl.col(open_col).log()
     high_low = pl.col(high_col).log() - pl.col(low_col).log()
     variance = (0.5 * (high_low ** 2)) - (((2.0 * math.log(2.0)) - 1.0) * (close_open ** 2))
 
     return (
-        data
-        .with_columns(variance.alias('_garman_klass_variance'))
+        data.with_columns(variance.alias('_garman_klass_variance'))
         .with_columns(
             (
                 pl.col('_garman_klass_variance')

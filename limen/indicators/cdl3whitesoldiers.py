@@ -2,6 +2,7 @@ import numpy as np
 import polars as pl
 
 from limen.indicators.cdladvancedblock import candle_totals as _candle_totals
+import limen._feature_constraints as _check
 
 CDL3WHITESOLDIERS_BODY_SHORT_AVG_PERIOD = 10
 CDL3WHITESOLDIERS_BODY_SHORT_PERIOD_TOTAL = 0.0
@@ -104,6 +105,8 @@ def cdl3whitesoldiers(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdl3whitesoldiers'
     input_cols = [open_col, high_col, low_col, close_col]

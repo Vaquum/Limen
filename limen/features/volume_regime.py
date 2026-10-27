@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -15,6 +16,8 @@ def volume_regime(data: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'volume_regime'
     '''
+
+    _check.integers(lower=1, lookback=lookback)
 
     return (
         data

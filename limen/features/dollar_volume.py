@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def dollar_volume(
@@ -18,5 +19,7 @@ def dollar_volume(
     Returns:
         pl.DataFrame: The input data with a new column 'dollar_volume'
     '''
+
+    _check.names(price_col=price_col, volume_col=volume_col)
 
     return data.with_columns((pl.col(price_col) * pl.col(volume_col)).alias('dollar_volume'))

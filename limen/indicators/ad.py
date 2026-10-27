@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def ad(
@@ -22,6 +23,8 @@ def ad(
     Returns:
         pl.DataFrame: The input data with a new column 'ad'
     '''
+
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col, volume_col=volume_col)
 
     hl_range = pl.col(high_col) - pl.col(low_col)
     money_flow_volume = (

@@ -105,6 +105,16 @@ def test_calculation_latency(name, timing_worker):
 
 
 class _AllowedRewrites(ast.NodeTransformer):
+    def visit_Import(self, node):
+        if len(node.names) == 1 and node.names[0].name == 'limen._feature_constraints':
+            return None
+        return node
+
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Call) and ast.unparse(node.value.func) in ('_check.names', '_check.numbers'):
+            return None
+        return self.generic_visit(node)
+
     def visit_Call(self, node):
         node = self.generic_visit(node)
         if isinstance(node.func, ast.Attribute):

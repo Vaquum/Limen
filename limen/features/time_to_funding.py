@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 HOURS_PER_DAY = 24
@@ -32,6 +33,10 @@ def time_to_funding(
     Returns:
         pl.DataFrame: The input data with a new 'hours_to_funding' column
     '''
+
+    _check.integers(lower=1, interval_hours=interval_hours)
+    _check.integers(lower=0, upper=23, offset_hour=offset_hour)
+    _check.names(datetime_col=datetime_col, output_col=output_col)
 
     if interval_hours <= 0:
         raise ValueError('time_to_funding interval_hours must be positive')

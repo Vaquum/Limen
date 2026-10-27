@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 __all__ = ['linearreg', 'linearreg_components']
 
@@ -57,6 +58,9 @@ def linearreg(
 
     '''Append the trailing least-squares line value with the original warmup.'''
 
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
+
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('linearreg period must be between 2 and 100000')
 
@@ -64,10 +68,7 @@ def linearreg(
     return data.with_columns(
         pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _linearreg_from_values(
-                    s.to_numpy().astype(float, copy=False),
-                    period,
-                )
+                _linearreg_from_values(s.to_numpy().astype(float, copy=False), period)
             ),
             return_dtype=pl.Float64,
         ).alias(out_col)

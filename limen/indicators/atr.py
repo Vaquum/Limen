@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.indicators._atr import atr_from_true_range_expr
+import limen._feature_constraints as _check
 
 ATR_PERIOD_MIN = 1
 ATR_PERIOD_MAX = 100000
@@ -29,6 +30,9 @@ def atr(
     Returns:
         pl.DataFrame: The input data with a new column 'atr_{period}'
     '''
+
+    _check.integers(period=period)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     if period < ATR_PERIOD_MIN or period > ATR_PERIOD_MAX:
         raise ValueError(f"atr period must be between {ATR_PERIOD_MIN} and {ATR_PERIOD_MAX}")

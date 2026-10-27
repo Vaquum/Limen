@@ -4,6 +4,7 @@ import polars as pl
 
 from limen.indicators.rsi import rsi_from_values
 from limen.indicators.stochf import stochf_from_arrays
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -51,9 +52,7 @@ def stochrsi(
     fastd_ma_type: int = 0,
 ) -> pl.DataFrame:
 
-    '''
-    Compute Stochastic RSI (TA_STOCHRSI): fast %K and fast %D on RSI values.
-
+    '''Compute Stochastic RSI (TA_STOCHRSI): fast %K and fast %D on RSI values.
     Args:
         data (pl.DataFrame): Dataset with input price column
         price_col (str): Column name for input price
@@ -65,6 +64,9 @@ def stochrsi(
     Returns:
         pl.DataFrame: The input data with 'stochrsi_fastk' and 'stochrsi_fastd'
     '''
+
+    _check.integers(period=period, fastk_period=fastk_period, fastd_period=fastd_period, fastd_ma_type=fastd_ma_type)
+    _check.names(price_col=price_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('stochrsi period must be between 2 and 100000')

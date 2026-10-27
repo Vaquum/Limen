@@ -1,5 +1,6 @@
 import polars as pl
 import numpy as np
+import limen._feature_constraints as _check
 
 
 def hours_since_big_move(data: pl.DataFrame,
@@ -18,6 +19,8 @@ def hours_since_big_move(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'hours_since_big_move'
     '''
+
+    _check.integers(lower=1, lookback_hours=lookback_hours)
 
     n_rows = data.height
 

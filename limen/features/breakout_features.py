@@ -1,5 +1,6 @@
 import polars as pl
 from limen.features.lagged_features import lag_range
+import limen._feature_constraints as _check
 
 
 def _breakout_lags(data: pl.DataFrame,
@@ -130,6 +131,10 @@ def breakout_features(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with multiple breakout feature columns added
     '''
+
+    _check.integers(lower=2, lookback=lookback)
+    _check.integers(lower=0, horizon=horizon)
+    _check.names(long_col=long_col, short_col=short_col, target=target)
 
     df = _breakout_lags(data, long_col, short_col, lookback, horizon)
 

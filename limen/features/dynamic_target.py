@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def dynamic_target(data: pl.DataFrame,
@@ -20,6 +21,14 @@ def dynamic_target(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'dynamic_target'
     '''
+
+    _check.numbers(
+        base_min_breakout=base_min_breakout,
+        target_volatility_multiplier=target_volatility_multiplier,
+        clip_lower_mult=clip_lower_mult,
+        clip_upper_mult=clip_upper_mult,
+    )
+    _check.ordered('clip_lower_mult', clip_lower_mult, 'clip_upper_mult', clip_upper_mult)
 
     return data.with_columns([
         (pl.col('volatility_measure') * target_volatility_multiplier * pl.col('regime_multiplier'))

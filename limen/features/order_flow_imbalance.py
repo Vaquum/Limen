@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.features.bulk_volume_classification import bulk_volume_classification
+import limen._feature_constraints as _check
 
 
 def order_flow_imbalance(
@@ -31,6 +32,9 @@ def order_flow_imbalance(
         pl.DataFrame: The input data with classified buy/sell volume columns and a
             new 'order_flow_imbalance' column
     '''
+
+    _check.integers(lower=1, window=window, classification_window=classification_window)
+    _check.names(close_col=close_col, volume_col=volume_col)
 
     if window <= 0:
         raise ValueError('order_flow_imbalance window must be positive')

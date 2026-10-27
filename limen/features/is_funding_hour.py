@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def is_funding_hour(
@@ -22,6 +23,9 @@ def is_funding_hour(
     Returns:
         pl.DataFrame: The input data with an Int8 funding-hour flag appended
     '''
+
+    hours = _check.integer_sequence('hours', hours, maximum=23)
+    _check.names(datetime_col=datetime_col, output_col=output_col)
 
     return data.with_columns(
         pl.col(datetime_col).dt.hour().is_in(list(hours)).cast(pl.Int8).alias(output_col)

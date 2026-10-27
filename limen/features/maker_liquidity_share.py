@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -31,6 +32,8 @@ def maker_liquidity_share(
     Returns:
         pl.DataFrame: The input data with the maker-liquidity share column appended
     '''
+
+    _check.names(maker_liquidity_col=maker_liquidity_col, liquidity_col=liquidity_col, output_col=output_col)
 
     return data.with_columns(
         _safe_divide(pl.col(maker_liquidity_col), pl.col(liquidity_col)).alias(output_col)

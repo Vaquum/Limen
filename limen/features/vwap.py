@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -18,6 +19,8 @@ def vwap(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'vwap'
     '''
+
+    _check.names(price_col=price_col, volume_col=volume_col)
 
     return (
         data

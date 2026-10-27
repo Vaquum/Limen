@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 TRANGE_LOOKBACK = 1
 
@@ -23,11 +24,10 @@ def trange(
         pl.DataFrame: The input data with a new column 'trange'
     '''
 
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
+
     prev_close = pl.col(close_col).shift(1)
-    true_range = (
-        pl.max_horizontal(pl.col(high_col), prev_close)
-        - pl.min_horizontal(pl.col(low_col), prev_close)
-    )
+    true_range = pl.max_horizontal(pl.col(high_col), prev_close) - pl.min_horizontal(pl.col(low_col), prev_close)
 
     return data.with_columns(
         pl.when(pl.int_range(0, pl.len()) < TRANGE_LOOKBACK)

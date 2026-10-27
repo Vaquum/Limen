@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CMP_N_3E37 = 3e37
 
@@ -135,6 +136,9 @@ def cdlmathold(
     close_col: str = 'close',
     penetration: float = 0.5,
 ) -> pl.DataFrame:
+
+    _check.numbers(lower=0, upper=3e37, penetration=penetration)
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdlmathold'
     input_cols = [open_col, high_col, low_col, close_col]

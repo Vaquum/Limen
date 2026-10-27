@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def medprice(
@@ -19,9 +20,8 @@ def medprice(
         pl.DataFrame: The input data with a new column 'medprice'
     '''
 
-    med_price = (
-        pl.col(high_col).cast(pl.Float64)
-        + pl.col(low_col).cast(pl.Float64)
-    ) / 2.0
+    _check.names(high_col=high_col, low_col=low_col)
+
+    med_price = (pl.col(high_col).cast(pl.Float64) + pl.col(low_col).cast(pl.Float64)) / 2.0
 
     return data.with_columns(med_price.alias('medprice'))

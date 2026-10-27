@@ -268,8 +268,9 @@ def test_recorded_availability_columns_never_become_meta_features(ml):
 @pytest.mark.parametrize('ml', [False, True])
 def test_oof_rejects_terminal_lookahead(folds, ml):
     manifest, raw, params, _ = _prepared(ml)
-    from limen.indicators import window_return
-    manifest.add_indicator(window_return, period=-1)
+    def terminal_lookahead(frame):
+        return frame.with_columns((pl.col('close') / pl.col('close').shift(-1) - 1.).alias('ret_-1'))
+    manifest.add_indicator(terminal_lookahead)
     data = manifest.prepare_data(raw, params)
     with pytest.raises(ValueError, match='observations after their decision'):
         training_opportunities(data['_allocation_context'], folds=folds, validation_fraction=0.2, include_primary_proba=False)

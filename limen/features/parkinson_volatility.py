@@ -1,6 +1,7 @@
 import math
 
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def parkinson_volatility(
@@ -22,6 +23,9 @@ def parkinson_volatility(
     Returns:
         pl.DataFrame: The input data with a new column 'parkinson_volatility'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(high_col=high_col, low_col=low_col)
 
     scale = 4.0 * math.log(2.0)
 

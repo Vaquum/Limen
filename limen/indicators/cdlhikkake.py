@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def _cdlhikkake_impl(
@@ -98,6 +99,8 @@ def cdlhikkake(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdlhikkake'
     input_cols = [open_col, high_col, low_col, close_col]

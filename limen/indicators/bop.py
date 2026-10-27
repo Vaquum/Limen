@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 BOP_EPSILON = 1e-14
@@ -25,6 +26,8 @@ def bop(
     Returns:
         pl.DataFrame: The input data with a new column 'bop'
     '''
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     denominator = pl.col(high_col) - pl.col(low_col)
     bop_expr = (
