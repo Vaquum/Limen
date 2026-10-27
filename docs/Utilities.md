@@ -416,3 +416,23 @@ Compute one-vs-rest AUC safely handling missing classes.
 | probs (`np.ndarray \| list[list[float]]`) | Predicted probabilities, shape (n_samples, n_classes) |
 
 **Returns:** float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
+
+## Temporal perturbation selectors
+
+`lookback_window` selects the inclusive trailing elapsed-day interval ending at the last supplied observation. It requires unique, increasing, non-null datetime observations and a positive finite day count.
+
+`sample_regime_blocks` computes the existing causal market classifier under an explicit `regime_version`, identifies complete contiguous runs of `target_regime`, and chooses one uniformly with `seed`. It refuses initializing/unknown regimes, multiple series and populations without a sufficiently long block. It returns original rows without adding regime features or concatenating separated runs. Optional `lookback_days` bounds the classifier input before selection. A selected population may be unsuitable for fixed date splits; normal split admission remains authoritative. Results describe this conditional population.
+
+Both functions can be declared through the existing manifest/YAML `pre_split_data_selector`, with parameter references for their controls.
+
+<!-- reference: utilities-lookback-window source=limen/data/utils/lookback_window.py region=signature:lookback_window role=signature -->
+```python
+def lookback_window(data: pl.DataFrame, lookback_days: float) -> pl.DataFrame:
+    ...
+```
+
+<!-- reference: utilities-sample-regime-blocks source=limen/data/utils/sample_regime_blocks.py region=signature:sample_regime_blocks role=signature -->
+```python
+def sample_regime_blocks(data: pl.DataFrame, target_regime: str, min_block_size: int, *, seed: int, regime_version: str, lookback_days: float | None=None) -> pl.DataFrame:
+    ...
+```

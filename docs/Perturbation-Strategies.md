@@ -25,6 +25,8 @@ will generalize.
 
 ## The Five Primitives
 
+Data perturbations can select a trailing `lookback_window` or one `sample_regime_blocks` block through `pre_split_data_selector`. Both preserve original row order and values. The [utility contracts](Utilities.md#temporal-perturbation-selectors) describe their bounds and seeded selection. `HistoricalData.get_spot_klines` and `get_spot_dollar_klines` also accept `lookback_days` with an explicit `end_date_limit`; combining it with `start_date_limit` is rejected before acquisition.
+
 | Primitive | What it varies | Round parameter(s) | Manifest method |
 |---|---|---|---|
 | Feature-group selection | which declared feature families run | `feature_groups` | `add_indicator(..., group=)` / `add_feature(..., group=)` |

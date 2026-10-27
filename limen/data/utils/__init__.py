@@ -7,10 +7,14 @@ from limen.data.utils.splits import split_sequential
 from limen.data.utils.splits import split_random
 from limen.data.utils.random_slice import random_slice
 from limen.data.utils.split_walk_forward import split_walk_forward
+from limen.data.utils.lookback_window import lookback_window
+from limen.data.utils.sample_regime_blocks import sample_regime_blocks
 
 __all__ = [
     'compute_data_bars',
     'random_slice',
+    'lookback_window',
+    'sample_regime_blocks',
     'split_by_dates',
     'split_data_to_prep_output',
     'split_data_to_rule_based_prep_output',

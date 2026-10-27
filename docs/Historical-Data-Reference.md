@@ -22,7 +22,7 @@ Dataset snapshot file names are treated as the cache identity. Limen does not pa
 
 <!-- reference: data-api-get-spot-klines source=limen/data/historical_data.py region=signature:HistoricalData.get_spot_klines role=signature -->
 ```python
-def get_spot_klines(self, row_count_limit: int | None=None, kline_size: int=60, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+def get_spot_klines(self, row_count_limit: int | None=None, kline_size: int=60, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None, lookback_days: float | None=None) -> pl.DataFrame:
     ...
 ```
 
@@ -52,7 +52,7 @@ It reads native [1M](https://huggingface.co/datasets/vaquum/binance_btcusdt_1M_d
 
 <!-- reference: data-api-get-spot-dollar-klines source=limen/data/historical_data.py region=signature:HistoricalData.get_spot_dollar_klines role=signature -->
 ```python
-def get_spot_dollar_klines(self, row_count_limit: int | None=None, dollar_bar_size: int=1000000, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+def get_spot_dollar_klines(self, row_count_limit: int | None=None, dollar_bar_size: int=1000000, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None, lookback_days: float | None=None) -> pl.DataFrame:
     ...
 ```
 

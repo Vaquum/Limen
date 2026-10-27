@@ -20,6 +20,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from limen.data._internal.binance_file_to_polars import binance_file_to_polars
+from limen.data.utils.lookback_window import start_limit
 
 
 logger = logging.getLogger(__name__)
@@ -1003,7 +1004,7 @@ class HistoricalData:
         start_date_limit: str | None = None,
         end_date_limit: str | None = None,
         *,
-        n_rows: int | None = None,
+        n_rows: int | None = None, lookback_days: float | None = None,
     ) -> pl.DataFrame:
 
         '''Load BTCUSDT spot klines from a file and aggregate upward when needed.
@@ -1022,6 +1023,7 @@ class HistoricalData:
             'end_date_limit',
             end_of_day=True,
         )
+        start_date_limit = start_limit(start_date_limit, end_date_limit, lookback_days)
         if (
             start_date_limit is not None
             and end_date_limit is not None
@@ -1068,7 +1070,7 @@ class HistoricalData:
         start_date_limit: str | None = None,
         end_date_limit: str | None = None,
         *,
-        n_rows: int | None = None,
+        n_rows: int | None = None, lookback_days: float | None = None,
     ) -> pl.DataFrame:
 
         '''Load BTCUSDT spot dollar klines from Hugging Face snapshots.
@@ -1090,6 +1092,7 @@ class HistoricalData:
             'end_date_limit',
             end_of_day=True,
         )
+        start_date_limit = start_limit(start_date_limit, end_date_limit, lookback_days)
         if (
             start_date_limit is not None
             and end_date_limit is not None

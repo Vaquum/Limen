@@ -63,6 +63,8 @@
   "limen/data/bars/__init__.py": 10,
   "limen/data/bars/standard_bars.py": 110,
   "limen/data/historical_data.py": 960,
+  "limen/data/utils/lookback_window.py": 50,
+  "limen/data/utils/sample_regime_blocks.py": 60,
   "limen/data/utils/__init__.py": 20,
   "limen/data/utils/compute_data_bars.py": 30,
   "limen/data/utils/random_slice.py": 30,
