@@ -1,237 +1,1182 @@
 [
-  {"name": "ad", "type": "indicator", "category": "volume"},
-  {"name": "adosc", "type": "indicator", "category": "volume"},
-  {"name": "apo", "type": "indicator", "category": "momentum"},
-  {"name": "atr", "type": "indicator", "category": "volatility"},
-  {"name": "avgprice", "type": "indicator", "category": "market_structure"},
-  {"name": "bbands", "type": "indicator", "category": "volatility"},
-  {"name": "body_pct", "type": "indicator", "category": "market_structure"},
-  {"name": "bollinger_bands", "type": "indicator", "category": "volatility"},
-  {"name": "bollinger_position", "type": "indicator", "category": "market_structure"},
-  {"name": "bop", "type": "indicator", "category": "momentum"},
-  {"name": "cci", "type": "indicator", "category": "momentum"},
-  {"name": "cdl2crows", "type": "indicator", "category": "market_structure"},
-  {"name": "cdl3blackcrows", "type": "indicator", "category": "market_structure"},
-  {"name": "cdl3inside", "type": "indicator", "category": "market_structure"},
-  {"name": "cdl3linestrike", "type": "indicator", "category": "market_structure"},
-  {"name": "cdl3starsinsouth", "type": "indicator", "category": "market_structure"},
-  {"name": "cdl3whitesoldiers", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlabandonedbaby", "type": "indicator", "category": "market_structure"},
-  {"name": "cdladvancedblock", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlbelthold", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlclosingmarubozu", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlconcealbabyswall", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlcounterattack", "type": "indicator", "category": "market_structure"},
-  {"name": "cdldarkcloudcover", "type": "indicator", "category": "market_structure"},
-  {"name": "cdldoji", "type": "indicator", "category": "market_structure"},
-  {"name": "cdldragonflydoji", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlengulfing", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlgravestonedoji", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlhammer", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlhangingman", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlharami", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlharamicross", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlhighwave", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlhikkake", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlhikkakemod", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlhomingpigeon", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlidentical3crows", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlinvertedhammer", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlladderbottom", "type": "indicator", "category": "market_structure"},
-  {"name": "cdllongleggeddoji", "type": "indicator", "category": "market_structure"},
-  {"name": "cdllongline", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlmarubozu", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlmatchinglow", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlmathold", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlonneck", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlpiercing", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlrickshawman", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlrisefall3methods", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlseparatinglines", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlshootingstar", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlshortline", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlspinningtop", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlstalledpattern", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlsticksandwich", "type": "indicator", "category": "market_structure"},
-  {"name": "cdltakuri", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlthrusting", "type": "indicator", "category": "market_structure"},
-  {"name": "cdltristar", "type": "indicator", "category": "market_structure"},
-  {"name": "cdlunique3river", "type": "indicator", "category": "market_structure"},
-  {"name": "cmo", "type": "indicator", "category": "momentum"},
-  {"name": "dema", "type": "indicator", "category": "trend"},
-  {"name": "ema", "type": "indicator", "category": "trend"},
-  {"name": "ht_dcperiod", "type": "indicator", "category": "temporal"},
-  {"name": "ht_dcphase", "type": "indicator", "category": "temporal"},
-  {"name": "ht_phasor", "type": "indicator", "category": "temporal"},
-  {"name": "ht_sine", "type": "indicator", "category": "temporal"},
-  {"name": "ht_trendline", "type": "indicator", "category": "trend"},
-  {"name": "ht_trendmode", "type": "indicator", "category": "trend"},
-  {"name": "kama", "type": "indicator", "category": "trend"},
-  {"name": "linearreg", "type": "indicator", "category": "trend"},
-  {"name": "linearreg_angle", "type": "indicator", "category": "trend"},
-  {"name": "linearreg_intercept", "type": "indicator", "category": "trend"},
-  {"name": "linearreg_slope", "type": "indicator", "category": "trend"},
-  {"name": "ma", "type": "indicator", "category": "trend"},
-  {"name": "macd", "type": "indicator", "category": "momentum"},
-  {"name": "macdext", "type": "indicator", "category": "momentum"},
-  {"name": "macdfix", "type": "indicator", "category": "momentum"},
-  {"name": "mama", "type": "indicator", "category": "trend"},
-  {"name": "medprice", "type": "indicator", "category": "market_structure"},
-  {"name": "mfi", "type": "indicator", "category": "volume"},
-  {"name": "midpoint", "type": "indicator", "category": "market_structure"},
-  {"name": "midprice", "type": "indicator", "category": "market_structure"},
-  {"name": "mom", "type": "indicator", "category": "momentum"},
-  {"name": "natr", "type": "indicator", "category": "volatility"},
-  {"name": "obv", "type": "indicator", "category": "volume"},
-  {"name": "ppo", "type": "indicator", "category": "momentum"},
-  {"name": "price_change_pct", "type": "indicator", "category": "momentum"},
-  {"name": "returns", "type": "indicator", "category": "momentum"},
-  {"name": "roc", "type": "indicator", "category": "momentum"},
-  {"name": "rocp", "type": "indicator", "category": "momentum"},
-  {"name": "rocr", "type": "indicator", "category": "momentum"},
-  {"name": "rocr100", "type": "indicator", "category": "momentum"},
-  {"name": "rolling_volatility", "type": "indicator", "category": "volatility"},
-  {"name": "rsi", "type": "indicator", "category": "momentum"},
-  {"name": "rsi_sma", "type": "indicator", "category": "momentum"},
-  {"name": "sar", "type": "indicator", "category": "trend"},
-  {"name": "sarext", "type": "indicator", "category": "trend"},
-  {"name": "sma", "type": "indicator", "category": "trend"},
-  {"name": "sma_deviation_std", "type": "indicator", "category": "volatility"},
-  {"name": "stddev", "type": "indicator", "category": "volatility"},
-  {"name": "stoch", "type": "indicator", "category": "momentum"},
-  {"name": "stochastic_oscillator", "type": "indicator", "category": "momentum"},
-  {"name": "stochf", "type": "indicator", "category": "momentum"},
-  {"name": "stochrsi", "type": "indicator", "category": "momentum"},
-  {"name": "t3", "type": "indicator", "category": "trend"},
-  {"name": "tema", "type": "indicator", "category": "trend"},
-  {"name": "trange", "type": "indicator", "category": "volatility"},
-  {"name": "trima", "type": "indicator", "category": "trend"},
-  {"name": "trix", "type": "indicator", "category": "momentum"},
-  {"name": "tsf", "type": "indicator", "category": "trend"},
-  {"name": "typprice", "type": "indicator", "category": "market_structure"},
-  {"name": "ultosc", "type": "indicator", "category": "momentum"},
-  {"name": "var", "type": "indicator", "category": "volatility"},
-  {"name": "wclprice", "type": "indicator", "category": "market_structure"},
-  {"name": "wilder_rsi", "type": "indicator", "category": "momentum"},
-  {"name": "willr", "type": "indicator", "category": "momentum"},
-  {"name": "window_return", "type": "indicator", "category": "momentum"},
-  {"name": "wma", "type": "indicator", "category": "trend"},
-  {"name": "absorption_intensity", "type": "feature", "category": "volume"},
-  {"name": "active_lines", "type": "feature", "category": "market_structure"},
-  {"name": "active_quantile_count", "type": "feature", "category": "market_structure"},
-  {"name": "amihud_illiquidity", "type": "feature", "category": "volume"},
-  {"name": "atr_percent_sma", "type": "feature", "category": "volatility"},
-  {"name": "atr_sma", "type": "feature", "category": "volatility"},
-  {"name": "body_to_range", "type": "feature", "category": "market_structure"},
-  {"name": "breakout_features", "type": "feature", "category": "momentum"},
-  {"name": "breakout_percentile_regime", "type": "feature", "category": "momentum"},
-  {"name": "bulk_volume_classification", "type": "feature", "category": "volume"},
-  {"name": "calendar_time_features", "type": "feature", "category": "temporal"},
-  {"name": "close_ma_distance_atr", "type": "feature", "category": "market_structure"},
-  {"name": "close_position", "type": "feature", "category": "market_structure"},
-  {"name": "close_position_rolling", "type": "feature", "category": "market_structure"},
-  {"name": "close_to_extremes", "type": "feature", "category": "market_structure"},
-  {"name": "common_strategy_positions", "type": "feature", "category": "trade_logic"},
-  {"name": "conserved_flux_renormalization", "type": "feature", "category": "exotic"},
-  {"name": "cusum_filter", "type": "feature", "category": "temporal"},
-  {"name": "cyclical_time_features", "type": "feature", "category": "temporal"},
-  {"name": "distance_from_high", "type": "feature", "category": "market_structure"},
-  {"name": "distance_from_low", "type": "feature", "category": "market_structure"},
-  {"name": "distance_from_ma", "type": "feature", "category": "market_structure"},
-  {"name": "dollar_bar_crash_reversal", "type": "feature", "category": "trade_logic"},
-  {"name": "dollar_volume", "type": "feature", "category": "volume"},
-  {"name": "downside_volatility_ratio", "type": "feature", "category": "volatility"},
-  {"name": "dynamic_stop_loss", "type": "feature", "category": "trade_logic"},
-  {"name": "dynamic_target", "type": "feature", "category": "trade_logic"},
-  {"name": "ema_alignment", "type": "feature", "category": "trend"},
-  {"name": "entry_score_microstructure", "type": "feature", "category": "trade_logic"},
-  {"name": "feature_aliases", "type": "feature", "category": "temporal"},
-  {"name": "fractional_diff", "type": "feature", "category": "temporal"},
-  {"name": "gap_high", "type": "feature", "category": "market_structure"},
-  {"name": "garman_klass_volatility", "type": "feature", "category": "volatility"},
-  {"name": "hh_hl_structure_regime", "type": "feature", "category": "market_structure"},
-  {"name": "hours_since_big_move", "type": "feature", "category": "temporal"},
-  {"name": "hours_since_quantile_line", "type": "feature", "category": "temporal"},
-  {"name": "ichimoku_cloud", "type": "feature", "category": "trend"},
-  {"name": "illiquidity_shock", "type": "feature", "category": "volume"},
-  {"name": "is_funding_hour", "type": "feature", "category": "temporal"},
-  {"name": "is_us_open_hour", "type": "feature", "category": "temporal"},
-  {"name": "jump_variation_proxy", "type": "feature", "category": "volatility"},
-  {"name": "kaufman_efficiency_ratio", "type": "feature", "category": "trend"},
-  {"name": "kline_imbalance", "type": "feature", "category": "volume"},
-  {"name": "lagged_features", "type": "feature", "category": "temporal"},
-  {"name": "liquidity_drop", "type": "feature", "category": "volume"},
-  {"name": "liquidity_range", "type": "feature", "category": "volume"},
-  {"name": "log_returns", "type": "feature", "category": "momentum"},
-  {"name": "ma_slope_regime", "type": "feature", "category": "trend"},
-  {"name": "maker_liquidity_share", "type": "feature", "category": "volume"},
-  {"name": "maker_volume_ratio", "type": "feature", "category": "volume"},
-  {"name": "maker_volume_share", "type": "feature", "category": "volume"},
-  {"name": "market_regime", "type": "feature", "category": "trade_logic"},
-  {"name": "micro_momentum", "type": "feature", "category": "momentum"},
-  {"name": "momentum_confirmation", "type": "feature", "category": "momentum"},
-  {"name": "momentum_periods", "type": "feature", "category": "momentum"},
-  {"name": "momentum_weight", "type": "feature", "category": "momentum"},
-  {"name": "narrow_range", "type": "feature", "category": "volatility"},
-  {"name": "order_flow_imbalance", "type": "feature", "category": "volume"},
-  {"name": "parkinson_vol_of_vol", "type": "feature", "category": "volatility"},
-  {"name": "parkinson_volatility", "type": "feature", "category": "volatility"},
-  {"name": "position_in_candle", "type": "feature", "category": "market_structure"},
-  {"name": "position_in_range", "type": "feature", "category": "market_structure"},
-  {"name": "price_lines", "type": "feature", "category": "market_structure"},
-  {"name": "price_range_position", "type": "feature", "category": "market_structure"},
-  {"name": "price_vs_band_regime", "type": "feature", "category": "momentum"},
-  {"name": "quantile_line_density", "type": "feature", "category": "market_structure"},
-  {"name": "quantile_price_lines", "type": "feature", "category": "market_structure"},
-  {"name": "range_overlap", "type": "feature", "category": "market_structure"},
-  {"name": "range_pct", "type": "feature", "category": "volatility"},
-  {"name": "range_per_dollar_volume", "type": "feature", "category": "volume"},
-  {"name": "realized_kurtosis", "type": "feature", "category": "volatility"},
-  {"name": "realized_semivariance", "type": "feature", "category": "volatility"},
-  {"name": "realized_skewness", "type": "feature", "category": "volatility"},
-  {"name": "regime_multiplier", "type": "feature", "category": "volatility"},
-  {"name": "rejection_intensity", "type": "feature", "category": "market_structure"},
-  {"name": "relative_range_seasonality", "type": "feature", "category": "volatility"},
-  {"name": "relative_volatility_seasonality", "type": "feature", "category": "volatility"},
-  {"name": "relative_volume_seasonality", "type": "feature", "category": "volume"},
-  {"name": "return_autocorrelation", "type": "feature", "category": "temporal"},
-  {"name": "return_per_dollar_volume", "type": "feature", "category": "volume"},
-  {"name": "return_volatility_correlation", "type": "feature", "category": "volatility"},
-  {"name": "returns_lags", "type": "feature", "category": "temporal"},
-  {"name": "rogers_satchell_volatility", "type": "feature", "category": "volatility"},
-  {"name": "rolling_zscore", "type": "feature", "category": "temporal"},
-  {"name": "sma_crossover", "type": "feature", "category": "trend"},
-  {"name": "sma_ratios", "type": "feature", "category": "trend"},
-  {"name": "spread", "type": "feature", "category": "volatility"},
-  {"name": "spread_percent", "type": "feature", "category": "volatility"},
-  {"name": "stochastic_k_abs", "type": "feature", "category": "market_structure"},
-  {"name": "tail_event_intensity", "type": "feature", "category": "volatility"},
-  {"name": "taker_imbalance_ratio", "type": "feature", "category": "volume"},
-  {"name": "time_to_funding", "type": "feature", "category": "temporal"},
-  {"name": "trade_density", "type": "feature", "category": "volume"},
-  {"name": "trade_imbalance", "type": "feature", "category": "volume"},
-  {"name": "trade_size_ratio", "type": "feature", "category": "volume"},
-  {"name": "trend_coherence", "type": "feature", "category": "trend"},
-  {"name": "trend_strength", "type": "feature", "category": "trend"},
-  {"name": "volatility_1h", "type": "feature", "category": "volatility"},
-  {"name": "volatility_barriers", "type": "feature", "category": "trade_logic"},
-  {"name": "volatility_measure", "type": "feature", "category": "volatility"},
-  {"name": "volatility_of_volatility", "type": "feature", "category": "volatility"},
-  {"name": "volatility_ratio", "type": "feature", "category": "volatility"},
-  {"name": "volatility_spike", "type": "feature", "category": "volatility"},
-  {"name": "volatility_term_structure", "type": "feature", "category": "volatility"},
-  {"name": "volatility_weight", "type": "feature", "category": "volatility"},
-  {"name": "volume_ratio", "type": "feature", "category": "volume"},
-  {"name": "volume_regime", "type": "feature", "category": "volume"},
-  {"name": "volume_spike", "type": "feature", "category": "volume"},
-  {"name": "volume_to_range", "type": "feature", "category": "volume"},
-  {"name": "volume_trend", "type": "feature", "category": "volume"},
-  {"name": "volume_volatility_correlation", "type": "feature", "category": "volume"},
-  {"name": "volume_weight", "type": "feature", "category": "volume"},
-  {"name": "vpin", "type": "feature", "category": "volume"},
-  {"name": "vwap", "type": "feature", "category": "volume"},
-  {"name": "wick_imbalance", "type": "feature", "category": "market_structure"},
-  {"name": "wick_proportion", "type": "feature", "category": "market_structure"},
-  {"name": "window_return_regime", "type": "feature", "category": "momentum"},
-  {"name": "yang_zhang_volatility", "type": "feature", "category": "volatility"}
+  {
+    "name": "ad",
+    "type": "indicator",
+    "category": "volume"
+  },
+  {
+    "name": "adosc",
+    "type": "indicator",
+    "category": "volume"
+  },
+  {
+    "name": "apo",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "atr",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "avgprice",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "bbands",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "body_pct",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "bollinger_bands",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "bollinger_position",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "bop",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "cci",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "cdl2crows",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdl3blackcrows",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdl3inside",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdl3linestrike",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdl3starsinsouth",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdl3whitesoldiers",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlabandonedbaby",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdladvancedblock",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlbelthold",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlclosingmarubozu",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlconcealbabyswall",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlcounterattack",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdldarkcloudcover",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdldoji",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdldragonflydoji",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlengulfing",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlgravestonedoji",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlhammer",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlhangingman",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlharami",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlharamicross",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlhighwave",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlhikkake",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlhikkakemod",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlhomingpigeon",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlidentical3crows",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlinvertedhammer",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlladderbottom",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdllongleggeddoji",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdllongline",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlmarubozu",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlmatchinglow",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlmathold",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlonneck",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlpiercing",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlrickshawman",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlrisefall3methods",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlseparatinglines",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlshootingstar",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlshortline",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlspinningtop",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlstalledpattern",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlsticksandwich",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdltakuri",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlthrusting",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdltristar",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cdlunique3river",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "cmo",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "dema",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "ema",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "ht_dcperiod",
+    "type": "indicator",
+    "category": "temporal"
+  },
+  {
+    "name": "ht_dcphase",
+    "type": "indicator",
+    "category": "temporal"
+  },
+  {
+    "name": "ht_phasor",
+    "type": "indicator",
+    "category": "temporal"
+  },
+  {
+    "name": "ht_sine",
+    "type": "indicator",
+    "category": "temporal"
+  },
+  {
+    "name": "ht_trendline",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "ht_trendmode",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "kama",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "linearreg",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "linearreg_angle",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "linearreg_intercept",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "linearreg_slope",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "ma",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "macd",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "macdext",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "macdfix",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "mama",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "medprice",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "mfi",
+    "type": "indicator",
+    "category": "volume"
+  },
+  {
+    "name": "midpoint",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "midprice",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "mom",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "natr",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "obv",
+    "type": "indicator",
+    "category": "volume"
+  },
+  {
+    "name": "ppo",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "price_change_pct",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "returns",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "roc",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "rocp",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "rocr",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "rocr100",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "rolling_volatility",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "rsi",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "rsi_sma",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "sar",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "sarext",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "sma",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "sma_deviation_std",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "stddev",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "stoch",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "stochastic_oscillator",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "stochf",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "stochrsi",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "t3",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "tema",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "trange",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "trima",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "trix",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "tsf",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "typprice",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "ultosc",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "var",
+    "type": "indicator",
+    "category": "volatility"
+  },
+  {
+    "name": "wclprice",
+    "type": "indicator",
+    "category": "market_structure"
+  },
+  {
+    "name": "wilder_rsi",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "willr",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "window_return",
+    "type": "indicator",
+    "category": "momentum"
+  },
+  {
+    "name": "wma",
+    "type": "indicator",
+    "category": "trend"
+  },
+  {
+    "name": "absorption_intensity",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "active_lines",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "active_quantile_count",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "amihud_illiquidity",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "atr_percent_sma",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "atr_sma",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "body_to_range",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "breakout_features",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "breakout_percentile_regime",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "bulk_volume_classification",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "calendar_time_features",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "close_ma_distance_atr",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "close_position",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "close_position_rolling",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "close_to_extremes",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "common_strategy_positions",
+    "type": "feature",
+    "category": "trade_logic"
+  },
+  {
+    "name": "conserved_flux_renormalization",
+    "type": "feature",
+    "category": "exotic"
+  },
+  {
+    "name": "cusum_filter",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "cyclical_time_features",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "distance_from_high",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "distance_from_low",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "distance_from_ma",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "dollar_bar_crash_reversal",
+    "type": "feature",
+    "category": "trade_logic"
+  },
+  {
+    "name": "dollar_volume",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "downside_volatility_ratio",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "dynamic_stop_loss",
+    "type": "feature",
+    "category": "trade_logic"
+  },
+  {
+    "name": "dynamic_target",
+    "type": "feature",
+    "category": "trade_logic"
+  },
+  {
+    "name": "ema_alignment",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "entry_score_microstructure",
+    "type": "feature",
+    "category": "trade_logic"
+  },
+  {
+    "name": "feature_aliases",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "fractional_diff",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "gap_high",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "garman_klass_volatility",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "hh_hl_structure_regime",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "hours_since_big_move",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "hours_since_quantile_line",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "ichimoku_cloud",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "illiquidity_shock",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "is_funding_hour",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "is_us_open_hour",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "jump_variation_proxy",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "kaufman_efficiency_ratio",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "kline_imbalance",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "lagged_features",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "liquidity_drop",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "liquidity_range",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "log_returns",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "ma_slope_regime",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "maker_liquidity_share",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "maker_volume_ratio",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "maker_volume_share",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "market_regime",
+    "type": "feature",
+    "category": "trade_logic"
+  },
+  {
+    "name": "micro_momentum",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "momentum_confirmation",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "momentum_periods",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "momentum_weight",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "narrow_range",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "order_flow_imbalance",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "parkinson_vol_of_vol",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "parkinson_volatility",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "position_in_candle",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "position_in_range",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "price_lines",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "price_range_position",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "price_vs_band_regime",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "quantile_line_density",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "quantile_price_lines",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "range_overlap",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "range_pct",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "range_per_dollar_volume",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "realized_kurtosis",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "realized_semivariance",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "realized_skewness",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "regime_multiplier",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "rejection_intensity",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "relative_range_seasonality",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "relative_volatility_seasonality",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "relative_volume_seasonality",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "return_autocorrelation",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "return_per_dollar_volume",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "return_volatility_correlation",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "returns_lags",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "rogers_satchell_volatility",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "rolling_zscore",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "sma_crossover",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "sma_ratios",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "spread",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "spread_percent",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "stochastic_k_abs",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "tail_event_intensity",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "taker_imbalance_ratio",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "time_to_funding",
+    "type": "feature",
+    "category": "temporal"
+  },
+  {
+    "name": "trade_density",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "trade_imbalance",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "trade_size_ratio",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "trend_coherence",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "trend_strength",
+    "type": "feature",
+    "category": "trend"
+  },
+  {
+    "name": "volatility_1h",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "volatility_barriers",
+    "type": "feature",
+    "category": "trade_logic"
+  },
+  {
+    "name": "volatility_measure",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "volatility_of_volatility",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "volatility_ratio",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "volatility_spike",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "volatility_term_structure",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "volatility_weight",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "volume_ratio",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "volume_regime",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "volume_spike",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "volume_to_range",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "volume_trend",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "volume_volatility_correlation",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "volume_weight",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "vpin",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "vwap",
+    "type": "feature",
+    "category": "volume"
+  },
+  {
+    "name": "wick_imbalance",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "wick_proportion",
+    "type": "feature",
+    "category": "market_structure"
+  },
+  {
+    "name": "window_return_regime",
+    "type": "feature",
+    "category": "momentum"
+  },
+  {
+    "name": "yang_zhang_volatility",
+    "type": "feature",
+    "category": "volatility"
+  },
+  {
+    "name": "classify_market_regime",
+    "type": "feature",
+    "category": "market_structure"
+  }
 ]

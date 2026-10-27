@@ -1,3 +1,4 @@
+from limen.features.classify_market_regime import classify_market_regime
 from limen.features.absorption_intensity import absorption_intensity
 from limen.features.active_lines import active_lines
 from limen.features.active_quantile_count import active_quantile_count
@@ -120,6 +121,7 @@ from limen.features.yang_zhang_volatility import yang_zhang_volatility
 
 
 __all__ = [
+    'classify_market_regime',
     'absorption_intensity',
     'active_lines',
     'active_quantile_count',
