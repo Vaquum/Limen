@@ -3,7 +3,7 @@
   "title": "Limen experiment manifest",
   "description": "Portable structure only. Native Limen admission owns executable references, parameter identity, data evidence and scientific compatibility.",
   "x-limen-package-version": "5.46.2",
-  "x-limen-contract-inventory-sha256": "af551463d9a8779d5e1a45a813c477a5e3cd2989637c51b668f7ae4ff5ea663b",
+  "x-limen-contract-inventory-sha256": "b9a9faafb21a8e198cc36a6a4074cbf4e0bcd989531f105d990edecf2b3ef13d",
   "type": "object",
   "properties": {
     "schema_version": {

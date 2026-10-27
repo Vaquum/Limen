@@ -27,11 +27,11 @@ def config(values=(1., -1., .1)):
     return result
 
 
-def loop(reference, directory, *, mode='record', limit=2, callback=None, search=True):
+def loop(reference, directory, *, mode='record', limit=2, callback=None, search=True, checkpoint=1000):
     return UniversalExperimentLoop(sfd=CompiledSFD(reference), data=_bars(),
         yaml_reference=reference, experiment_dir=directory,
         search_strategy=build_search_strategy(reference) if search else None,
-        checkpoint_interval=1000, feedback_interval=1, intra_callback=callback,
+        checkpoint_interval=checkpoint, feedback_interval=1, intra_callback=callback,
         on_round_error=mode, max_round_errors=limit)
 
 
@@ -111,6 +111,27 @@ def test_resume_preserves_failed_occurrences_and_policy(tmp_path):
     resumed = loop(reference, tmp_path)
     run(resumed, count=4, resume=True)
     assert [row['C'] for row in rows(tmp_path)] == ['1.0', '-1.0', '0.1', '0.2']
+    assert resumed._round_error_policy.failures == 1
+
+
+def test_resume_counts_only_the_committed_failure_prefix(tmp_path):
+    reference = config((1., .2, .3, -1., .1))
+    interrupted = loop(reference, tmp_path, limit=1, checkpoint=2)
+    original = interrupted.model
+
+    def crash(data, round_params):
+        if round_params['C'] == .1:
+            raise SystemExit('uncheckpointed failure control')
+        return original(data, round_params)
+
+    interrupted.model = crash
+    with pytest.raises(SystemExit, match='uncheckpointed failure control'):
+        run(interrupted, count=5)
+    assert len(rows(tmp_path)) == 4 and rows(tmp_path)[3]['strict_mode_error']
+    assert json.loads((tmp_path / 'checkpoint.json').read_text())['metadata']['experiment_round'] == 2
+    resumed = loop(reference, tmp_path, limit=1)
+    run(resumed, count=5, resume=True)
+    assert [row['C'] for row in rows(tmp_path)] == ['1.0', '0.2', '0.3', '-1.0', '0.1']
     assert resumed._round_error_policy.failures == 1
 
 

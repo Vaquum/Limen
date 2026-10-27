@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 import csv
 from functools import wraps
 import inspect
+from itertools import islice
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
@@ -12,6 +13,7 @@ from limen.experiment._fold_fingerprint import FoldEvidenceError
 from limen.experiment._holdout_history import HoldoutEvidenceError
 from limen.experiment._round_storage import RoundStorageError
 from limen.experiment.errors import StrictModeError
+from limen.experiment.checkpoint_manager import CheckpointManager
 
 if TYPE_CHECKING:
     from limen.yaml.errors import YAMLError
@@ -69,8 +71,12 @@ class RoundErrorPolicy:
         if saved != self.metadata.get('round_error_policy'):
             raise ValueError('Cannot resume with a changed round error policy or budget')
         if self.mode == 'record':
+            checkpoint: Mapping[str, object] = CheckpointManager().load(directory)
+            metadata = checkpoint['metadata']
+            if not isinstance(metadata, Mapping) or type(committed := cast(Mapping[str, object], metadata).get('experiment_round')) is not int or committed < 0:
+                raise ValueError('Invalid committed round in checkpoint metadata')
             with (directory / 'results.csv').open(newline='') as stream:
-                self.failures = sum(bool(row.get('strict_mode_error')) for row in csv.DictReader(stream))
+                self.failures = sum(bool(row.get('strict_mode_error')) for row in islice(csv.DictReader(stream), committed + 1))
             if self.failures > cast(int, self.limit):
                 raise ValueError('Cannot resume an exhausted round error budget')
 
