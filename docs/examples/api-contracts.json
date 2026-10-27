@@ -1874,6 +1874,11 @@
     "symbol": "calendar_time_features",
     "role": "signature"
   },
+  "limen.features.classify_market_regime": {
+    "source": "limen/features/classify_market_regime.py",
+    "symbol": "classify_market_regime",
+    "role": "signature"
+  },
   "limen.features.close_ma_distance_atr": {
     "source": "limen/features/close_ma_distance_atr.py",
     "symbol": "close_ma_distance_atr",
@@ -2412,6 +2417,46 @@
   "limen.features.yang_zhang_volatility": {
     "source": "limen/features/yang_zhang_volatility.py",
     "symbol": "yang_zhang_volatility",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.MarketRegimeClassifier": {
+    "source": "limen/features/classify_market_regime.py",
+    "symbol": "MarketRegimeClassifier",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.MarketRegimeClassifier.__init__": {
+    "source": "limen/features/classify_market_regime.py",
+    "symbol": "MarketRegimeClassifier.__init__",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.MarketRegimeClassifier.snapshot": {
+    "source": "limen/features/classify_market_regime.py",
+    "symbol": "MarketRegimeClassifier.snapshot",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.MarketRegimeClassifier.from_snapshot": {
+    "source": "limen/features/classify_market_regime.py",
+    "symbol": "MarketRegimeClassifier.from_snapshot",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.MarketRegimeClassifier.update": {
+    "source": "limen/features/classify_market_regime.py",
+    "symbol": "MarketRegimeClassifier.update",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.RegimeConfig": {
+    "source": "limen/features/_regime_config.py",
+    "symbol": "RegimeConfig",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.RegimeConfig.config_hash": {
+    "source": "limen/features/_regime_config.py",
+    "symbol": "RegimeConfig.config_hash",
+    "role": "signature"
+  },
+  "limen.features.classify_market_regime.classify_market_regime": {
+    "source": "limen/features/classify_market_regime.py",
+    "symbol": "classify_market_regime",
     "role": "signature"
   },
   "limen.features.common_strategy_positions.POSITION_COLUMN": {

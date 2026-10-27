@@ -546,5 +546,12 @@
   "limen/yaml/_source_binding.py": 100,
   "limen/yaml/_callable_binding.py": 90,
   "limen/yaml/_fitted_binding.py": 155,
+  "limen/features/_regime_config.py": 100,
+  "limen/features/_regime_contract.py": 100,
+  "limen/features/_regime_audit.py": 160,
+  "limen/features/_regime_ranks.py": 80,
+  "limen/features/_regime_rules.py": 150,
+  "limen/features/classify_market_regime.py": 200,
+  "limen/features/_regime_state.py": 190,
   "limen/_feature_constraints.py": 110
 }

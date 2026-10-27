@@ -913,6 +913,7 @@
           "breakout_percentile_regime",
           "bulk_volume_classification",
           "calendar_time_features",
+          "classify_market_regime",
           "close_ma_distance_atr",
           "close_position",
           "close_position_rolling",
@@ -1814,6 +1815,25 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
+      },
+      "limen.features.classify_market_regime": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/features/classify_market_regime.py",
+        "entry_point": "limen.features.classify_market_regime",
+        "names": [
+          "MarketRegimeClassifier",
+          "RegimeConfig",
+          "classify_market_regime"
+        ],
+        "reference": "limen/features/README.md"
       }
     },
     "registries": {

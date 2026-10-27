@@ -7,11 +7,13 @@ import pytest
 from polars.testing import assert_frame_equal
 
 from limen import features, indicators
+from limen.features.classify_market_regime import RegimeConfig
 from limen.features.volatility_barriers import volatility_barriers
 
 FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
 LINE_DATA = {'long_lines', 'short_lines', 'long_lines_q', 'short_lines_q'}
 REQUIRED = {
+    'config': RegimeConfig(version='baseline-v1'),
     'cols': ['close'], 'col': 'close', 'column': 'close', 'strategy': 'sma_cross',
     'start': 0, 'end': 0, 'lag': 0, 'window': 10, 'max_duration_hours': 24,
     'min_height_pct': .01, 'lookback_hours': 24, 'base_stop_loss': .01,

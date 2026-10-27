@@ -127,6 +127,7 @@
   {"name": "breakout_percentile_regime", "type": "feature", "category": "momentum"},
   {"name": "bulk_volume_classification", "type": "feature", "category": "volume"},
   {"name": "calendar_time_features", "type": "feature", "category": "temporal"},
+  {"name": "classify_market_regime", "type": "feature", "category": "market_structure"},
   {"name": "close_ma_distance_atr", "type": "feature", "category": "market_structure"},
   {"name": "close_position", "type": "feature", "category": "market_structure"},
   {"name": "close_position_rolling", "type": "feature", "category": "market_structure"},
