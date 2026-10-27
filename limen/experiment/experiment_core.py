@@ -2,7 +2,8 @@ import limen.experiment._holdout_research as _holdout
 import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
-from limen.experiment import _result_fields as _fields, _uel_snapshot as _snapshot
+import limen.experiment._result_fields as _fields
+import limen.experiment._uel_snapshot as _snapshot
 import csv
 import importlib.metadata
 import json
@@ -51,9 +52,7 @@ logger = logging.getLogger(__name__)
 
 def _validate_prep_each_round_arg(value: object) -> None:
     if not isinstance(value, bool):
-        raise TypeError(
-            'UniversalExperimentLoop prep_each_round must be a bool.'
-        )
+        raise TypeError('UniversalExperimentLoop prep_each_round must be a bool.')
 
 STANDARD_RUN_LOG_BATCH_SIZE = 1000
 

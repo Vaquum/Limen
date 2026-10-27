@@ -14,12 +14,17 @@ from limen.experiment import _uel_snapshot as snapshot
 from tests.test_factorize_equivalence import _loop, _numeric_equal
 
 
-@pytest.fixture
-def completed(tmp_path):
-    loop = _loop('binary_costs', tmp_path / 'recorded')
+@pytest.fixture(scope='module')
+def recorded(tmp_path_factory):
+    loop = _loop('binary_costs', tmp_path_factory.mktemp('snapshot-recorded'))
     loop.run('snapshot', n_permutations=1, prep_each_round=True,
              progress_bar=False, post_processing=True)
     return loop
+
+
+@pytest.fixture
+def completed(recorded):
+    return copy.deepcopy(recorded)
 
 
 @pytest.mark.parametrize('case', ['binary_costs', 'directional_barriers', 'rule_based'])
@@ -38,11 +43,15 @@ def test_recorded_experiment_snapshot_restores_captured_state(tmp_path, case):
     assert restored.convergence_report == loop.convergence_report
     assert restored._log.experiment_log.equals(loop._log.experiment_log)
     assert restored._log._captured_log.equals(loop._log._captured_log)
-    for original, loaded in zip(loop.models, restored.models, strict=True):
-        if hasattr(original, 'coef_'):
-            np.testing.assert_array_equal(original.coef_, loaded.coef_)
-        if hasattr(original, 'get_params'):
-            assert loaded.get_params() == original.get_params()
+    assert len(restored.models) == len(loop.models) == 1
+    prepared = loop.manifest.prepare_data(loop.data, loop.round_params[0])
+    original, loaded = loop.models[0], restored.models[0]
+    assert type(loaded) is type(original)
+    expected, actual = original.predict(prepared), loaded.predict(prepared)
+    assert actual.keys() == expected.keys()
+    np.testing.assert_array_equal(actual['_preds'], loop.preds[0])
+    for name in expected:
+        np.testing.assert_array_equal(actual[name], expected[name])
     assert len(restored.scalers) == len(loop.scalers)
     assert restored._search_strategy._seen == loop._search_strategy._seen
     assert restored._search_strategy.domain is restored._search_strategy._domain
