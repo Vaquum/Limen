@@ -674,6 +674,7 @@ def _protected_strict_worker(config, snapshot, authority, cwd, occurrence):
 
 
 @pytest.mark.parametrize('cwd_mode', ['outside', 'foreign'])
+@pytest.mark.xdist_group('protected-worker-lifecycle')
 def test_protected_worker_handoff(cwd_mode, tmp_path):
     from concurrent.futures import ProcessPoolExecutor
     from dataclasses import replace
@@ -802,6 +803,7 @@ def _protected_worker_coordinator(root, config, pipe):
 
 
 @pytest.mark.parametrize('active', [True, False])
+@pytest.mark.xdist_group('protected-worker-lifecycle')
 def test_protected_worker_parent_death(active, tmp_path, monkeypatch):
     import os
     import signal
