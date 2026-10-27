@@ -68,3 +68,8 @@ def apply(instance: object, data: pl.DataFrame, settings: Mapping[str, object],
 def refuse_reuse(params: Mapping[str, object]) -> None:
     if any(params.get(key, 0) != 0 for key in NOISE_KEYS):
         raise ValueError('factorize refuses permutation-seeded target noise')
+
+
+def record_parameters(instance: object, enabled: bool, parameters: dict[str, object]) -> None:
+    if enabled:
+        vars(instance)['perturbation_parameters'] = parameters

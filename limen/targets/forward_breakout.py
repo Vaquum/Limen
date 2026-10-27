@@ -45,7 +45,7 @@ class ForwardBreakoutTarget:
 
         forward_periods, (threshold,) = _noise.parameters(forward_periods, (threshold,), horizon_jitter=horizon_jitter,
             noise_std=threshold_noise_std, noise_seed=noise_seed, permutation_id=permutation_id)
-        self.perturbation_parameters = {'permutation_id': permutation_id, 'forward_periods': forward_periods, 'threshold': threshold}
+        _noise.record_parameters(self, bool(horizon_jitter or threshold_noise_std), {'permutation_id': permutation_id, 'forward_periods': forward_periods, 'threshold': threshold})
         forward_return = (pl.col('close').shift(-forward_periods) - pl.col('close')) / pl.col('close')
         labelled = data.with_columns(
             (forward_return >= threshold).cast(pl.UInt8).shift(shift).alias(self.target_name)

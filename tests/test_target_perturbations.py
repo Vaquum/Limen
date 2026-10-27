@@ -178,3 +178,12 @@ def test_training_smoothing_retains_factorized_metric_parity(tmp_path):
         experiment.run('smoothing', n_permutations=2, prep_each_round=True, progress_bar=False, factorize=factorize)
         logs.append(experiment.experiment_log.drop('execution_time'))
     assert_frame_equal(*logs, check_exact=True)
+
+
+@pytest.mark.parametrize('target_class', [ForwardBreakoutTarget, TripleBarrierTarget])
+def test_default_target_transforms_preserve_fitted_state(market, target_class):
+    import copy
+    target = target_class(market, 'target')
+    before = copy.deepcopy(vars(target))
+    target.transform(market)
+    assert vars(target) == before

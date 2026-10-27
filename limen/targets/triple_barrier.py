@@ -75,7 +75,7 @@ class TripleBarrierTarget:
         close = data[self.close_col].to_numpy().astype(float, copy=False)
         horizon, (upper, lower) = _noise.parameters(self.max_horizon, (self.upper_multiple, self.lower_multiple),
             horizon_jitter=horizon_jitter, noise_std=barrier_noise_std, noise_seed=noise_seed, permutation_id=permutation_id)
-        self.perturbation_parameters = {'permutation_id': permutation_id, 'max_horizon': horizon, 'upper_multiple': upper, 'lower_multiple': lower}
+        _noise.record_parameters(self, bool(horizon_jitter or barrier_noise_std), {'permutation_id': permutation_id, 'max_horizon': horizon, 'upper_multiple': upper, 'lower_multiple': lower})
         label, valid = first_touch(close, self._volatility(data), upper, lower, horizon)
 
         return (
