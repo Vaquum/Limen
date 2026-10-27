@@ -8,6 +8,9 @@ hashes, parameter admission, checkpoint codec or supported recovery paths.
 
 Read the [search reference](../Search-Reference.md) and retain a matching released
 wheel and recorded run before evaluating any recovery-format change.
+The [Python project](../examples/python-research/README.md) and
+[Compiled project](../examples/compiled-research/README.md) retain the current
+interrupted-run recovery examples that the proposed protocol must preserve.
 
 ## Existing behavior
 
