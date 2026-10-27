@@ -115,6 +115,7 @@ limen = ["py.typed", "yaml/templates/*.yaml", "yaml/manifest.schema.json"]
   "THIRD_PARTY.md",
 ]
 "share/limen/docs" = ["docs/*.md"]
+"share/limen/datasets" = ["datasets/taxonomy.json"]
 "share/limen/docs/Developer" = ["docs/Developer/*.md"]
 "share/limen/github" = [
   ".github/PULL_REQUEST_TEMPLATE.md",
