@@ -16,6 +16,7 @@ include SECURITY.md
 include SUPPORT.md
 include THIRD_PARTY.md
 include .markdownlint.json
+include datasets/taxonomy.json
 recursive-include docs *.md *.yaml
 recursive-include docs/benchmarks *.csv *.json *.txt
 include docs/examples/xgboost_sweep.py
