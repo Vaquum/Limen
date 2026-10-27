@@ -3255,7 +3255,7 @@ Recorded outputs carry no binary classification interpretation.
 
 <!-- reference: public-limen-log-permutation-prediction-performance source=limen/log/_permutation_prediction_performance.py region=signature:permutation_prediction_performance role=signature -->
 ```python
-def permutation_prediction_performance(self: Any, round_id: int) -> pd.DataFrame:
+def permutation_prediction_performance(self: Any, round_id: int) -> pl.DataFrame:
     ...
 ```
 
@@ -3269,7 +3269,7 @@ round_id (int): Round ID (i.e. nth permutation in an experiment)
 
 Returns:
 
-pd.DataFrame: Table with predictions, actuals, hit/miss, datetime, open, close, and price_change
+pl.DataFrame: Table with predictions, actuals, hit/miss, datetime, open, close, and price_change
 
 ### `limen.sfd.foundational_sfd.ridge_regressor.manifest`
 

@@ -201,8 +201,7 @@ class CorrelationReducer(PruningStrategy):
         '''
 
         cols = [c for c in domain_keys if c in df.columns] + [self._metric]
-        pdf = df.select(cols).to_pandas()
-        shim = _CorrelationShim(pdf)
+        shim = _CorrelationShim(df.select(cols))
 
         result = experiment_parameter_correlation(
             shim,
@@ -214,7 +213,7 @@ class CorrelationReducer(PruningStrategy):
             random_state=self._random_state,
         )
 
-        return pl.from_pandas(result.reset_index())
+        return result
 
 
     def _check_wrong_direction(self,

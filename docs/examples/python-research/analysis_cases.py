@@ -22,10 +22,10 @@ def recordable_prep(raw, round_params):
 def analyze_log(loop, directory, space):
     analysis = Log(uel_object=loop)
     correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in project.completed_log(loop).columns if column not in {*space, 'validation_rmse'}],
-        heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
+        heads=(1.,), n_boot=50, min_n=10, random_state=42)
     importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
-    correlation.to_csv(directory / 'correlation.csv', index=False)
-    importance.to_csv(directory / 'importance.csv', index=False)
+    correlation.write_csv(directory / 'correlation.csv')
+    importance.write_csv(directory / 'importance.csv')
     return correlation, importance
 # endregion analysis_results
 
@@ -69,6 +69,6 @@ def analyze_candidates(bars, output):
         controls[name] = {'rows': project.completed_log(reduced).to_dicts(),
             'audit': [json.loads(line) for line in (location / 'audit.jsonl').read_text().splitlines()],
             'checkpoint': json.loads((location / 'checkpoint.json').read_text())['msq_state']}
-    return {'rows': project.completed_log(loop).to_dicts(), 'correlation': correlation.to_dict('records'),
-            'importance': importance.to_dict('records'), 'controls': controls}
+    return {'rows': project.completed_log(loop).to_dicts(), 'correlation': correlation.to_dicts(),
+            'importance': importance.to_dicts(), 'controls': controls}
 # endregion analysis_campaign

@@ -78,10 +78,10 @@ def test_ablation_rows_round_trip(tmp_path, monkeypatch, msq, counts):
     assert uel.experiment_log['_dropped_features'].to_list() == values
     assert uel.experiment_log.schema['_dropped_features'] == pl.String
     for log in (Log(file_path=str(tmp_path / 'results.csv')), Log(uel_object=uel), uel._log):
-        assert log.experiment_log['_dropped_features'].tolist() == values
+        assert log.experiment_log['_dropped_features'].to_list() == values
         for feature in ('roc', 'vol_5', 'vol', 'sma_10'):
-            membership = log.experiment_log['_dropped_features'].apply(lambda value, feature=feature: feature in json.loads(value))
-            assert membership.tolist() == [feature in dropped for dropped in seen]
+            membership = log.experiment_log['_dropped_features'].map_elements(lambda value, feature=feature: feature in json.loads(value), return_dtype=pl.Boolean)
+            assert membership.to_list() == [feature in dropped for dropped in seen]
     uel.experiment_log.write_parquet(tmp_path / 'results.parquet')
     assert pl.read_parquet(tmp_path / 'results.parquet')['_dropped_features'].to_list() == values
     if msq:
@@ -176,4 +176,4 @@ def test_ablation_resume_preserves_json_or_rejects_legacy(tmp_path, legacy):
         assert len({row['id'] for row in rows}) == 6
         assert [json.loads(row['_dropped_features']) for row in rows] == first_seen + next_seen
         assert resumed.experiment_log['_dropped_features'].to_list() == [row['_dropped_features'] for row in rows]
-        assert resumed._log.experiment_log['_dropped_features'].tolist() == [row['_dropped_features'] for row in rows]
+        assert resumed._log.experiment_log['_dropped_features'].to_list() == [row['_dropped_features'] for row in rows]

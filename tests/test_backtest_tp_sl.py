@@ -472,7 +472,7 @@ def test_tp_sl_real_fixture_inline_post_run_parity(market, tmp_path):
     for i in range(4):
         replay = snapshot_backtest_round(loop._log, i, normalize)
         assert list(replay) == BACKTEST_SNAPSHOT_COLUMNS
-        for key, value in loop.experiment_backtest_results.iloc[i].items():
+        for key, value in loop.experiment_backtest_results.row(i, named=True).items():
             np.testing.assert_equal(replay[key], value)
             np.testing.assert_equal(loop.experiment_log[f'backtest_{key}'][i], value)
         fresh = manifest.prepare_data(bars, loop.round_params[i])
@@ -481,9 +481,9 @@ def test_tp_sl_real_fixture_inline_post_run_parity(market, tmp_path):
     legacy = SimpleNamespace(round_params=loop.round_params, permutation_prediction_performance=loop._log.permutation_prediction_performance)
     old = pl.DataFrame([snapshot_backtest_round(legacy, i, normalize)
                         for i in range(4)]).to_pandas()
-    assert old['inventory_per_bar'].iloc[0] != loop.experiment_backtest_results['inventory_per_bar'].iloc[0]
+    assert old['inventory_per_bar'].iloc[0] != loop.experiment_backtest_results['inventory_per_bar'][0]
     baseline_inventory = float(old['inventory_per_bar'].iloc[0])
-    corrected_inventory = float(loop.experiment_backtest_results['inventory_per_bar'].iloc[0])
+    corrected_inventory = float(loop.experiment_backtest_results['inventory_per_bar'][0])
     assert corrected_inventory == pytest.approx(baseline_inventory / 2, abs=0.0001)
     assert 'high' not in loop._log.permutation_prediction_performance(0).columns
     missing_witness = loop._log._alignment[0].pop('_backtest_provenance')

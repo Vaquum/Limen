@@ -106,10 +106,10 @@ def test_recorded_confusion_and_rule_metrics_preserve_precision(bars):
     for name, pred_value, actual_value in [('tp', 1, 1), ('fp', 1, 0), ('tn', 0, 0), ('fn', 0, 1)]:
         mask = (predictions[:-1] == pred_value) & (actual[:-1] == actual_value)
         assert means[f'{name}_mean_return_pct'] == float(future_returns[mask].mean())
-    frame = pd.DataFrame({'predictions': predictions, 'actuals': actual,
+    frame = pl.DataFrame({'predictions': predictions, 'actuals': actual,
                           'open': opens, 'price_change': closes - opens})
-    log = SimpleNamespace(permutation_prediction_performance=lambda _: frame.copy())
-    report = permutation_confusion_metrics(log, 'price_change', 0, outlier_quantiles=(0, 1)).iloc[0]
+    log = SimpleNamespace(permutation_prediction_performance=lambda _: frame.clone())
+    report = permutation_confusion_metrics(log, 'price_change', 0, outlier_quantiles=(0, 1)).row(0, named=True)
     assert report['precision_pct'] == metrics.precision_score(actual, predictions) * 100
     assert report['recall_pct'] == metrics.recall_score(actual, predictions) * 100
     assert report['pred_pos_rate_pct'] == predictions.mean() * 100
@@ -188,11 +188,11 @@ def test_every_entry_component_weights_in_float64(bars, dtype, regime, component
 
 
 def test_recorded_cohort_percentages_stay_distinct(bars):
-    data = pd.DataFrame({'metric': bars['close'], 'parameter': bars['volume']})
+    data = pl.DataFrame({'metric': bars['close'], 'parameter': bars['volume']})
     report = experiment_parameter_correlation(SimpleNamespace(experiment_log=data), 'metric',
                                                heads=[10, 11], min_n=2, n_boot=2)
-    assert report.index.get_level_values('cohort_pct').unique().to_list() == [1000 / len(data), 1100 / len(data)]
-    assert not report.index.has_duplicates
+    assert report['cohort_pct'].unique(maintain_order=True).to_list() == [1000 / len(data), 1100 / len(data)]
+    assert report.select('cohort_pct', 'feature').unique().height == report.height
 
 
 def test_sampling_preserves_sub_basis_point_fractions(bars, monkeypatch):
@@ -249,7 +249,7 @@ def test_near_integer_recorded_scores_remain_directional(bars):
     classes = np.searchsorted(np.quantile(returns, [1 / 3, 2 / 3]), returns)
     scores = classes + 1 + np.abs(returns) * 1e-6
     frame = pd.DataFrame({'predictions': scores})
-    prepared = _prepare_snapshot_backtest_input(frame, prediction_kind='directional')
+    prepared = _prepare_snapshot_backtest_input(pl.from_pandas(frame), prediction_kind='directional')
     assert (prepared['predictions'] == 1).all()
 
 

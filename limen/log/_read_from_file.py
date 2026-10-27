@@ -2,10 +2,10 @@ from io import StringIO
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
+import polars as pl
 
 
-def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
+def read_from_file(_self: Any, file_path: str) -> pl.DataFrame:
 
     '''
     Create cleaned experiment log DataFrame from file.
@@ -14,7 +14,7 @@ def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
         file_path (str): Path to experiment log CSV file
 
     Returns:
-        pd.DataFrame: Cleaned log data with whitespace-trimmed object columns
+        pl.DataFrame: Cleaned log data with whitespace-trimmed string columns
     '''
 
     with Path(file_path).open() as f:
@@ -34,11 +34,8 @@ def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
         else:
             lines = []
 
-    data = pd.read_csv(StringIO(''.join(lines)), float_precision='round_trip')
-
-    for col in data.columns:
-        if pd.api.types.is_object_dtype(data[col]) or pd.api.types.is_string_dtype(data[col]):
-
-            data[col] = data[col].map(lambda value: value.strip() if isinstance(value, str) else value)
-
-    return data
+    data = pl.read_csv(StringIO(''.join(lines)), infer_schema_length=None,
+                       null_values=['#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN',
+                                    '-NaN', '-nan', '1.#IND', '1.#QNAN', '<NA>',
+                                    'N/A', 'NA', 'NULL', 'NaN', 'None', 'n/a', 'nan', 'null'])
+    return data.with_columns(pl.col(pl.String).str.strip_chars())

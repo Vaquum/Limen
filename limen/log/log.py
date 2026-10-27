@@ -1,5 +1,4 @@
 import limen.experiment._holdout_research as _holdout
-import pandas as pd
 import polars as pl
 from typing import Any
 from collections.abc import Callable
@@ -34,9 +33,9 @@ class Log:
         if uel_object is not None:
 
             rows = uel_object.experiment_log
-            if not isinstance(rows, (pl.DataFrame, pd.DataFrame)):
+            if not isinstance(rows, pl.DataFrame):
                 raise ValueError('Log requires captured experiment rows')
-            self.experiment_log = rows.to_pandas() if isinstance(rows, pl.DataFrame) else rows.copy()
+            self.experiment_log = rows.clone()
             self.data, self.prep, self.scalers, self.round_params, self.preds, self._alignment, self.manifest = (
                 getattr(uel_object, name, None) for name in ('data', 'prep', 'scalers', 'round_params', 'preds', '_alignment', 'manifest'))
             self.fold_results = getattr(uel_object, 'fold_results', pl.DataFrame()).clone()
@@ -47,21 +46,17 @@ class Log:
         else:
             raise ValueError('Log Both uel_object and file_path cannot be None')
 
-        self._captured_log = self.experiment_log.copy()
+        self._captured_log = self.experiment_log.clone()
 
         if cols_to_multilabel is not None:
             for col in cols_to_multilabel:
-                temp_cols = pd.get_dummies(self.experiment_log[col])
-                temp_cols.columns = [f"{col}_{i}" for i in temp_cols.columns]
-                self.experiment_log = pd.merge(
-                    self.experiment_log.drop(col, axis=1),
-                    temp_cols,
-                    left_index=True,
-                    right_index=True,
+                self.experiment_log = self.experiment_log.drop(col).with_columns(
+                    (pl.Series(f'{col}_{value}', self.experiment_log[col] == value)
+                     .fill_null(False).cast(pl.Int64))
+                    for value in self.experiment_log[col].unique().drop_nulls().sort()
                 )
 
-            for col in self.experiment_log.select_dtypes(include=bool):
-                self.experiment_log[col] = self.experiment_log[col].astype(int)
+            self.experiment_log = self.experiment_log.with_columns(pl.col(pl.Boolean).cast(pl.Int64))
 
         if inverse_scaler is not None:
             self.inverse_scaler = inverse_scaler
@@ -70,7 +65,7 @@ class Log:
 
 
     @_holdout.replay_guard
-    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+    def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame:
         if not self.fold_results.is_empty():
             raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
         if self.round_params is None or self.preds is None or self._alignment is None:

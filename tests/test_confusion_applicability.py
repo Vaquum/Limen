@@ -53,7 +53,7 @@ def test_recorded_binary_confusion_internally_consistent() -> None:
     uel = _foundational_run(logreg_sfd)
     table = uel.experiment_confusion_metrics
     assert table is not None
-    row = table.iloc[0]
+    row = table.row(0, named=True)
     assert int(row['tp_count'] + row['fp_count']) == int(row['pred_pos_count'])
     assert int(row['pred_pos_count']) <= int(row['n_kept'])
     expected_precision = 100.0 * row['tp_count'] / row['pred_pos_count'] if row['pred_pos_count'] else np.nan
