@@ -591,7 +591,7 @@ def _normalize_datetime_column_by_name(
         )
 
     if isinstance(datetime_dtype, pl.Datetime):
-        expr = pl.col(column_name).dt.cast_time_unit('ms')
+        expr = pl.col(column_name)
         if datetime_dtype.time_zone is None:
             expr = expr.dt.replace_time_zone('UTC')
         else:

@@ -102,8 +102,10 @@ def test_native_yaml_sweep_runs_both_adaptive_bar_types(trades, tmp_path):
     reference['sfd']['params'] = {'bar_type': ['imbalance', 'run'], 'expected_num_ticks': [5], 'ema_span': [10],
                                  'lookback': [2], 'fee': [4.]}
     reference['uel']['n_permutations'] = 2
+    from limen.data import HistoricalData
+    assert_frame_equal(HistoricalData().get_any_file(str(source)), trades)
     assert validate(reference).valid
-    experiment = UniversalExperimentLoop(sfd=CompiledSFD(reference), data=trades, yaml_reference=reference,
+    experiment = UniversalExperimentLoop(sfd=CompiledSFD(reference), yaml_reference=reference,
         search_strategy=build_search_strategy(reference), experiment_dir=tmp_path / 'experiment')
     experiment.run('adaptive', n_permutations=2, prep_each_round=True, progress_bar=False)
     log = pl.read_csv(tmp_path / 'experiment/results.csv')
