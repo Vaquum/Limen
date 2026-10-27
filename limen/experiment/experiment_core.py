@@ -4,6 +4,7 @@ import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import limen.experiment._result_fields as _fields
 import limen.experiment._round_errors as _errors
+import limen.experiment._uel_snapshot as _snapshot
 import csv
 import importlib.metadata
 import json
@@ -98,14 +99,12 @@ class UniversalExperimentLoop:
         self._pause_requested: bool = False
         self._search_strategy = search_strategy
         self._pruning_strategies = pruning_strategies or []
-        self._feedback_interval = feedback_interval
-        self._checkpoint_interval = checkpoint_interval
+        self._feedback_interval, self._checkpoint_interval = feedback_interval, checkpoint_interval
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
         self._yaml_reference, self._compiled_yaml, self._workers, self._parallel_sources = _parallel.configuration(sfd, yaml_reference)
         self._walk_forward: WalkForwardRun | None = None
-        self._record_execution = False
-        self._record_model_outputs = False
+        self._record_execution, self._record_model_outputs = False, False
         self._recording: dict[str, bool] | None = None
         self._factorize = False
         self.round_params: list[dict[str, Any]] = []
@@ -126,13 +125,14 @@ class UniversalExperimentLoop:
     def fold_results(self) -> pl.DataFrame:
         return self._walk_forward.results if self._walk_forward is not None else pl.DataFrame()
 
-    check_parallel_admission, _admit_round_errors = _parallel.admit_parallel, _errors.admit
+    check_parallel_admission, _admit_round_errors, save, load = _parallel.admit_parallel, _errors.admit, _snapshot.save, classmethod(_snapshot.load)
 
     @property
     def interrupted(self) -> bool:
         return self._shutdown_requested
 
     @_holdout.run_guard
+    @_snapshot.captured
     @_errors.guarded
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
