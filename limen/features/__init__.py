@@ -42,10 +42,7 @@ from limen.features.is_us_open_hour import is_us_open_hour
 from limen.features.jump_variation_proxy import jump_variation_proxy
 from limen.features.kaufman_efficiency_ratio import kaufman_efficiency_ratio
 from limen.features.kline_imbalance import kline_imbalance
-from limen.features.lagged_features import lag_column
-from limen.features.lagged_features import lag_columns
-from limen.features.lagged_features import lag_range
-from limen.features.lagged_features import lag_range_cols
+from limen.features.lagged_features import lag_column, lag_columns, lag_range, lag_range_cols
 from limen.features.liquidity_drop import liquidity_drop
 from limen.features.liquidity_range import liquidity_range
 from limen.features.log_returns import log_returns
@@ -121,7 +118,6 @@ from limen.features.yang_zhang_volatility import yang_zhang_volatility
 
 
 __all__ = [
-    'classify_market_regime',
     'absorption_intensity',
     'active_lines',
     'active_quantile_count',
@@ -133,6 +129,7 @@ __all__ = [
     'breakout_percentile_regime',
     'bulk_volume_classification',
     'calendar_time_features',
+    'classify_market_regime',
     'close_ma_distance_atr',
     'close_position',
     'close_position_rolling',

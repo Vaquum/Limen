@@ -32,12 +32,11 @@ class RegimeConfig:
     eps: float = 1e-12
 
     def __post_init__(self) -> None:
-        if not isinstance(self.version, str) or not self.version.strip():
-            raise ValueError('version must be a non-empty string')
         values = cast(dict[str, object], asdict(self))
+        version = values.pop('version')
+        if not isinstance(version, str) or not version.strip():
+            raise ValueError('version must be a non-empty string')
         for name, value in values.items():
-            if name == 'version':
-                continue
             if name in ('confirmation_rows', 'breakout_ttl'):
                 if type(value) is not int or value < 1:
                     raise ValueError(f'{name} must be a positive integer')

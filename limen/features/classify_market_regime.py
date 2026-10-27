@@ -1,63 +1,62 @@
-from collections import deque
 from collections.abc import Iterator
 from copy import deepcopy
-from dataclasses import dataclass, field
-import math
 from typing import cast
 
 import numpy as np
 import polars as pl
 
-from limen.features._regime_audit import _Bar, _audit
+from limen.features._regime_audit import audit as _audit, admit_bar as _bar
 from limen.features._regime_config import RegimeConfig
-from limen.features._regime_contract import AUDIT, PRICES, PRODUCTION, RANKS, SLOW, feature_hash
-from limen.features._regime_ranks import _Ranks, rank_values
-from limen.features._regime_rules import _Decision
+from limen.features._regime_contract import AUDIT, PRICES, PRODUCTION, RANKS, feature_hash
+from limen.features._regime_ranks import rank_values
+from limen.features._regime_state import Series as _Series, dump_state, restore_state
 
 __all__ = ['MarketRegimeClassifier', 'RegimeConfig', 'classify_market_regime']
 
 
-@dataclass
-class _Series:
-    last_timestamp: int | None = None
-    bars: deque[_Bar | None] = field(default_factory=lambda: deque(maxlen=SLOW + 1))
-    ranks: _Ranks = field(default_factory=_Ranks)
-    decision: _Decision = field(default_factory=_Decision)
 
 
-def _bar(values: tuple[object, ...]) -> tuple[_Bar | None, str]:
-    numbers: list[float] = []
-    for name, value in zip(PRICES, values, strict=True):
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
-            return None, name
-        if value < 0 or (name != 'volume' and value == 0):
-            return None, name
-        numbers.append(float(value))
-    opened, high, low, close, volume = numbers
-    if high < max(opened, close):
-        return None, 'high'
-    if low > min(opened, close):
-        return None, 'low'
-    return _Bar(opened, high, low, close, volume), ''
+
+
+
+def _config(value: object) -> RegimeConfig:
+    if not isinstance(value, RegimeConfig):
+        raise TypeError('config must be a RegimeConfig')
+    return value
+
+
+def _frame(value: object, include_audit: object) -> pl.DataFrame:
+    if not isinstance(include_audit, bool):
+        raise TypeError('include_audit must be a bool')
+    if not isinstance(value, pl.DataFrame):
+        raise TypeError('data must be a Polars DataFrame')
+    return value
 
 
 class MarketRegimeClassifier:
     """Apply the same bounded, causal computation to batch and streaming rows."""
 
     def __init__(self, config: RegimeConfig) -> None:
-        if not isinstance(config, RegimeConfig):
-            raise TypeError('config must be a RegimeConfig')
-        self._config = config
+        super().__init__()
+        self._config = _config(config)
         self._config_hash = config.config_hash
         self._feature_hash = feature_hash()
         self._series: dict[str, _Series] = {}
 
+    def snapshot(self) -> str:
+        """Serialize bounded state as JSON with configuration and formula identity."""
+        return dump_state(self._series, self._config_hash, self._feature_hash)
+
+    @classmethod
+    def from_snapshot(cls, config: RegimeConfig, snapshot: str) -> 'MarketRegimeClassifier':
+        """Restore a checkpoint only under its original configuration and formulas."""
+        result = cls(config)
+        result._series = restore_state(snapshot, config, result._config_hash, result._feature_hash)
+        return result
+
     def update(self, data: pl.DataFrame, *, include_audit: bool = False) -> pl.DataFrame:
         """Classify a chronological chunk; rejected keys/times leave state unchanged."""
-        if not isinstance(include_audit, bool):
-            raise TypeError('include_audit must be a bool')
-        if not isinstance(data, pl.DataFrame):
-            raise TypeError('data must be a Polars DataFrame')
+        data = _frame(data, include_audit)
         required = ('series_id', 'datetime', *PRICES)
         missing = [name for name in required if name not in data.columns]
         if missing:
@@ -96,7 +95,7 @@ class MarketRegimeClassifier:
                 reason = 'insufficient_history'
             regime, count, transition, fallback = state.decision.step(
                 cast(dict[str, float], audit), cast(dict[str, float], ranks),
-                observation.close if observation is not None else math.nan, self._config, reason)
+                observation.close if observation is not None else None, self._config, reason)
             state.decision.previous_up = audit['breakout_up_atr']
             state.decision.previous_down = audit['breakout_down_atr']
             vol, expansion = ranks['rank_vol_rs_20_252'], ranks['rank_vol_expansion_252']

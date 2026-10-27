@@ -551,5 +551,6 @@
   "limen/features/_regime_audit.py": 160,
   "limen/features/_regime_ranks.py": 80,
   "limen/features/_regime_rules.py": 150,
-  "limen/features/classify_market_regime.py": 200
+  "limen/features/classify_market_regime.py": 200,
+  "limen/features/_regime_state.py": 190
 }

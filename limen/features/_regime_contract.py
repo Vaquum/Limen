@@ -9,7 +9,7 @@ import polars as pl
 __all__: list[str] = []
 
 
-class _Regime(IntEnum):
+class Regime(IntEnum):
     INITIALIZING = 0
     TREND_UP = 1
     TREND_DOWN = 2
@@ -19,7 +19,7 @@ class _Regime(IntEnum):
     BREAKOUT_DOWN = 6
 
 
-REGIMES = [value.name for value in _Regime]
+REGIMES = [value.name for value in Regime]
 TRANSITIONS = ['none', 'from_initializing', 'trend_to_range', 'range_to_trend',
                'range_to_breakout', 'breakout_to_trend', 'breakout_to_range', 'flip']
 PRICES = ('open', 'high', 'low', 'close', 'volume')
@@ -31,7 +31,7 @@ AUDIT = ('ret_1_log', 'true_range', 'atr_20', 'atr_pct_20', 'rs_var', 'vol_rs_20
 RANKS = ('rank_abs_trend_score_252', 'rank_trend_slope_252', 'rank_vol_rs_20_252',
          'rank_vol_expansion_252', 'rank_breakout_up_252', 'rank_breakout_down_252',
          'rank_chop_252', 'rank_participation_252')
-PRODUCTION = {
+PRODUCTION: dict[str, pl.DataType | type[pl.DataType]] = {
     'series_id': pl.String, 'datetime': pl.Datetime('ns', 'UTC'),
     'market_regime': pl.Enum(REGIMES), 'market_regime_code': pl.UInt8,
     'stress_level': pl.Float32, 'is_stress': pl.Boolean,
@@ -48,7 +48,7 @@ MAX_BARS = 2**32 - 1
 @lru_cache(maxsize=1)
 def feature_hash() -> str:
     sources = ('_regime_contract.py', '_regime_audit.py', '_regime_ranks.py', '_regime_rules.py',
-               'classify_market_regime.py')
+               'classify_market_regime.py', '_regime_state.py')
     normalized = '\n'.join(ast.dump(ast.parse(Path(__file__).with_name(name).read_text()),
                                      include_attributes=False) for name in sources)
     return hashlib.sha256(normalized.encode()).hexdigest()

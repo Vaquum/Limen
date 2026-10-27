@@ -7,8 +7,9 @@ from limen.features._regime_contract import RANKS, RANK_WINDOW
 __all__: list[str] = []
 
 
-class _Ranks:
+class Ranks:
     def __init__(self) -> None:
+        super().__init__()
         self.history: list[deque[float]] = [deque() for _ in RANKS]
         self.sorted: list[list[float]] = [[] for _ in RANKS]
 
@@ -22,7 +23,7 @@ class _Ranks:
             if current is not None and valid:
                 if len(history) == RANK_WINDOW:
                     old = history.popleft()
-                    ordered.pop(bisect_left(ordered, old))
+                    _ = ordered.pop(bisect_left(ordered, old))
                 history.append(current)
                 insort(ordered, current)
         return result

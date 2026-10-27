@@ -1,15 +1,16 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 import math
+from itertools import pairwise
 from typing import cast
 
-from limen.features._regime_contract import AUDIT, FAST, SLOW
+from limen.features._regime_contract import AUDIT, FAST, PRICES, SLOW
 
 __all__: list[str] = []
 
 
 @dataclass(frozen=True)
-class _Bar:
+class Bar:
     open: float
     high: float
     low: float
@@ -17,11 +18,28 @@ class _Bar:
     volume: float
 
 
-def _window(history: Sequence[_Bar | None], size: int) -> Sequence[_Bar] | None:
+def admit_bar(values: tuple[object, ...]) -> tuple[Bar | None, str]:
+    numbers: list[float] = []
+    for name, value in zip(PRICES, values, strict=True):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            return None, name
+        if value < 0 or (name != 'volume' and value == 0):
+            return None, name
+        numbers.append(float(value))
+    opened, high, low, close, volume = numbers
+    if high < max(opened, close):
+        return None, 'high'
+    if low > min(opened, close):
+        return None, 'low'
+    return Bar(opened, high, low, close, volume), ''
+
+
+
+def _window(history: Sequence[Bar | None], size: int) -> Sequence[Bar] | None:
     subset = history[-size:]
     if len(subset) != size or any(bar is None for bar in subset):
         return None
-    return cast(Sequence[_Bar], subset)
+    return cast(Sequence[Bar], subset)
 
 
 def _mean(values: Sequence[float]) -> float:
@@ -33,18 +51,18 @@ def _log_ratio(numerator: float, denominator: float) -> float:
     return math.log(numerator) - math.log(denominator)
 
 
-def _rs(bar: _Bar) -> float:
+def _rs(bar: Bar) -> float:
     return (_log_ratio(bar.high, bar.close) * _log_ratio(bar.high, bar.open)
             + _log_ratio(bar.low, bar.close) * _log_ratio(bar.low, bar.open))
 
 
-def _tr(bar: _Bar, previous: _Bar | None) -> float:
+def _tr(bar: Bar, previous: Bar | None) -> float:
     if previous is None:
         return bar.high - bar.low
     return max(bar.high - bar.low, abs(bar.high - previous.close), abs(bar.low - previous.close))
 
 
-def _audit(history: Sequence[_Bar | None], eps: float) -> tuple[dict[str, float | None], str]:
+def audit(history: Sequence[Bar | None], eps: float) -> tuple[dict[str, float | None], str]:
     values: dict[str, float | None] = dict.fromkeys(AUDIT)
     current = history[-1]
     if current is None:
@@ -92,7 +110,7 @@ def _audit(history: Sequence[_Bar | None], eps: float) -> tuple[dict[str, float 
             values['breakout_down_atr'] = max(low - current.close, 0.) / (atr + eps)
     returns = _window(history, FAST + 1)
     if returns is not None:
-        changes = [_log_ratio(bar.close, before.close) for before, bar in zip(returns[:-1], returns[1:], strict=True)]
+        changes = [_log_ratio(bar.close, before.close) for before, bar in pairwise(returns)]
         values['coherence_20'] = abs(math.fsum(changes)) / (math.fsum(abs(value) for value in changes) + eps)
     complete = _window(history, SLOW + 1) is not None
     reason = ''
