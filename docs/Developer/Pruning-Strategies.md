@@ -75,11 +75,17 @@ def __init__(self, *, start_time: float | None=None, max_walltime_hours: float |
 
 <!-- reference: pruning-correlation source=limen/experiment/reducer/correlation_reducer.py region=signature:CorrelationReducer.__init__ role=signature -->
 ```python
-def __init__(self, *, metric: str, method: str='spearman', min_observations: int=50, prune_threshold: float=0.05, sign_stability_threshold: float=0.8, n_boot: int=300, negative_correlation_threshold: float=-0.3, maximize: bool=True, random_state: int=0, active: bool=True) -> None:
+def __init__(self, *, metric: str, method: str='spearman', min_observations: int=50, prune_threshold: float=0.05, sign_stability_threshold: float=0.8, n_boot: int=300, negative_correlation_threshold: float=-0.3, maximize: bool=True, random_state: int=0, analyzer: str='correlation', metrics: Mapping[str, bool] | None=None, n_repeats: int=10, min_model_score: float=0.1, active: bool=True) -> None:
     ...
 ```
 
 Supported methods are `spearman`, `pearson`, and `kendall`. Non-numeric, all-null, and constant parameter columns are skipped.
+
+Set `analyzer="random_forest"` to use the [held-out parameter importance analysis](../Log.md) instead. It handles numeric, Boolean and categorical scalar parameters together, including nonlinear effects and interactions. It requires at least 20 distinct successful configurations and `min_observations` successful rows. Each metric's held-out surrogate R² must meet `min_model_score`; otherwise it logs the unavailable evidence and emits no suggestions. Missing columns, nonfinite successful metrics and unsupported parameter values raise errors.
+
+Forest analysis emits advisory `keep_is` suggestions when permutation importance mean (floored at zero) plus twice its repeat standard deviation is below `prune_threshold`. This is a screening rule, not a confidence interval. `n_repeats` controls repeated shuffles; `random_state` controls the held-out configuration split, forest and shuffles. Identical configurations stay together across that split. The forest does not infer a monotonic wrong direction.
+
+For multiple objectives, `metrics` maps additional metric names to explicit maximize booleans. The primary `metric` uses `maximize`. Every metric must pass the surrogate-score gate and low-importance rule, and agree on the same observed best value before a suggestion is retained. Conflicting directions for the primary metric are rejected. Suggestions retain native queue values and are checkpointed through the existing `suggested` state. YAML uses the same controls under `type: correlation` → `params`.
 
 ### `FocusReducer`
 
