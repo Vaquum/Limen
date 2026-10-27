@@ -61,7 +61,8 @@ def test_regime_sampling_retains_one_original_contiguous_block(market):
     assert length >= 10
     chosen = sample_regime_blocks(market, regime, 10, seed=42, regime_version='label3-test')
     assert_frame_equal(chosen, sample_regime_blocks(market, regime, 10, seed=42, regime_version='label3-test'))
-    positions = [index for index, clock in enumerate(market['datetime']) if clock in chosen['datetime']]
+    selected = set(chosen['datetime'].dt.epoch('ns').to_list())
+    positions = [index for index, clock in enumerate(market['datetime'].dt.epoch('ns')) if clock in selected]
     assert positions == list(range(positions[0], positions[-1] + 1))
     assert_frame_equal(chosen, market.slice(positions[0], len(positions)))
     assert set(states[positions[0]:positions[-1] + 1]) == {regime}
