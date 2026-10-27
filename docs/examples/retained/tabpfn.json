@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-27T10:41:24.806032+00:00",
-  "execution_checkout_head": "946547670c421bacb1012f58fb9c14a1833c7bf3",
+  "observed_at": "2026-10-27T17:05:46.210779+00:00",
+  "execution_checkout_head": "f08ffe0002fb184ad71cebc39da5702f7542c77e",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -131,6 +131,7 @@
     "experiment/_serial_resume.py": "6edfa038ce7acf0e155e438ca19894f619576dbe868726f420501e40cb02fc7a",
     "experiment/_shim_fractional_diff.py": "b0fc724b946c4d33ac0998b094c15e3ccc26cf61c883d630a79de3c4d78ff8ac",
     "experiment/_source_contract.py": "915d56e7b9ab835099f8260701e86fa9e0366f1c98b4ae9388841ce0ad928dfa",
+    "experiment/_uel_snapshot.py": "5ffe63911623d811a518523d3c1c6d3cb744715ab12eb56df7c90c7dce8c8f00",
     "experiment/_validation_calibration.py": "89fb4dbc8ca6dbcda6496db2b5a5ba8999edc0021a9579eb9b497bd2081163d5",
     "experiment/_validation_decisions.py": "654f03346a41959f419a3ed7f940a6e8681d15b26063566f8770f83b9a52c590",
     "experiment/_walk_forward_run.py": "7739de954217f11d9911b939c463923dd366af031f9286ba8b7454f742fe42c0",
@@ -139,7 +140,7 @@
     "experiment/checkpoint_manager.py": "fb8587a9364816a7f70208daf615af0fbf7726894b00fbfb4d1365b75e0f497f",
     "experiment/convergence_report.py": "63a3cda8861a939ebfa5a6f1aaecd2abd9e3bab4663acace92542414e2d0e0b3",
     "experiment/errors.py": "dbf7edfb45abd2156a255588e04454b3ed285defa741ed15f6cd3c2a6f54e5f5",
-    "experiment/experiment_core.py": "928fa04c057fea4fc7ae0b2f46d5b69ab6ab851f87a51a33ca2021aaae4048d7",
+    "experiment/experiment_core.py": "549e7cabf76a94884f9dc428a0d8420e54c42c22c44120aee64df942eee73690",
     "experiment/family_acceptance_report.py": "b1a15c0541433581a25cb5acc095a689f5f820a06f79539a0dc4f5ba93f7fa51",
     "experiment/feedback_controller.py": "d3f1fd75c0e6bc976f0815c925a4a944144cfbb373807495ba3b0826e29284e9",
     "experiment/holdout.py": "e6f6a90b16b47394e09749b94e2af30ddf3cd032e664db7eff8fe845665970d1",
