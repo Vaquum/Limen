@@ -2,6 +2,7 @@ from dataclasses import asdict, dataclass
 import hashlib
 import json
 import math
+import sys
 from typing import cast
 
 __all__: list[str] = []
@@ -40,7 +41,7 @@ class RegimeConfig:
             if name in ('confirmation_rows', 'breakout_ttl'):
                 if type(value) is not int or value < 1:
                     raise ValueError(f'{name} must be a positive integer')
-            elif isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            elif isinstance(value, bool) or not isinstance(value, (int, float)) or abs(value) > sys.float_info.max or not math.isfinite(value):
                 raise ValueError(f'{name} must be a finite real number')
             elif name in ('eps', 'breakout_atr'):
                 if value <= 0:

@@ -61,6 +61,12 @@ Does **not** own raw technical indicators, feature scaling, or model fitting.
 features/
 ├── README.md
 ├── __init__.py
+├── _regime_audit.py
+├── _regime_config.py
+├── _regime_contract.py
+├── _regime_ranks.py
+├── _regime_rules.py
+├── _regime_state.py
 ├── absorption_intensity.py
 ├── active_lines.py
 ├── active_quantile_count.py
@@ -72,6 +78,7 @@ features/
 ├── breakout_percentile_regime.py
 ├── bulk_volume_classification.py
 ├── calendar_time_features.py
+├── classify_market_regime.py
 ├── close_ma_distance_atr.py
 ├── close_position.py
 ├── close_position_rolling.py

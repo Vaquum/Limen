@@ -3,6 +3,7 @@ import argparse
 from dataclasses import asdict, replace
 import hashlib
 import json
+import logging
 from pathlib import Path
 import platform
 import time
@@ -11,6 +12,7 @@ import polars as pl
 
 from limen.features.classify_market_regime import RegimeConfig, classify_market_regime
 
+LOGGER = logging.getLogger(__name__)
 INPUTS = ('spot_1h_20240101_20241231.parquet', 'spot_15m_20250101_20250531.parquet')
 
 
@@ -50,7 +52,8 @@ def characterize(root, output):
                       'labels_differing_from_baseline': (codes != baseline).sum(),
                       'stress_rows': stress.sum(), 'stress_available_rows': stress.len()}
             observations.append(record)
-            print(name, identity, result.height, f'{time.perf_counter() - started:.3f}s', record['regime_counts'], flush=True)
+            LOGGER.info('%s %s %s %.3fs %s', name, identity, result.height,
+                        time.perf_counter() - started, record['regime_counts'])
     report = {'scope': 'Chronological descriptive characterization of fixed hypotheses; no optimization, predictive accuracy or trading-return claim.',
               'python': platform.python_version(), 'platform': platform.system(), 'machine': platform.machine(),
               'observations': observations}
@@ -60,6 +63,7 @@ def characterize(root, output):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()

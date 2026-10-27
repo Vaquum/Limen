@@ -2883,3 +2883,9 @@ AUDIT = ('ret_1_log', 'true_range', 'atr_20', 'atr_pct_20', 'rs_var', 'vol_rs_20
 ```python
 RANKS = ('rank_abs_trend_score_252', 'rank_trend_slope_252', 'rank_vol_rs_20_252', 'rank_vol_expansion_252', 'rank_breakout_up_252', 'rank_breakout_down_252', 'rank_chop_252', 'rank_participation_252')
 ```
+
+### Recorded sensitivity characterization
+
+The [retained observations](benchmarks/regime-classifier-2026-10-27/observations.json) cover 8,784 hourly bars from 2024 and 14,496 quarter-hour bars from January–May 2025. Both periods produce all seven labels. The baseline initializes for 312 rows in each period. Fixed perturbations to trend-entry rank (0.60/0.70), breakout magnitude (0.20/0.30 ATR) and breakout TTL (2/4) change 0.17–1.52% of labels; confirmation of 1/3 rows changes 4.82–6.43%.
+
+Reproduce with `python -m tests.benchmark_regime_classifier --output observations.json`. These are descriptive sensitivity observations without fitting or predictive/trading-return claims. Defaults remain hypotheses. Validate chronologically on the intended assets and intervals, monitor label stability and drift, and account for selection bias if comparing configurations against downstream returns.

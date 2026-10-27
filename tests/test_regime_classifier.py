@@ -126,3 +126,182 @@ def test_invalid_rows_are_visible_and_rejected_chunks_do_not_advance_state():
         assert classifier.snapshot() == snapshot
     assert_frame_equal(classifier.update(bars.slice(353)),
                        classify_market_regime(bars, config=config).slice(353), check_exact=True)
+
+
+@pytest.fixture(scope='module')
+def annual_audit():
+    bars = _recorded(rows=None)
+    return bars, classify_market_regime(bars, config=RegimeConfig(version='baseline-v1'), include_audit=True)
+
+
+def test_recorded_all_states_counters_breakout_expiry_and_stress(annual_audit):
+    bars, result = annual_audit
+    codes = result['market_regime_code'].to_list()
+    assert set(codes) == set(range(7))
+    assert result.schema['stress_level'] == pl.Float32
+    assert result.schema['market_regime_code'] == pl.UInt8
+    assert result.schema['bars_in_regime'] == pl.UInt32
+    count, boundary, direction = 0, None, None
+    for index, row in enumerate(result.iter_rows(named=True)):
+        changed = index == 0 or codes[index - 1] != codes[index]
+        count = 1 if changed else count + 1
+        assert row['bars_in_regime'] == count
+        if row['market_regime_code'] in (5, 6):
+            assert count <= 3
+            if changed:
+                direction = 'up' if row['market_regime_code'] == 5 else 'down'
+                boundary = row['range_high_60_prev' if direction == 'up' else 'range_low_60_prev']
+                assert result[f'breakout_{direction}_atr'][index - 1] < .25 <= row[f'breakout_{direction}_atr']
+                assert row[f'rank_breakout_{direction}_252'] >= .95
+                assert row['rank_participation_252'] >= .60
+            else:
+                assert bars['close'][index] > boundary if direction == 'up' else bars['close'][index] < boundary
+        if row['stress_level'] is not None:
+            assert row['stress_level'] == float(np.float32(max(row['rank_vol_rs_20_252'], row['rank_vol_expansion_252'])))
+            assert row['is_stress'] == (row['stress_level'] >= .95)
+        else:
+            assert row['is_stress'] is None
+    assert result['fallback_reason'].head(312).unique().to_list() == ['insufficient_history']
+    assert result.filter(pl.col('fallback_reason') == 'finite_fallback').height > 0
+
+
+def test_real_candidates_have_inclusive_entry_boundaries(annual_audit):
+    from limen.features._regime_contract import AUDIT, RANKS, Regime
+    from limen.features._regime_rules import _base
+
+    _, result = annual_audit
+    config = RegimeConfig(version='baseline-v1')
+    for regime, direction in ((Regime.TREND_UP, 1), (Regime.TREND_DOWN, -1)):
+        candidates = result.filter((pl.col('trend_score_20_60') * direction > 0)
+                                   & (pl.col('trend_slope_20') * direction > 0)
+                                   & (pl.col('coherence_20') >= config.coherence_entry)
+                                   & (pl.col('rank_abs_trend_score_252') >= config.trend_rank_entry)
+                                   & ((pl.col('rank_trend_slope_252') >= config.trend_slope_up) if direction == 1
+                                      else (pl.col('rank_trend_slope_252') <= config.trend_slope_down)))
+        row = candidates.row(0, named=True)
+        audit, ranks = ({name: row[name] for name in names} for names in (AUDIT, RANKS))
+        threshold = row['rank_abs_trend_score_252']
+        assert _base(audit, ranks, replace(config, trend_rank_entry=threshold))[0] == regime
+        assert _base(audit, ranks, replace(config, trend_rank_entry=np.nextafter(threshold, 1.)))[0] != regime
+    row = result.filter((pl.col('rank_vol_rs_20_252') <= .35)
+                        & (pl.col('rank_abs_trend_score_252') <= .5)).row(0, named=True)
+    audit, ranks = ({name: row[name] for name in names} for names in (AUDIT, RANKS))
+    threshold = row['rank_vol_rs_20_252']
+    assert _base(audit, ranks, replace(config, range_vol_entry=threshold))[0] == Regime.RANGE_LOW_VOL
+    assert _base(audit, ranks, replace(config, range_vol_entry=np.nextafter(threshold, 0.)))[0] != Regime.RANGE_LOW_VOL
+
+
+def test_confirmation_and_hysteresis_use_observed_candidates(annual_audit):
+    from limen.features._regime_contract import AUDIT, RANKS, Regime
+    from limen.features._regime_rules import Decision, _base
+
+    bars, result = annual_audit
+    config = RegimeConfig(version='baseline-v1')
+    rows = result.with_columns(bars['close']).iter_rows(named=True)
+    previous = None
+    for row in rows:
+        if row['rank_abs_trend_score_252'] is None:
+            continue
+        audit, ranks = ({name: row[name] for name in names} for names in (AUDIT, RANKS))
+        candidate = _base(audit, ranks, config)[0]
+        if previous is not None and candidate in (Regime.TREND_UP, Regime.TREND_DOWN) and candidate == previous[3]:
+            break
+        previous = audit, ranks, row['close'], candidate
+    else:
+        pytest.fail('Recorded period has no consecutive trend candidates')
+    state = Decision(regime=Regime.RANGE_CHOP, bars=1)
+    assert state.step(previous[0], previous[1], previous[2], config, '')[0] == Regime.RANGE_CHOP
+    assert state.pending == candidate and state.pending_count == 1
+    assert state.step(audit, ranks, row['close'], config, '')[0] == candidate
+    retained = replace(config, trend_rank_entry=min(1., ranks['rank_abs_trend_score_252'] + .1))
+    from limen.features._regime_rules import _retained
+    assert _base(audit, ranks, retained)[0] != candidate
+    assert _retained(candidate, audit, ranks, retained)
+
+
+@pytest.mark.parametrize('index', [0, 20, 312, 353, 599])
+def test_checkpoint_replays_one_row_chunks_and_inactive_states(index):
+    bars, config = _recorded(), RegimeConfig(version='baseline-v1')
+    classifier = MarketRegimeClassifier(config)
+    classifier.update(bars.head(index))
+    restored = MarketRegimeClassifier.from_snapshot(config, classifier.snapshot())
+    tail = bars.slice(index, 5)
+    actual = pl.concat([restored.update(tail.slice(row, 1), include_audit=True) for row in range(tail.height)])
+    assert_frame_equal(actual, classify_market_regime(bars.head(index + tail.height), config=config, include_audit=True).tail(tail.height), check_exact=True)
+
+
+def test_configuration_domains_and_undefined_feature_fallback():
+    from dataclasses import asdict
+
+    config = RegimeConfig(version='baseline-v1')
+    for name in asdict(config):
+        bad_values = ('', 5) if name == 'version' else (True, float('nan'), float('inf'), -1)
+        for value in bad_values:
+            with pytest.raises(ValueError, match=name):
+                replace(config, **{name: value})
+    for changes in ({'trend_rank_exit': .8}, {'coherence_exit': .8}, {'range_vol_exit': .1},
+                    {'range_trend_exit': .1}, {'trend_slope_down': .7}, {'eps': 10**400}):
+        with pytest.raises(ValueError):
+            replace(config, **changes)
+    result = classify_market_regime(_recorded(), config=replace(config, eps=1e10), include_audit=True)
+    assert result['fallback_reason'][60] == 'invalid_input:range_position_60'
+    assert result['market_regime_code'].unique().to_list() == [0]
+    assert config.config_hash != replace(config, confirmation_rows=3).config_hash
+
+
+def test_checkpoint_rejects_malformed_state_and_counter_overflow():
+    config = RegimeConfig(version='baseline-v1')
+    classifier = MarketRegimeClassifier(config)
+    classifier.update(_recorded().head(353))
+    original = json.loads(classifier.snapshot())
+    for field, value in (('bars', []), ('ranks', []), ('last_timestamp', None)):
+        payload = json.loads(classifier.snapshot())
+        payload['series'][FIXTURE.stem][field] = value
+        with pytest.raises(ValueError):
+            MarketRegimeClassifier.from_snapshot(config, json.dumps(payload))
+    for field, value in (('regime', 7), ('bars', 0), ('pending_count', 2), ('boundary', 1.), ('previous_up', float('inf'))):
+        payload = json.loads(classifier.snapshot())
+        payload['series'][FIXTURE.stem]['decision'][field] = value
+        with pytest.raises(ValueError):
+            MarketRegimeClassifier.from_snapshot(config, json.dumps(payload))
+    original['series'][FIXTURE.stem]['decision'].update(regime=0, bars=2**32 - 1, pending=None, pending_count=0, boundary=None)
+    restored = MarketRegimeClassifier.from_snapshot(config, json.dumps(original))
+    snapshot = restored.snapshot()
+    invalid = _recorded().slice(353, 1).with_columns(pl.lit(None, dtype=pl.Float64).alias('open'))
+    with pytest.raises(ValueError, match='UInt32'):
+        restored.update(invalid)
+    assert restored.snapshot() == snapshot
+
+
+def test_breakout_checkpoint_and_prior_tied_rank_window(annual_audit):
+    bars, result = annual_audit
+    config = RegimeConfig(version='baseline-v1')
+    index = result.with_row_index('_row').filter(pl.col('market_regime_code').is_in([5, 6]))['_row'][0]
+    classifier = MarketRegimeClassifier(config)
+    classifier.update(bars.head(index + 1))
+    snapshot = classifier.snapshot()
+    payload = json.loads(snapshot)['series'][FIXTURE.stem]
+    assert len(payload['bars']) == 61 and all(len(history) <= 252 for history in payload['ranks'])
+    assert payload['decision']['boundary'] is not None
+    restored = MarketRegimeClassifier.from_snapshot(config, snapshot)
+    assert_frame_equal(restored.update(bars.slice(index + 1, 5), include_audit=True),
+                       result.slice(index + 1, 5), check_exact=True)
+    for index in (313, 421, 7000):
+        values = result['breakout_up_atr']
+        previous = values.head(index).drop_nulls().tail(252).to_numpy()
+        current = values[index]
+        assert np.count_nonzero(previous == current) > 0
+        expected = (np.count_nonzero(previous < current) + .5 * np.count_nonzero(previous == current)) / 252
+        assert result['rank_breakout_up_252'][index] == expected
+
+
+def test_feature_fingerprint_uses_interpreter_independent_source_bytes():
+    import hashlib
+    from limen.features._regime_contract import feature_hash
+
+    digest = hashlib.sha256()
+    directory = Path(__file__).resolve().parents[1] / 'limen/features'
+    for name in ('_regime_contract.py', '_regime_audit.py', '_regime_ranks.py', '_regime_rules.py',
+                 'classify_market_regime.py', '_regime_state.py'):
+        digest.update(name.encode() + b'\0' + (directory / name).read_bytes() + b'\0')
+    assert feature_hash() == digest.hexdigest()

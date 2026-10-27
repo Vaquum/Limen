@@ -2,6 +2,7 @@ from collections import deque
 from dataclasses import asdict, dataclass, field
 import json
 import math
+import sys
 from typing import cast
 
 from limen.features._regime_audit import Bar, admit_bar
@@ -56,7 +57,7 @@ def _integer(value: object, lower: int, upper: int) -> int:
 
 
 def _number(value: object) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or abs(value) > sys.float_info.max or not math.isfinite(value):
         raise ValueError('Checkpoint observations must be finite numbers')
     return float(value)
 

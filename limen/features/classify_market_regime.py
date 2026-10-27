@@ -15,10 +15,6 @@ __all__ = ['MarketRegimeClassifier', 'RegimeConfig', 'classify_market_regime']
 
 
 
-
-
-
-
 def _config(value: object) -> RegimeConfig:
     if not isinstance(value, RegimeConfig):
         raise TypeError('config must be a RegimeConfig')

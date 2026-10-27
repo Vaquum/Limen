@@ -1,4 +1,3 @@
-import ast
 from enum import IntEnum
 from functools import lru_cache
 import hashlib
@@ -49,6 +48,7 @@ MAX_BARS = 2**32 - 1
 def feature_hash() -> str:
     sources = ('_regime_contract.py', '_regime_audit.py', '_regime_ranks.py', '_regime_rules.py',
                'classify_market_regime.py', '_regime_state.py')
-    normalized = '\n'.join(ast.dump(ast.parse(Path(__file__).with_name(name).read_text()),
-                                     include_attributes=False) for name in sources)
-    return hashlib.sha256(normalized.encode()).hexdigest()
+    digest = hashlib.sha256()
+    for name in sources:
+        digest.update(name.encode() + b'\0' + Path(__file__).with_name(name).read_bytes() + b'\0')
+    return digest.hexdigest()

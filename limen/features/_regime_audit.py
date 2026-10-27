@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 import math
+import sys
 from itertools import pairwise
 from typing import cast
 
@@ -21,7 +22,7 @@ class Bar:
 def admit_bar(values: tuple[object, ...]) -> tuple[Bar | None, str]:
     numbers: list[float] = []
     for name, value in zip(PRICES, values, strict=True):
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or abs(value) > sys.float_info.max or not math.isfinite(value):
             return None, name
         if value < 0 or (name != 'volume' and value == 0):
             return None, name
@@ -115,7 +116,7 @@ def audit(history: Sequence[Bar | None], eps: float) -> tuple[dict[str, float | 
     complete = _window(history, SLOW + 1) is not None
     reason = ''
     for name, value in values.items():
-        if value is None or not math.isfinite(value):
+        if value is None or abs(value) > sys.float_info.max or not math.isfinite(value):
             values[name] = None
             if not reason:
                 reason = 'invalid_input:' + name if complete else 'insufficient_history'
