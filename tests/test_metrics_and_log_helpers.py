@@ -213,7 +213,7 @@ class _DummyRegressionBacktestLog:
 def test_permutation_prediction_performance_preserves_inverse_scaled_features() -> None:
     perf = permutation_prediction_performance(_DummyPerfWithInverseScaler(), round_id=0)
 
-    assert perf.columns.tolist() == [
+    assert perf.columns == [
         'restored_feature',
         'predictions',
         'actuals',
@@ -223,10 +223,10 @@ def test_permutation_prediction_performance_preserves_inverse_scaled_features() 
         'close',
         'price_change',
     ]
-    assert perf['restored_feature'].tolist() == [10.0, 20.0]
-    assert perf['hit'].tolist() == [True, False]
-    assert perf['miss'].tolist() == [False, True]
-    assert perf['price_change'].tolist() == [10.0, -5.0]
+    assert perf['restored_feature'].to_list() == [10.0, 20.0]
+    assert perf['hit'].to_list() == [True, False]
+    assert perf['miss'].to_list() == [False, True]
+    assert perf['price_change'].to_list() == [10.0, -5.0]
 
 
 def test_permutation_prediction_performance_rejects_single_argument_prep() -> None:

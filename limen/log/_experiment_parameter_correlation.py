@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import numpy.typing as npt
 import polars as pl
 
 logger = logging.getLogger(__name__)
+_MIN_CORRELATION_ROWS = 2
 
 _FRAMEWORK_LOG_COLUMNS = frozenset({
     'id', '_id', '_round_index', 'execution_time', '_warnings',
@@ -57,21 +58,21 @@ def experiment_parameter_correlation(self: Any,
 
     def correlations(frame: pl.DataFrame) -> npt.NDArray[np.float64]:
         from scipy.stats import kendalltau, rankdata
-        target = frame[metric].to_numpy()
+        target = np.asarray(frame[metric].to_numpy(), dtype=np.float64)
         values: list[float] = []
         for name in features:
-            column = frame[name].to_numpy()
+            column = np.asarray(frame[name].to_numpy(), dtype=np.float64)
             present = np.isfinite(column) & np.isfinite(target)
             x, y = column[present], target[present]
-            if x.size < 2 or np.ptp(x) == 0 or np.ptp(y) == 0:
+            if x.size < _MIN_CORRELATION_ROWS or np.ptp(x) == 0 or np.ptp(y) == 0:
                 values.append(np.nan)
             elif method == 'kendall':
                 values.append(float(kendalltau(x, y).statistic))
             else:
                 if method == 'spearman':
-                    x, y = rankdata(x), rankdata(y)
+                    x, y = np.asarray(rankdata(x), dtype=np.float64), np.asarray(rankdata(y), dtype=np.float64)
                 values.append(float(np.corrcoef(x, y)[0, 1]))
-        return np.asarray(values)
+        return np.asarray(values, dtype=np.float64)
 
     rng = np.random.default_rng(random_state)
     total_n = num_df.height
@@ -87,15 +88,17 @@ def experiment_parameter_correlation(self: Any,
         order = cohort_order.setdefault(percentage, len(cohort_order))
         cohort = num_df.head(n)
         base = correlations(cohort)
-        boot = np.asarray([correlations(cohort[rng.integers(0, n, n)]) for _ in range(n_boot)]).T
+        boot = np.asarray([correlations(cohort[rng.integers(0, n, n)]) for _ in range(n_boot)], dtype=np.float64).T
         for index, name in enumerate(features):
             samples = boot[index]
             valid = samples[~np.isnan(samples)]
-            median, low, high = np.quantile(valid, [0.5, 0.025, 0.975]) if valid.size else (np.nan, np.nan, np.nan)
+            median = float(cast(np.float64, np.quantile(valid, 0.5))) if valid.size else np.nan
+            low = float(cast(np.float64, np.quantile(valid, 0.025))) if valid.size else np.nan
+            high = float(cast(np.float64, np.quantile(valid, 0.975))) if valid.size else np.nan
             records.append({'cohort_pct': percentage, 'feature': name, 'n_rows': n,
                             'corr': float(base[index]), 'corr_med': float(median),
                             'ci_lo': float(low), 'ci_hi': float(high),
-                            'sign_stability': float(np.mean(np.sign(samples) == np.sign(median))),
+                            'sign_stability': float(np.count_nonzero(np.sign(samples) == np.sign(median)) / samples.size),
                             '_order': order})
     if not records:
         raise ValueError('experiment_parameter_correlation No cohorts produced results (check heads/min_n and data quality).')

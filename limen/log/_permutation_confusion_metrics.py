@@ -20,8 +20,8 @@ def _declared_output_modes(manifest: object, alignment: object, round_id: int) -
     return modes | {node} if isinstance(node, str) else modes
 
 
-def confusion_mean_return_pct(pred: pl.Series | npt.NDArray[np.float64],
-                               actual: pl.Series | npt.NDArray[np.float64],
+def confusion_mean_return_pct(pred: pl.Series | npt.ArrayLike,
+                               actual: pl.Series | npt.ArrayLike,
                                open_px: pl.Series,
                                price_change: pl.Series,
                                *,
@@ -57,7 +57,7 @@ def confusion_mean_return_pct(pred: pl.Series | npt.NDArray[np.float64],
     open_arr = open_px.to_numpy()
     change_arr = price_change.to_numpy()
 
-    return_pct = np.divide(change_arr * 100.0, open_arr, out=np.full(open_arr.shape, np.nan), where=open_arr != 0)
+    return_pct = np.divide(change_arr, open_arr, out=cast(npt.NDArray[np.float64], np.full(open_arr.shape, np.nan, dtype=np.float64)), where=open_arr != 0) * 100.0
     valid = (
         ~np.isnan(pred_arr) &
         ~np.isnan(actual_arr) &
@@ -152,8 +152,7 @@ def permutation_confusion_metrics(self: Any,
         df['price_change'],
     )
     df = df.filter(eligible).with_columns(
-        pl.col(pred_col).cast(pl.Int64), pl.col(actual_col).cast(pl.Int64),
-        pl.col(x).fill_nan(None),
+        pl.col(pred_col).cast(pl.Int64), pl.col(actual_col).cast(pl.Int64), pl.col(x).fill_nan(None),
     )
 
     q_lo, q_hi = (df[x].quantile(q, interpolation='linear') for q in outlier_quantiles)
@@ -201,8 +200,7 @@ def permutation_confusion_metrics(self: Any,
     actual_pos_rate  = actual_pos_count / n
 
     pred_pos_mean_x   = ((tp['mean'] * TP + fp['mean'] * FP) / pred_pos_count) if pred_pos_count else np.nan
-    median_x = df.filter(pred == 1)[x].median()
-    pred_pos_median_x = float(median_x) if median_x is not None else np.nan
+    pred_pos_median_x = float(value) if (value := df.filter(pred == 1)[x].median()) is not None else np.nan
 
     def _cohen_d(a: npt.NDArray[np.float64], b: npt.NDArray[np.float64]) -> float:
 

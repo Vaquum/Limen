@@ -22,7 +22,7 @@ def captured_metrics(source: object, names: list[str], prefix: str) -> pl.DataFr
     required = [prefix + name for name in names if not name.endswith('_mean_return_pct') and name not in ('avg_win_bps', 'avg_loss_bps', 'cvar_95_pnl_bps')]
     if frame.select(pl.any_horizontal(pl.col(required).is_null() | pl.col(required).cast(pl.Float64, strict=False).is_nan()).any()).item():
         raise ValueError(f'Successful rows lack required captured {prefix} metrics')
-    return frame.select(columns).rename(dict(zip(columns, names, strict=True)))
+    return frame.select(columns).with_columns(pl.col(pl.String, pl.Null).cast(pl.Float64)).rename(dict(zip(columns, names, strict=True)))
 
 
 def _prepare_snapshot_backtest_input(df: pl.DataFrame, *, prediction_kind: Literal['binary', 'directional'] = 'binary') -> pl.DataFrame:

@@ -108,4 +108,4 @@ def experiment_parameter_importance(
         'parameter': columns, 'importance_mean': means, 'importance_std': deviations,
         'baseline_score': baseline, 'n_train': len(train), 'n_evaluation': len(evaluation),
         'n_configurations': n_configurations,
-    }).sort('importance_mean', descending=True, maintain_order=True)
+    }).with_columns(pl.col('n_train', 'n_evaluation', 'n_configurations').cast(pl.Int64)).sort('importance_mean', descending=True, maintain_order=True)

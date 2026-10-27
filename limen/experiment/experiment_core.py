@@ -39,11 +39,12 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.utils._computation_cache import computation_reuse
 from limen.log import ConfusionNotApplicableError
-from limen.log.log import Log
 from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
 from limen.sfd.rule_based._temporal import validate_temporal_conditions
 from limen.yaml.store import canonical_manifest_id
 import limen.experiment._parallel_rounds as _parallel
+
+import limen.log.log as _log_module
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ class UniversalExperimentLoop:
         self.convergence_report: dict[str, object] | None = None
         self._convergence_caught: list[warnings.WarningMessage] = []
         self.param_space: ParamSpace | None = None
-        self._log: Log | None = None
+        self._log: _log_module.Log | None = None
         self.experiment_confusion_metrics: pl.DataFrame | None = None
         self.experiment_backtest_results: pl.DataFrame | None = None
         self.experiment_parameter_correlation: Callable[..., pl.DataFrame] | None = None
@@ -452,7 +453,7 @@ class UniversalExperimentLoop:
 
         cols_to_multilabel = self.experiment_log.select(pl.col(pl.Utf8).exclude('_dropped_features')).columns
 
-        self._log = Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
+        self._log = _log_module.Log(uel_object=self, cols_to_multilabel=cols_to_multilabel)
 
         if self._walk_forward is not None:
             self.experiment_backtest_results = self._log.experiment_backtest_results()

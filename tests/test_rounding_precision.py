@@ -249,7 +249,7 @@ def test_near_integer_recorded_scores_remain_directional(bars):
     classes = np.searchsorted(np.quantile(returns, [1 / 3, 2 / 3]), returns)
     scores = classes + 1 + np.abs(returns) * 1e-6
     frame = pd.DataFrame({'predictions': scores})
-    prepared = _prepare_snapshot_backtest_input(frame, prediction_kind='directional')
+    prepared = _prepare_snapshot_backtest_input(pl.from_pandas(frame), prediction_kind='directional')
     assert (prepared['predictions'] == 1).all()
 
 

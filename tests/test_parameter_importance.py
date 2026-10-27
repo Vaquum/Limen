@@ -57,9 +57,18 @@ def recorded_importance(tmp_path_factory):
 
 
 def _log(rows):
-    frame = pl.DataFrame({name: pl.Series(name, rows[name].to_list(), dtype=pl.Object)
-                         if rows[name].dtype == object else pl.Series(name, rows[name].to_list())
-                         for name in rows.columns})
+    series = []
+    for name in rows.columns:
+        values = rows[name].to_list()
+        if rows[name].dtype == object:
+            if all(isinstance(value, str) or value is None or (isinstance(value, float) and np.isnan(value)) for value in values):
+                values = [None if isinstance(value, float) and np.isnan(value) else value for value in values]
+                series.append(pl.Series(name, values, dtype=pl.String))
+            else:
+                series.append(pl.Series(name, values, dtype=pl.Object))
+        else:
+            series.append(pl.Series(name, values))
+    frame = pl.DataFrame(series)
     return Log(uel_object=SimpleNamespace(experiment_log=frame))
 
 
@@ -224,7 +233,7 @@ def test_importance_read_only(recorded_importance, monkeypatch):
     first = first.with_columns(pl.lit(np.nan).alias('importance_mean'))
     second = log.experiment_parameter_importance(METRIC, parameters=PARAMETERS,
                                                 random_state=7, n_repeats=2)
-    assert np.isfinite(second['importance_mean']).all()
+    assert second['importance_mean'].is_finite().all()
     assert_frame_equal(log._captured_log, original)
     assert {file.relative_to(path): file.read_bytes() for file in path.rglob('*') if file.is_file()} == artifacts
     assert loop._search_strategy.get_state() == search
