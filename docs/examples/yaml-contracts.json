@@ -207,7 +207,7 @@
       "symbol": "configuration"
     },
     "uel.on_round_error": {
-      "sha256": "cdb31af955410e8b8919648ee7bcd22d081ac154102fffbd8e4655fe88b5ae2b",
+      "sha256": "1018a275afbda224d816ff59a0a92f436222f992e3222de1395400f9667af8f4",
       "source": "limen/experiment/_round_errors.py",
       "symbol": "RoundErrorPolicy"
     },
@@ -816,7 +816,7 @@
     "limen/experiment/_required_columns.py": "2cd675b12f7cba92d43866fec12d17d167fb6e91a6efae1f28019f5f5a751945",
     "limen/experiment/_resolve_backtest_config.py": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f",
     "limen/experiment/_resolve_trade_policy.py": "93d17a4cd19476017f250c5970d0d67f93c7a8941050902897b8545f7b970ce1",
-    "limen/experiment/_round_errors.py": "b7445141b30ad50cc983086244134b60de64a6d903d95fe16e98d21f756bdbb1",
+    "limen/experiment/_round_errors.py": "f7be1fbd05694316c8559d0f0d06a7b51716af290ad1d4eb7cb2abb723be1fde",
     "limen/experiment/_shim_fractional_diff.py": "b0fc724b946c4d33ac0998b094c15e3ccc26cf61c883d630a79de3c4d78ff8ac",
     "limen/experiment/_source_contract.py": "915d56e7b9ab835099f8260701e86fa9e0366f1c98b4ae9388841ce0ad928dfa",
     "limen/experiment/_walk_forward_split.py": "485a9605a9ea280d9d2224af0460824f93bfd16e519cfa199a60fb89a4925a15",

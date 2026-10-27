@@ -98,6 +98,12 @@ def admit(host: object, call: Mapping[str, object]) -> None:
     cast(RoundErrorPolicy, vars(host)['_round_error_policy']).admit(host, call)
 
 
+def initialize(host: object, mode: object, limit: object) -> RoundErrorPolicy:
+    policy = RoundErrorPolicy(mode, limit)
+    policy.admit(host, {})
+    return policy
+
+
 def configuration(config: Mapping[str, object]) -> None:
     raw = config.get('uel')
     uel: Mapping[str, object] = cast(Mapping[str, object], raw) if isinstance(raw, Mapping) else {}

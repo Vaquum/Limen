@@ -77,7 +77,6 @@ class UniversalExperimentLoop:
         '''Configure the manifest or custom SFD and optional MSQ persistence.'''
 
         super().__init__()
-        self._round_error_policy = _errors.RoundErrorPolicy(on_round_error, max_round_errors)
 
         if sfd is None:
             raise ValueError('UniversalExperimentLoop sfd is required')
@@ -120,6 +119,7 @@ class UniversalExperimentLoop:
         self.experiment_backtest_results: pl.DataFrame | None = None
         self.experiment_parameter_correlation: Callable[..., pl.DataFrame] | None = None
         self._clear_post_processing_outputs()
+        self._round_error_policy = _errors.initialize(self, on_round_error, max_round_errors)
 
     @property
     def fold_results(self) -> pl.DataFrame:

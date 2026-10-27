@@ -80,6 +80,8 @@ def test_budget_exhaustion_commits_failed_prefix_and_refuses_resume(tmp_path):
     experiment = loop(reference, tmp_path, limit=1)
     with pytest.raises(RuntimeError, match='budget exceeded'):
         run(experiment, count=4)
+    with pytest.raises(ValueError, match='successful'):
+        experiment.save(tmp_path / 'failed.uel')
     assert len(rows(tmp_path)) == 3
     checkpoint = json.loads((tmp_path / 'checkpoint.json').read_text())
     assert checkpoint['metadata']['experiment_round'] == 2
@@ -116,8 +118,8 @@ def test_resume_preserves_failed_occurrences_and_policy(tmp_path):
 def test_record_mode_refuses_unsupported_routes_before_artifacts(tmp_path, options):
     directory = tmp_path / 'unsupported'
     settings = dict(options)
-    experiment = loop(config(), directory, search=settings.pop('search', True))
     with pytest.raises(ValueError, match='ordinary unprotected serial MSQ'):
+        experiment = loop(config(), directory, search=settings.pop('search', True))
         run(experiment, **settings)
     assert not directory.exists()
 
