@@ -180,6 +180,7 @@ def _profile_admission(tmp_path, monkeypatch, kind, failure, binding):
 
 
 @pytest.mark.parametrize(('kind', 'failure'), [('ml', None), ('rule', None), ('ml', 'load'), ('ml', 'model'), ('ml', 'interrupt')])
+@pytest.mark.xdist_group('protected-profile-admission')
 def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failure):
     _profile_admission(tmp_path, monkeypatch, kind, failure, 'explicit')
 
@@ -673,6 +674,7 @@ def _protected_strict_worker(config, snapshot, authority, cwd, occurrence):
 
 
 @pytest.mark.parametrize('cwd_mode', ['outside', 'foreign'])
+@pytest.mark.xdist_group('protected-worker-lifecycle')
 def test_protected_worker_handoff(cwd_mode, tmp_path):
     from concurrent.futures import ProcessPoolExecutor
     from dataclasses import replace
@@ -801,6 +803,7 @@ def _protected_worker_coordinator(root, config, pipe):
 
 
 @pytest.mark.parametrize('active', [True, False])
+@pytest.mark.xdist_group('protected-worker-lifecycle')
 def test_protected_worker_parent_death(active, tmp_path, monkeypatch):
     import os
     import signal
@@ -1410,6 +1413,7 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('case', ['direct_ml', 'direct_rule', 'compiled', 'cli_run', 'profile_ml', 'profile_rule', 'cli_profile', 'factorized_ml', 'factorized_rule', 'workers_outside', 'workers_foreign', 'serial_resume_keep', 'serial_resume_drop', 'parallel_resume_drop', 'cli_resume_drop', 'parallel_folds', 'resumed_folds', 'qualified_fold_refit_and_log', 'dormant_formation', 'active_formation', 'execution_source', 'funding_source', 'useful_extension', 'search_affecting_hook', 'eligible_v1_assessment_nextbar', 'eligible_v1_assessment_threshold'])
+@pytest.mark.xdist_group('protected-recorded-workflows')
 def test_recorded_protected_workflows(case, tmp_path, monkeypatch):
     import numpy as np
     from tests.test_factorize_equivalence import _numeric_equal
