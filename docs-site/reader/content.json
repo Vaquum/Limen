@@ -217,6 +217,11 @@
       "part": "Developer",
       "navigationGroup": "Extension"
     },
+    "docs/Developer/Search-Identity-Compatibility.md": {
+      "route": "/developer/search-identity-compatibility/",
+      "part": "Developer",
+      "navigationGroup": "Extension"
+    },
     "docs/Developer/Writing-Docstrings.md": {
       "route": "/developer/writing-docstrings/",
       "part": "Developer",

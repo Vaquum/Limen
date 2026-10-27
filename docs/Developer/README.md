@@ -26,6 +26,7 @@ Before opening or updating a Limen PR:
 | planning or delivering research, maintenance or private prerequisites | [Constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) | Defines the delivery laws: every PR closes one issue, `feat` work goes through a PRD. |
 | changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
 | updating reducer behavior | [Pruning Strategies](Pruning-Strategies.md) | Defines reducer semantics, YAML shape, testing, and failure modes. |
+| planning a search identity or recovery-format change | [Search Identity Compatibility](Search-Identity-Compatibility.md) | Defines historical-ID preservation and the proof required for a future protocol. |
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
 | adding a new foundational experiment template | [Contributing Foundational SFDs](Contributing-Foundational-SFDs.md) | Covers research expectations, file ownership, and review criteria for foundational SFDs. |
 | preparing a release or checking release automation | [Making a Release](Making-Release.md) | Defines the local evidence required before Limen release publication. |
