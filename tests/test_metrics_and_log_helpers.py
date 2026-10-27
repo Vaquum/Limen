@@ -133,9 +133,9 @@ class _DummyPerfWithoutInverseScaler:
 
 class _DummyConfusionMetrics:
 
-    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+    def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame:
         assert round_id == 0
-        return pd.DataFrame({
+        return pl.DataFrame({
             'predictions': [1, 1, 0, 0, 0],
             'actuals': [1, 0, 0, 1, 0],
             'open': [100.0, 100.0, 100.0, 100.0, 100.0],
@@ -146,9 +146,9 @@ class _DummyConfusionMetrics:
 
 class _DummyConfusionMetricsMissingPriceChange:
 
-    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+    def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame:
         assert round_id == 0
-        return pd.DataFrame({
+        return pl.DataFrame({
             'predictions': [1, 1, 0, 0],
             'actuals': [1, 0, 0, 1],
             'open': [100.0, 100.0, 100.0, 100.0],
@@ -157,9 +157,9 @@ class _DummyConfusionMetricsMissingPriceChange:
 
 class _DummyConfusionMetricsOutlierFiltered:
 
-    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+    def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame:
         assert round_id == 0
-        return pd.DataFrame({
+        return pl.DataFrame({
             'predictions': [1, 0, 0, 0, 0],
             'actuals': [1, 1, 0, 0, 0],
             'open': [100.0, 100.0, 100.0, 100.0, 100.0],
@@ -187,9 +187,9 @@ class _DummyCompletedBarSignal:
             'y_test': np.array([0, 1, 0, 1]),
         }
 
-    def _get_test_data_with_all_cols(self, round_id: int) -> pd.DataFrame:
+    def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
         assert round_id == 0
-        return pd.DataFrame({
+        return pl.DataFrame({
             'open': [100.0, 100.0, 100.0, 100.0],
             'close': [110.0, 90.0, 110.0, 90.0],
         })
@@ -199,9 +199,9 @@ class _DummyRegressionBacktestLog:
 
     round_params: ClassVar[list[dict]] = [{}]
 
-    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+    def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame:
         assert round_id == 0
-        return pd.DataFrame({
+        return pl.DataFrame({
             'predictions': [0.4, -0.2, 0.7],
             'actuals': [0.6, -0.1, 0.2],
             'open': [100.0, 100.0, 100.0],
@@ -243,7 +243,7 @@ def test_permutation_confusion_metrics_adds_mean_return_pct_columns() -> None:
         x='price_change',
         round_id=0,
         outlier_quantiles=(0.0, 1.0),
-    ).iloc[0]
+    ).row(0, named=True)
 
     assert result['tp_x_mean'] == 50.0
     assert result['fp_x_mean'] == 10.0
@@ -283,7 +283,7 @@ def test_permutation_confusion_metrics_keeps_mean_returns_on_unfiltered_rows() -
         x='x_metric',
         round_id=0,
         outlier_quantiles=(0.25, 0.75),
-    ).iloc[0]
+    ).row(0, named=True)
 
     assert result['n_kept'] == 4
     assert np.isnan(result['tp_x_mean'])
@@ -916,7 +916,7 @@ def test_snapshot_backtest_round_directionalizes_regression_predictions() -> Non
 def test_prepare_snapshot_backtest_input_rejects_multiclass() -> None:
     with pytest.raises(ValueError, match='snapshot backtest does not support multiclass'):
         _prepare_snapshot_backtest_input(
-            pd.DataFrame({
+            pl.DataFrame({
                 'predictions': [0, 1, 2],
                 'actuals': [0, 1, 2],
             })
@@ -926,8 +926,8 @@ def test_prepare_snapshot_backtest_input_rejects_multiclass() -> None:
 def test_prepare_snapshot_backtest_input_rejects_non_numeric_logged_values() -> None:
     with pytest.raises(ValueError, match='snapshot backtest received non-numeric prediction values'):
         _prepare_snapshot_backtest_input(
-            pd.DataFrame({
-                'predictions': [1, 'bad', 0],
+            pl.DataFrame({
+                'predictions': ['1', 'bad', '0'],
                 'actuals': [1, 0, 0],
             })
         )

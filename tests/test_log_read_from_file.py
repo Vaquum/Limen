@@ -20,7 +20,7 @@ def _read_log(csv_text: str, *, change_cwd: bool = False):
                 os.chdir(tmpdir_path)
 
             log = Log(file_path=str(input_path))
-            data = log.experiment_log.copy()
+            data = log.experiment_log.clone()
 
         finally:
             if change_cwd:
@@ -43,9 +43,9 @@ def test_read_from_file_removes_duplicate_headers_and_trims_object_columns():
     data, _ = _read_log(csv_text)
 
     assert list(data.columns) == ['recall', 'label', 'count']
-    assert data['recall'].tolist() == [0.1, 0.2, 0.3]
-    assert data['label'].tolist() == ['first', 'second', 'third']
-    assert data['count'].tolist() == [1, 2, 3]
+    assert data['recall'].to_list() == [0.1, 0.2, 0.3]
+    assert data['label'].to_list() == ['first', 'second', 'third']
+    assert data['count'].to_list() == [1, 2, 3]
 
 
 def test_read_from_file_matches_full_header_and_keeps_non_header_recall_rows():
@@ -62,7 +62,7 @@ def test_read_from_file_matches_full_header_and_keeps_non_header_recall_rows():
     data, temp_path = _read_log(csv_text, change_cwd=True)
 
     assert list(data.columns) == ['id', 'label', 'count']
-    assert data['id'].tolist() == ['alpha-1', 'recall-row', 'beta-2']
-    assert data['label'].tolist() == ['first', 'second', 'third']
-    assert data['count'].tolist() == [1, 2, 3]
+    assert data['id'].to_list() == ['alpha-1', 'recall-row', 'beta-2']
+    assert data['label'].to_list() == ['first', 'second', 'third']
+    assert data['count'].to_list() == [1, 2, 3]
     assert not temp_path.exists()

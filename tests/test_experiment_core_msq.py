@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import polars as pl
 
-import pandas as pd
 import pytest
 
 from limen.experiment.checkpoint_manager import CheckpointManager
@@ -808,7 +807,7 @@ def test_truncate_round_data_unit():
 
 def test_experiment_parameter_correlation_keeps_numeric_signal_columns_and_orders_cohorts():
 
-    experiment_log = pd.DataFrame({
+    experiment_log = pl.DataFrame({
         'auc': [0.1, 0.2, 0.3, 0.4, 0.5],
         'param_up': [1, 2, 3, 4, 5],
         'param_down': [5, 4, 3, 2, 1],
@@ -829,34 +828,20 @@ def test_experiment_parameter_correlation_keeps_numeric_signal_columns_and_order
         random_state=0,
     )
 
-    assert corr.index.names == ['cohort_pct', 'feature']
-    assert list(corr.columns) == [
-        'n_rows',
-        'corr',
-        'corr_med',
-        'ci_lo',
-        'ci_hi',
-        'sign_stability',
+    assert corr.columns == [
+        'cohort_pct', 'feature', 'n_rows', 'corr', 'corr_med', 'ci_lo', 'ci_hi', 'sign_stability',
     ]
-    assert set(corr.xs(100, level='cohort_pct').index.tolist()) == {
-        'param_down',
-        'param_up',
-    }
-    assert 'constant' not in corr.index.get_level_values('feature')
-    assert 'label' not in corr.index.get_level_values('feature')
-    assert 'id' not in corr.index.get_level_values('feature')
-    assert '_id' not in corr.index.get_level_values('feature')
-    assert '_round_index' not in corr.index.get_level_values('feature')
-    assert 'execution_time' not in corr.index.get_level_values('feature')
-    assert corr.loc[(100, 'param_up'), 'corr_med'] == pytest.approx(1.0)
-    assert corr.loc[(100, 'param_down'), 'corr_med'] == pytest.approx(-1.0)
-    assert corr.loc[(60, 'param_up'), 'n_rows'] == 3
-    assert corr['sign_stability'].between(0.0, 1.0).all()
+    assert set(corr.filter(pl.col('cohort_pct') == 100)['feature']) == {'param_down', 'param_up'}
+    assert not set(corr['feature']) & {'constant', 'label', 'id', '_id', '_round_index', 'execution_time'}
+    assert corr.filter((pl.col('cohort_pct') == 100) & (pl.col('feature') == 'param_up'))['corr_med'][0] == pytest.approx(1.0)
+    assert corr.filter((pl.col('cohort_pct') == 100) & (pl.col('feature') == 'param_down'))['corr_med'][0] == pytest.approx(-1.0)
+    assert corr.filter((pl.col('cohort_pct') == 60) & (pl.col('feature') == 'param_up'))['n_rows'][0] == 3
+    assert corr['sign_stability'].is_between(0.0, 1.0).all()
 
 
 def test_experiment_parameter_correlation_validates_metric_and_sort_key_presence():
 
-    experiment_log = pd.DataFrame({
+    experiment_log = pl.DataFrame({
         'auc': [0.1, 0.2, 0.3],
         'param': [1, 2, 3],
     })
@@ -871,7 +856,7 @@ def test_experiment_parameter_correlation_validates_metric_and_sort_key_presence
 
 def test_experiment_parameter_correlation_requires_numeric_features_after_cleaning():
 
-    experiment_log = pd.DataFrame({
+    experiment_log = pl.DataFrame({
         'auc': [0.1, 0.2],
         'constant': [1, 1],
         'label': ['low', 'high'],
@@ -891,7 +876,7 @@ def test_experiment_parameter_correlation_requires_numeric_features_after_cleani
 
 def test_experiment_parameter_correlation_rejects_logs_without_metric_rows():
 
-    experiment_log = pd.DataFrame({
+    experiment_log = pl.DataFrame({
         'auc': [None, None],
         'param': [1, 2],
     })

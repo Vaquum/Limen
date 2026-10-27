@@ -1047,7 +1047,6 @@ numpy==2.2.6 \
     #   -c requirements/constraints.txt
     #   lightgbm
     #   pandas
-    #   pandas-stubs
     #   patsy
     #   scikit-learn
     #   scipy
@@ -1230,14 +1229,11 @@ pandas==2.3.3 \
     --hash=sha256:f8bfc0e12dc78f777f323f55c58649591b2cd0c43534e8355c51d3fede5f4dee
     # via
     #   -c requirements/constraints.txt
+    #   -r requirements/ci/dev-env.in
     #   statsmodels
     #   tabpfn
     #   tabpfn-common-utils
     #   vaquum-limen
-pandas-stubs==2.3.3.260113 \
-    --hash=sha256:076e3724bcaa73de78932b012ec64b3010463d377fa63116f4e6850643d93800 \
-    --hash=sha256:ec070b5c576e1badf12544ae50385872f0631fc35d99d00dc598c2954ec564d3
-    # via vaquum-limen
 patsy==1.0.2 \
     --hash=sha256:37bfddbc58fcf0362febb5f54f10743f8b21dd2aa73dec7e7ef59d1b02ae668a \
     --hash=sha256:cdc995455f6233e90e22de72c37fcadb344e7586fb83f06696f54d92f8ce74c0
@@ -2232,10 +2228,6 @@ twine==6.2.0 \
     --hash=sha256:418ebf08ccda9a8caaebe414433b0ba5e25eb5e4a927667122fbe8f829f985d8 \
     --hash=sha256:e5ed0d2fd70c9959770dce51c8f39c8945c574e18173a7b81802dab51b4b75cf
     # via vaquum-limen
-types-pytz==2026.2.0.20260518 \
-    --hash=sha256:3a12eaa38f476bd650902a9c9bb442f03f3c7dee2be5c5848bce61bd708d205a \
-    --hash=sha256:e5d254329e9c4e91f0781b22c43a4bb2d10bb044d97b24c4b05d45567b0eae16
-    # via pandas-stubs
 typing-extensions==4.16.0 \
     --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8 \
     --hash=sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5

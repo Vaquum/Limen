@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
-import pandas as pd
 import polars as pl
 from tqdm import tqdm
 
@@ -117,9 +116,9 @@ class UniversalExperimentLoop:
         self._convergence_caught: list[warnings.WarningMessage] = []
         self.param_space: ParamSpace | None = None
         self._log: Log | None = None
-        self.experiment_confusion_metrics: pd.DataFrame | None = None
-        self.experiment_backtest_results: pd.DataFrame | None = None
-        self.experiment_parameter_correlation: Callable[..., pd.DataFrame] | None = None
+        self.experiment_confusion_metrics: pl.DataFrame | None = None
+        self.experiment_backtest_results: pl.DataFrame | None = None
+        self.experiment_parameter_correlation: Callable[..., pl.DataFrame] | None = None
         self._clear_post_processing_outputs()
 
     @property

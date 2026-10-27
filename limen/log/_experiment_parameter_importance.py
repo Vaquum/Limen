@@ -7,16 +7,16 @@ from typing import Protocol, cast
 
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
+import polars as pl
 
 
 class _Regressor(Protocol):
-    def fit(self, x: pd.DataFrame, y: pd.Series) -> object: ...
-    def score(self, x: pd.DataFrame, y: pd.Series) -> float: ...
+    def fit(self, x: npt.ArrayLike, y: npt.ArrayLike) -> object: ...
+    def score(self, x: npt.ArrayLike, y: npt.ArrayLike) -> float: ...
 
 
 class _Splitter(Protocol):
-    def split(self, x: pd.DataFrame, *, groups: npt.ArrayLike) -> Iterator[
+    def split(self, x: npt.ArrayLike, *, groups: npt.ArrayLike) -> Iterator[
         tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]]
     ]: ...
 
@@ -32,7 +32,7 @@ def experiment_parameter_importance(
     parameters: Sequence[str],
     random_state: int = 0,
     n_repeats: int = 10,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     '''Measure held-out surrogate R² loss when each recorded parameter is shuffled.'''
     if isinstance(parameters, (str, bytes)) or not parameters:
         raise ValueError('Parameter importance requires explicit parameter columns')
@@ -45,32 +45,34 @@ def experiment_parameter_importance(
     if type(n_repeats) is not int or n_repeats < _MIN_REPEATS:
         raise ValueError('n_repeats must be an integer of at least 2')
 
-    captured = cast(pd.DataFrame, vars(self)['_captured_log'])
-    if (type(metric) is not str or not metric or not captured.columns.is_unique
-            or any(name not in captured for name in [*columns, metric])):
+    captured = cast(pl.DataFrame, vars(self)['_captured_log'])
+    if (type(metric) is not str or not metric or len(captured.columns) != len(set(captured.columns))
+            or any(name not in captured.columns for name in [*columns, metric])):
         raise ValueError('Parameter importance requires existing, unambiguous columns')
-    if 'strict_mode_error' in captured:
-        captured = captured.loc[captured['strict_mode_error'].isna()
-                                | captured['strict_mode_error'].eq('')]
-    frame = captured.loc[:, columns].copy()
-    categorical: list[str] = []
-    for name in columns:
-        values = frame[name]
-        if values.isna().any():
+    if 'strict_mode_error' in captured.columns:
+        captured = captured.filter(pl.col('strict_mode_error').is_null() | (pl.col('strict_mode_error') == ''))
+    frame = captured.select(columns)
+    categorical: list[int] = []
+    for index, name in enumerate(columns):
+        values = frame[name].to_list()
+        if any(value is None for value in values):
             raise ValueError(f'Parameter {name!r} contains missing values')
         if all(isinstance(value, (Real, bool, np.bool_)) for value in values):
-            if not np.isfinite(values.to_numpy(dtype=float)).all():
+            if not np.isfinite(np.asarray(values, dtype=float)).all():
                 raise ValueError(f'Parameter {name!r} must be finite')
         elif all(isinstance(value, str) for value in values):
-            categorical.append(name)
+            categorical.append(index)
         else:
             raise ValueError(f'Parameter {name!r} must contain numeric, boolean or text scalars')
     target = captured[metric]
     if (not all(isinstance(value, (Real, bool, np.bool_)) for value in target)
-            or not np.isfinite(target.to_numpy(dtype=float)).all()):
+            or not np.isfinite(np.asarray(target.to_list(), dtype=float)).all()):
         raise ValueError('Successful rounds require a finite numeric metric')
 
-    groups = frame.groupby(columns, sort=False, observed=True).ngroup().to_numpy()
+    group_ids: dict[tuple[object, ...], int] = {}
+    groups = np.asarray([group_ids.setdefault(row, len(group_ids)) for row in frame.iter_rows()], dtype=np.intp)
+    design = frame.to_numpy()
+    target_values = target.to_numpy()
     n_configurations = len(np.unique(groups))
     if n_configurations < _MIN_CONFIGURATIONS:
         raise ValueError('Parameter importance requires at least 20 distinct configurations')
@@ -83,10 +85,10 @@ def experiment_parameter_importance(
     permutation_importance = cast(Callable[..., Mapping[str, npt.NDArray[np.float64]]],
                                   vars(import_module('sklearn.inspection'))['permutation_importance'])
     splitter = cast(_Splitter, GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=random_state))
-    train, evaluation = next(splitter.split(frame, groups=groups))
-    x_train, x_evaluation = frame.iloc[train], frame.iloc[evaluation]
-    y_train, y_evaluation = target.iloc[train], target.iloc[evaluation]
-    if y_evaluation.nunique() == 1:
+    train, evaluation = next(splitter.split(design, groups=groups))
+    x_train, x_evaluation = design[train], design[evaluation]
+    y_train, y_evaluation = target_values[train], target_values[evaluation]
+    if len(np.unique(y_evaluation)) == 1:
         raise ValueError('Held-out metric must vary for R² parameter importance')
     encoder = ColumnTransformer(
         [('categorical', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical)],
@@ -102,8 +104,8 @@ def experiment_parameter_importance(
     deviations = np.asarray(result['importances_std'], dtype=float)
     if not np.isfinite(baseline) or not np.isfinite(means).all() or not np.isfinite(deviations).all():
         raise ValueError('Parameter importance produced nonfinite scores')
-    return pd.DataFrame({
+    return pl.DataFrame({
         'parameter': columns, 'importance_mean': means, 'importance_std': deviations,
         'baseline_score': baseline, 'n_train': len(train), 'n_evaluation': len(evaluation),
         'n_configurations': n_configurations,
-    }).sort_values('importance_mean', ascending=False, kind='stable').reset_index(drop=True)
+    }).sort('importance_mean', descending=True, maintain_order=True)

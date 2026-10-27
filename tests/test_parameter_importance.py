@@ -6,8 +6,9 @@ from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
+import polars as pl
 import pytest
-from pandas.testing import assert_frame_equal
+from tests.utils.assert_table_equal import assert_table_equal as assert_frame_equal
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
@@ -56,10 +57,15 @@ def recorded_importance(tmp_path_factory):
 
 
 def _log(rows):
-    return Log(uel_object=SimpleNamespace(experiment_log=rows))
+    frame = pl.DataFrame({name: pl.Series(name, rows[name].to_list(), dtype=pl.Object)
+                         if rows[name].dtype == object else pl.Series(name, rows[name].to_list())
+                         for name in rows.columns})
+    return Log(uel_object=SimpleNamespace(experiment_log=frame))
 
 
 def _reference(rows, *, seed=7, repeats=3):
+    if isinstance(rows, pl.DataFrame):
+        rows = rows.to_pandas()
     frame = rows[PARAMETERS]
     groups = frame.groupby(PARAMETERS, sort=False, observed=True).ngroup().to_numpy()
     train, evaluation = next(GroupShuffleSplit(n_splits=1, test_size=0.25,
@@ -95,17 +101,17 @@ def test_recorded_parameter_importance(recorded_importance):
     assert list(live.columns) == COLUMNS
     assert_frame_equal(live, expected, check_exact=False, rtol=1e-12, atol=1e-12)
     assert_frame_equal(captured, saved_expected, check_exact=False, rtol=1e-12, atol=1e-12)
-    assert live['n_train'].eq(len(train)).all() and live['n_evaluation'].eq(len(evaluation)).all()
-    constants = live.set_index('parameter').loc[['force_row_wise', 'random_state']]
-    assert constants[['importance_mean', 'importance_std']].eq(0.0).all().all()
-    zero_names = live.loc[live['importance_mean'].eq(0.0), 'parameter'].to_list()
+    assert (live['n_train'] == len(train)).all() and (live['n_evaluation'] == len(evaluation)).all()
+    constants = live.filter(pl.col('parameter').is_in(['force_row_wise', 'random_state']))
+    assert (constants.select('importance_mean', 'importance_std').to_numpy() == 0.0).all()
+    zero_names = live.filter(pl.col('importance_mean') == 0.0)['parameter'].to_list()
     assert zero_names == [name for name in PARAMETERS if name in zero_names]
     assert np.isfinite(live[['importance_mean', 'importance_std', 'baseline_score']]).all().all()
     numeric_parameters = ['lookback', 'fee', 'n_estimators']
     numeric = Log(uel_object=loop).experiment_parameter_importance(
         METRIC, parameters=numeric_parameters, n_repeats=2)
     assert set(numeric['parameter']) == set(numeric_parameters)
-    assert numeric['n_configurations'].eq(32).all()
+    assert (numeric['n_configurations'] == 32).all()
 
 
 def test_invalid_importance_inputs(recorded_importance):
@@ -193,7 +199,7 @@ def test_importance_grouping_and_encoding(recorded_importance, monkeypatch):
     assert_frame_equal(actual, expected, check_exact=False, rtol=1e-12, atol=1e-12)
     np.testing.assert_array_equal(train, reference_train)
     np.testing.assert_array_equal(evaluation, reference_evaluation)
-    assert actual['n_configurations'].eq(33).all()
+    assert (actual['n_configurations'] == 33).all()
     encoder = pipelines[0].named_steps['columntransformer'].named_transformers_['categorical']
     assert encoder.categories_[0].tolist() == ['gbdt']
     estimator = pipelines[0].named_steps['randomforestregressor']
@@ -203,7 +209,7 @@ def test_importance_grouping_and_encoding(recorded_importance, monkeypatch):
 def test_importance_read_only(recorded_importance, monkeypatch):
     loop, path, _ = recorded_importance
     log = Log(uel_object=loop)
-    original = log._captured_log.copy(deep=True)
+    original = log._captured_log.clone()
     artifacts = {file.relative_to(path): file.read_bytes() for file in path.rglob('*') if file.is_file()}
     search = copy.deepcopy(loop._search_strategy.get_state())
 
@@ -212,10 +218,10 @@ def test_importance_read_only(recorded_importance, monkeypatch):
 
     monkeypatch.setattr(MLManifest, 'prepare_data', forbidden)
     monkeypatch.setattr(MLManifest, 'run_model', forbidden)
-    log.experiment_log = pd.DataFrame()
+    log.experiment_log = pl.DataFrame()
     first = log.experiment_parameter_importance(METRIC, parameters=PARAMETERS,
                                                random_state=7, n_repeats=2)
-    first.loc[:, 'importance_mean'] = np.nan
+    first = first.with_columns(pl.lit(np.nan).alias('importance_mean'))
     second = log.experiment_parameter_importance(METRIC, parameters=PARAMETERS,
                                                 random_state=7, n_repeats=2)
     assert np.isfinite(second['importance_mean']).all()

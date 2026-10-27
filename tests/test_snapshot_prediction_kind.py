@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
+from polars.testing import assert_frame_equal
 
 from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
 from limen.log._snapshot_backtest_round import snapshot_backtest_round
@@ -58,7 +59,7 @@ def recorded_frames():
     labels = observed['no_of_trades']
     assert labels.nunique() > 2 and (labels >= 0).all()
     decisions = np.asarray(outputs['_preds'])[:len(observed)]
-    return {
+    frames = {
         'binary': binary,
         'probabilities': pd.DataFrame({'predictions': probabilities}),
         'directional': pd.DataFrame({'predictions': differences}),
@@ -67,20 +68,21 @@ def recorded_frames():
         'multiclass_predictions': pd.DataFrame({'predictions': labels}),
         'multiclass_actuals': pd.DataFrame({'predictions': decisions, 'actuals': labels}),
     }
+    return {name: pl.from_pandas(frame) for name, frame in frames.items()}
 
 
 @pytest.mark.parametrize('prediction_kind', (None, 'binary', 'directional'))
 @pytest.mark.parametrize('as_float', (False, True))
 def test_recorded_binary_predictions_remain_unchanged(recorded_frames, prediction_kind, as_float):
-    frame = recorded_frames['binary'].copy()
+    frame = recorded_frames['binary'].clone()
     if as_float:
-        frame['predictions'] = frame['predictions'].astype(float)
-    before = frame.copy(deep=True)
+        frame = frame.with_columns(pl.col('predictions').cast(pl.Float64))
+    before = frame.clone()
     kwargs = {} if prediction_kind is None else {'prediction_kind': prediction_kind}
     result = _prepare_snapshot_backtest_input(frame, **kwargs)
     assert result is not frame
-    pd.testing.assert_frame_equal(result, before)
-    pd.testing.assert_frame_equal(frame, before)
+    assert_frame_equal(result, before)
+    assert_frame_equal(frame, before)
 
 
 @pytest.mark.parametrize('prediction_kind', (None, 'binary'))
@@ -96,12 +98,12 @@ def test_default_and_binary_reject_recorded_nonbinary_predictions(recorded_frame
 @pytest.mark.parametrize('source', ('probabilities', 'directional'))
 def test_explicit_directional_preserves_sign_semantics(recorded_frames, source):
     frame = recorded_frames[source]
-    before = frame.copy(deep=True)
+    before = frame.clone()
     result = _prepare_snapshot_backtest_input(frame, prediction_kind='directional')
-    expected = before.copy()
-    expected['predictions'] = (before['predictions'] > 0).astype(int)
-    pd.testing.assert_frame_equal(result, expected)
-    pd.testing.assert_frame_equal(frame, before)
+    expected = before.clone()
+    expected = before.with_columns((pl.col('predictions') > 0).cast(pl.Int64))
+    assert_frame_equal(result, expected)
+    assert_frame_equal(frame, before)
 
 
 @pytest.mark.parametrize('prediction_kind', ('probability', None, 0))
