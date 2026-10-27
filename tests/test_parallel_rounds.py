@@ -422,6 +422,8 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
     yaml_path = tmp_path / 'campaign.yaml'
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
+        from limen.experiment._round_errors import RoundErrorPolicy
+        loop_factory.return_value._round_error_policy = RoundErrorPolicy()
         loop_factory.return_value.interrupted = False
         assert run_experiment(yaml_path, results_base=tmp_path, progress_bar=False, workers=2)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 2
@@ -429,6 +431,7 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
     config['uel']['output_path'] = 'yaml'
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
+        loop_factory.return_value._round_error_policy = RoundErrorPolicy()
         loop_factory.return_value.interrupted = False
         assert run_experiment(yaml_path, results_base=tmp_path, progress_bar=False)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 4

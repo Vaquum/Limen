@@ -61,6 +61,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
             feedback_interval=feedback_interval,
             checkpoint_interval=checkpoint_interval,
             yaml_reference=yaml_reference,
+            on_round_error=metadata.get('round_error_policy', {}).get('on_round_error', 'abort'), max_round_errors=metadata.get('round_error_policy', {}).get('max_round_errors'),
         )
         uel.run(
             experiment_name=experiment_name,

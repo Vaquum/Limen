@@ -12,6 +12,7 @@ from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.commands._results_dir import admit_output
 from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
+from limen.experiment._round_errors import admit
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
@@ -62,20 +63,19 @@ def run_experiment(yaml_path: Path,
             pruning_strategies = build_pruning_strategies(yaml_dict)
             compiled = CompiledSFD(yaml_dict, project_root=yaml_path.parent)
             uel = UniversalExperimentLoop(
-                sfd=compiled,
-                search_strategy=search_strategy,
-                pruning_strategies=pruning_strategies,
-                experiment_dir=results_dir,
-                test_mode=test_mode,
-                feedback_interval=feedback_interval,
+                sfd=compiled, search_strategy=search_strategy,
+                pruning_strategies=pruning_strategies, experiment_dir=results_dir,
+                test_mode=test_mode, feedback_interval=feedback_interval,
                 checkpoint_interval=checkpoint_interval,
                 yaml_reference=dict(yaml_dict),
+                on_round_error=uel_cfg.get('on_round_error', 'abort'), max_round_errors=uel_cfg.get('max_round_errors'),
             )
             from limen.experiment._holdout_research import reject_modes
             reject_modes(uel.manifest)
             uel.check_parallel_admission(effective_workers, prep_each_round,
                                          factorize=uel_cfg.get('factorize', False))
             uel.check_fresh_directory()
+            admit(uel, {'workers': effective_workers, 'factorize': uel_cfg.get('factorize', False)})
         except Exception as exc:  # noqa: BLE001
             click.secho(f'  ✗ Failed to construct experiment: {exc}', fg='red')
             return False

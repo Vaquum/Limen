@@ -484,6 +484,7 @@
   "limen/experiment/param_search/_grid_permutation.py": 100,
   "limen/experiment/_grid_resume.py": 60,
   "limen/experiment/_serial_resume.py": 60,
+  "limen/experiment/_round_errors.py": 150,
   "limen/experiment/_uel_snapshot.py": 100,
   "limen/log/_experiment_parameter_importance.py": 110,
   "limen/features/common_strategy_positions.py": 50,

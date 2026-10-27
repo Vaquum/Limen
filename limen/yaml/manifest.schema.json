@@ -3,7 +3,7 @@
   "title": "Limen experiment manifest",
   "description": "Portable structure only. Native Limen admission owns executable references, parameter identity, data evidence and scientific compatibility.",
   "x-limen-package-version": "5.46.2",
-  "x-limen-contract-inventory-sha256": "24068bc48d9f92f8e22f56b1b4b503a78f29721e252c57e75289a38a0704da0a",
+  "x-limen-contract-inventory-sha256": "87e4bd3156c785c7b746deaa3421809b04e06854adc3e171f9757fabc4992326",
   "type": "object",
   "properties": {
     "schema_version": {
@@ -941,6 +941,19 @@
     "uel": {
       "type": "object",
       "properties": {
+        "on_round_error": {
+          "enum": [
+            "abort",
+            "record"
+          ]
+        },
+        "max_round_errors": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
         "n_permutations": {
           "type": "integer",
           "minimum": 1
@@ -1013,6 +1026,43 @@
       "additionalProperties": false,
       "required": [
         "n_permutations"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "on_round_error": {
+                "const": "record"
+              }
+            },
+            "required": [
+              "on_round_error"
+            ]
+          },
+          "then": {
+            "required": [
+              "max_round_errors"
+            ],
+            "properties": {
+              "max_round_errors": {
+                "type": "integer"
+              },
+              "workers": {
+                "const": 1
+              },
+              "factorize": {
+                "const": false
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "max_round_errors": {
+                "const": null
+              }
+            }
+          }
+        }
       ]
     },
     "assessment": {

@@ -722,10 +722,10 @@
           "Manifest": [
             "compiled"
           ],
-          "RuleBasedManifest": [
+          "ReuseContract": [
             "compiled"
           ],
-          "ReuseContract": [
+          "RuleBasedManifest": [
             "compiled"
           ],
           "declare_reuse": [
@@ -1027,6 +1027,25 @@
           "wick_proportion",
           "window_return_regime",
           "yang_zhang_volatility"
+        ],
+        "reference": "limen/features/README.md"
+      },
+      "limen.features.classify_market_regime": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/features/classify_market_regime.py",
+        "entry_point": "limen.features.classify_market_regime",
+        "names": [
+          "MarketRegimeClassifier",
+          "RegimeConfig",
+          "classify_market_regime"
         ],
         "reference": "limen/features/README.md"
       },
@@ -1821,7 +1840,7 @@
         ],
         "reference": "limen/yaml/README.md"
       },
-      "limen.features.classify_market_regime": {
+      "limen.data.bars.adaptive_bars": {
         "interfaces": [
           "python",
           "compiled"
@@ -1831,14 +1850,13 @@
           "compiled/bars"
         ],
         "proof": "public-signature-inventory",
-        "source": "limen/features/classify_market_regime.py",
-        "entry_point": "limen.features.classify_market_regime",
+        "source": "limen/data/bars/adaptive_bars.py",
+        "entry_point": "limen.data.bars.adaptive_bars",
         "names": [
-          "MarketRegimeClassifier",
-          "RegimeConfig",
-          "classify_market_regime"
+          "imbalance_bars",
+          "run_bars"
         ],
-        "reference": "limen/features/README.md"
+        "reference": "limen/data/bars/README.md"
       },
       "limen.data.utils.lookback_window": {
         "interfaces": [
@@ -1873,24 +1891,6 @@
           "sample_regime_blocks"
         ],
         "reference": "limen/data/utils/README.md"
-      },
-      "limen.data.bars.adaptive_bars": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/bars",
-          "compiled/bars"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/data/bars/adaptive_bars.py",
-        "entry_point": "limen.data.bars.adaptive_bars",
-        "names": [
-          "imbalance_bars",
-          "run_bars"
-        ],
-        "reference": "limen/data/bars/README.md"
       }
     },
     "registries": {
@@ -2031,6 +2031,15 @@
           "reference_architecture",
           "type"
         ],
+        "MANIFEST_OPTIONAL_SHARED": [
+          "allocation",
+          "backtest",
+          "indicators",
+          "objective",
+          "required_columns",
+          "split_dates",
+          "split_walk_forward"
+        ],
         "ML_MANIFEST_REQUIRED": [
           "target"
         ],
@@ -2157,6 +2166,8 @@
           "checkpoint_interval",
           "factorize",
           "feedback_interval",
+          "max_round_errors",
+          "on_round_error",
           "output_format",
           "output_path",
           "prep_each_round",
@@ -2199,15 +2210,6 @@
         ],
         "HOLDOUT_OPTIONAL": [
           "evaluation_target"
-        ],
-        "MANIFEST_OPTIONAL_SHARED": [
-          "allocation",
-          "backtest",
-          "indicators",
-          "objective",
-          "required_columns",
-          "split_dates",
-          "split_walk_forward"
         ]
       }
     }

@@ -7,6 +7,8 @@ from pathlib import Path
 # Open parameter mappings delegate to the named callable's argument contract.
 NESTED = {
     'uel': ('limen/yaml/rules.py', 'UelSpec'),
+    'uel.on_round_error': ('limen/experiment/_round_errors.py', 'RoundErrorPolicy'),
+    'uel.max_round_errors': ('limen/experiment/_round_errors.py', 'configuration'),
     'metadata': ('limen/yaml/_metadata_spec.py', 'check_metadata'),
     'sfd.manifest.required_columns': ('limen/experiment/_required_columns.py', 'column_issue'),
     'schema_version': ('limen/yaml/_schema_version.py', 'schema_errors'),
@@ -36,6 +38,7 @@ NESTED = {
 # Whole validation modules bind helpers, constants and field sets omitted by an
 # entry-point AST hash. Callable-specific execution remains native authority.
 _DELEGATED = (
+    'limen/experiment/_round_errors.py',
     'limen/_parameter_identity.py', 'limen/experiment/_required_columns.py',
     'limen/experiment/_walk_forward_split.py', 'limen/experiment/_resolve_trade_policy.py',
     'limen/experiment/_resolve_backtest_config.py', 'limen/experiment/_allocation.py',
