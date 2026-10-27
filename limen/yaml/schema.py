@@ -65,8 +65,7 @@ CALIBRATION_FUNC_OPTIONAL = {'params'}
 
 UEL_REQUIRED = {'n_permutations'}
 UEL_OPTIONAL = {
-    'on_round_error', 'max_round_errors',
-    'workers', 'record_execution',
+    'on_round_error', 'max_round_errors', 'workers', 'record_execution',
     'record_model_outputs', 'recording',
     'factorize',
     'search_strategy',

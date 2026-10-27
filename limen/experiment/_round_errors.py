@@ -1,19 +1,22 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Mapping
 import csv
 from functools import wraps
 import inspect
 import json
-import logging
 from pathlib import Path
-from typing import Concatenate, ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
 
 from limen.experiment._fold_fingerprint import FoldEvidenceError
 from limen.experiment._holdout_history import HoldoutEvidenceError
 from limen.experiment._round_storage import RoundStorageError
 from limen.experiment.errors import StrictModeError
 
+if TYPE_CHECKING:
+    from limen.yaml.errors import YAMLError
+
 __all__: list[str] = []
-logger = logging.getLogger(__name__)
 _P = ParamSpec('_P')
 _Host = TypeVar('_Host')
 _Result = TypeVar('_Result')
@@ -21,6 +24,7 @@ _Result = TypeVar('_Result')
 
 class RoundErrorPolicy:
     def __init__(self, mode: object = 'abort', limit: object = None) -> None:
+        super().__init__()
         if not isinstance(mode, str) or mode not in ('abort', 'record'):
             raise ValueError('on_round_error must be abort or record')
         if mode == 'record' and (not isinstance(limit, int) or isinstance(limit, bool) or limit < 1):
@@ -82,7 +86,6 @@ class RoundErrorPolicy:
             if self.failures > cast(int, self.limit):
                 vars(host)['_shutdown_requested'] = True
                 self._terminal = error
-        logger.error('Round %d failed: %s: %s', index, type(error).__name__, error)
         message = str(error) or type(error).__name__
         return {'strict_mode_error': f'{type(error).__name__}: {message}' if self.mode == 'record' else message}
 
@@ -97,13 +100,22 @@ def admit(host: object, call: Mapping[str, object]) -> None:
 
 def configuration(config: Mapping[str, object]) -> None:
     raw = config.get('uel')
-    uel = cast(Mapping[str, object], raw) if isinstance(raw, Mapping) else {}
+    uel: Mapping[str, object] = cast(Mapping[str, object], raw) if isinstance(raw, Mapping) else {}
     raw_sfd = config.get('sfd')
-    sfd = cast(Mapping[str, object], raw_sfd) if isinstance(raw_sfd, Mapping) else {}
+    sfd: Mapping[str, object] = cast(Mapping[str, object], raw_sfd) if isinstance(raw_sfd, Mapping) else {}
     raw_manifest = sfd.get('manifest')
-    manifest = cast(Mapping[str, object], raw_manifest) if isinstance(raw_manifest, Mapping) else {}
+    manifest: Mapping[str, object] = cast(Mapping[str, object], raw_manifest) if isinstance(raw_manifest, Mapping) else {}
     policy = RoundErrorPolicy(uel.get('on_round_error', 'abort'), uel.get('max_round_errors'))
     policy.modes(uel.get('workers', 1), search=True, factorize=uel.get('factorize'), walk_forward=manifest.get('split_walk_forward'))
+
+
+def yaml_errors(config: Mapping[str, object]) -> list[YAMLError]:
+    from limen.yaml.errors import YAMLError
+    try:
+        configuration(config)
+    except ValueError as error:
+        return [YAMLError(message=str(error), path='uel')]
+    return []
 
 
 def guarded(func: Callable[Concatenate[_Host, _P], _Result]) -> Callable[Concatenate[_Host, _P], _Result]:

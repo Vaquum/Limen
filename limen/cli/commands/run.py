@@ -63,12 +63,9 @@ def run_experiment(yaml_path: Path,
             pruning_strategies = build_pruning_strategies(yaml_dict)
             compiled = CompiledSFD(yaml_dict, project_root=yaml_path.parent)
             uel = UniversalExperimentLoop(
-                sfd=compiled,
-                search_strategy=search_strategy,
-                pruning_strategies=pruning_strategies,
-                experiment_dir=results_dir,
-                test_mode=test_mode,
-                feedback_interval=feedback_interval,
+                sfd=compiled, search_strategy=search_strategy,
+                pruning_strategies=pruning_strategies, experiment_dir=results_dir,
+                test_mode=test_mode, feedback_interval=feedback_interval,
                 checkpoint_interval=checkpoint_interval,
                 yaml_reference=dict(yaml_dict),
                 on_round_error=uel_cfg.get('on_round_error', 'abort'), max_round_errors=uel_cfg.get('max_round_errors'),

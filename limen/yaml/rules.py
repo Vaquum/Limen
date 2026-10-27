@@ -1135,11 +1135,8 @@ class UelSpec:
               _warnings: list[YAMLError]) -> None:
 
         uel: dict[str, Any] = yaml_dict.get('uel') or {}
-        from limen.experiment._round_errors import configuration
-        try:
-            configuration(yaml_dict)
-        except ValueError as exc:
-            errors.append(YAMLError(message=str(exc), path='uel'))
+        from limen.experiment._round_errors import yaml_errors
+        errors.extend(yaml_errors(yaml_dict))
         if 'n_permutations' in uel:
             value = uel['n_permutations']
             if not isinstance(value, int) or isinstance(value, (bool, ScalarBoolean)):

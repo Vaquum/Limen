@@ -3,7 +3,7 @@ import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import limen.experiment._result_fields as _fields
-import limen.experiment._round_errors as _round_errors
+import limen.experiment._round_errors as _errors
 import csv
 import importlib.metadata
 import json
@@ -76,7 +76,7 @@ class UniversalExperimentLoop:
         '''Configure the manifest or custom SFD and optional MSQ persistence.'''
 
         super().__init__()
-        self._round_error_policy = _round_errors.RoundErrorPolicy(on_round_error, max_round_errors)
+        self._round_error_policy = _errors.RoundErrorPolicy(on_round_error, max_round_errors)
 
         if sfd is None:
             raise ValueError('UniversalExperimentLoop sfd is required')
@@ -133,7 +133,7 @@ class UniversalExperimentLoop:
         return self._shutdown_requested
 
     @_holdout.run_guard
-    @_round_errors.guarded
+    @_errors.guarded
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
             context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
@@ -636,6 +636,7 @@ class UniversalExperimentLoop:
                         )
                 round_succeeded = True
             except Exception as exc:
+                logger.exception('Round %d failed', current_round)
                 round_results = self._round_error_policy.failure(self, exc, current_round)
             except KeyboardInterrupt:
                 if self._shutdown_requested:
@@ -1028,11 +1029,10 @@ class UniversalExperimentLoop:
             )
 
         metadata: dict[str, object] = _parallel.worker_metadata(self._workers, {
-            'sfd_module': self._sfd_module_name,
+            'sfd_module': self._sfd_module_name, **self._round_error_policy.metadata,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(), 'round_storage': _storage.FORMAT,
         }, context_parameter_keys=context_parameter_keys)
-        metadata.update(self._round_error_policy.metadata)
         if self._record_execution:
             metadata['record_execution'] = True
         if self._record_model_outputs:

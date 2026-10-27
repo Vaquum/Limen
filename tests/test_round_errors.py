@@ -137,8 +137,8 @@ def test_integrity_errors_are_not_candidate_failures(tmp_path):
     assert len(rows(tmp_path)) == 1
 
 
-@pytest.mark.parametrize('values', [dict(on_round_error='skip'), dict(on_round_error=True), dict(max_round_errors=True),
-                                   dict(max_round_errors=0), dict(max_round_errors=None), dict(workers=2), dict(factorize=True)])
+@pytest.mark.parametrize('values', [{'on_round_error': 'skip'}, {'on_round_error': True}, {'max_round_errors': True},
+                                   {'max_round_errors': 0}, {'max_round_errors': None}, {'workers': 2}, {'factorize': True}])
 def test_yaml_refuses_invalid_or_unsupported_policy(values):
     reference = config()
     reference['uel'].update(values)
