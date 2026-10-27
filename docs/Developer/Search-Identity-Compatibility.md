@@ -102,6 +102,7 @@ One delivery must update and test all of these consumers together:
 | `round_params` and CSV | The typed record is authoritative; CSV remains presentation and must never be parsed to invent a typed value |
 | Serial, parallel and filter recovery | Exactly the committed occurrences continue; completed work is neither repeated nor omitted |
 | Factorized signal/preparation keys | Both cache layers agree with the active codec and preserve their existing independent keys |
+| Candidate-seeded target perturbations | Preserve the logged ID and its protocol when deriving or replaying the target seed stream |
 | Trainer, Cohort and saved selectors | Existing `(manifest_id, permutation_id)` handles continue to resolve |
 | Walk-forward evidence | Fold records keep the same round identity through reconstruction |
 | Guarded holdout SQLite and checkpoints | Project-level `round_id` references stay valid without rewriting research history |

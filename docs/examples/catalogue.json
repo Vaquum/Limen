@@ -636,7 +636,9 @@
         "source": "limen/data/bars/__init__.py",
         "entry_point": "limen.data.bars",
         "names": [
+          "imbalance_bars",
           "liquidity_bars",
+          "run_bars",
           "trade_bars",
           "volume_bars"
         ],
@@ -656,7 +658,9 @@
         "entry_point": "limen.data.utils",
         "names": [
           "compute_data_bars",
+          "lookback_window",
           "random_slice",
+          "sample_regime_blocks",
           "split_by_dates",
           "split_data_to_prep_output",
           "split_data_to_rule_based_prep_output",
@@ -1835,6 +1839,58 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
+      },
+      "limen.data.bars.adaptive_bars": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/bars/adaptive_bars.py",
+        "entry_point": "limen.data.bars.adaptive_bars",
+        "names": [
+          "imbalance_bars",
+          "run_bars"
+        ],
+        "reference": "limen/data/bars/README.md"
+      },
+      "limen.data.utils.lookback_window": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/lookback_window.py",
+        "entry_point": "limen.data.utils.lookback_window",
+        "names": [
+          "lookback_window"
+        ],
+        "reference": "limen/data/utils/README.md"
+      },
+      "limen.data.utils.sample_regime_blocks": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/sample_regime_blocks.py",
+        "entry_point": "limen.data.utils.sample_regime_blocks",
+        "names": [
+          "sample_regime_blocks"
+        ],
+        "reference": "limen/data/utils/README.md"
       }
     },
     "registries": {

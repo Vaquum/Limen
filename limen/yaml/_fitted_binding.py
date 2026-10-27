@@ -68,7 +68,8 @@ def _target(block: Mapping[str, object], errors: list[YAMLError]) -> None:
     else:
         logger.debug('Target transform binding is indeterminate for %s', cls.__qualname__)
         return
-    _check(transform, args, block.get('transform_params'), path + '.transform_params', errors, supplied=context)
+    transform_context = {**context, **({'permutation_id': object(), 'training': object()} if getattr(cls, 'requires_permutation_id', False) else {})}
+    _check(transform, args, block.get('transform_params'), path + '.transform_params', errors, supplied=transform_context)
 
 
 def _scaler(block: Mapping[str, object], axes: Mapping[str, object], errors: list[YAMLError]) -> None:

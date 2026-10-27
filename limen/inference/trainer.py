@@ -1,3 +1,4 @@
+from limen.experiment._target_identity import bind as bind_target_identity
 import limen.experiment._holdout_research as _holdout
 from limen.inference._trainer_records import load_round_data, load_original_log
 from limen.experiment._recording import project_record
@@ -208,11 +209,12 @@ class Trainer:
 
             expected = self._round_data[pid]
             _holdout.trainer_round(self._manifest, expected)
-            data_dict = self._manifest.prepare_data(self._data, round_params)
-            policy, frozen_contract = self._metadata.get('recording'), expected.get('trade_contract')
-            if frozen_contract is not None and (project_record(expected, policy).get('trade_contract') != project_record(data_dict, policy).get('trade_contract') or expected.get('trade_contract_digest') != data_dict.get('trade_contract_digest')):
-                raise ReconstructionError(f'Permutation {pid}: exact trade rules/source/output identity changed')
-            results = self._manifest.run_model(data_dict, round_params)
+            with bind_target_identity(self._manifest, round_params, pid):
+                data_dict = self._manifest.prepare_data(self._data, round_params)
+                policy, frozen_contract = self._metadata.get('recording'), expected.get('trade_contract')
+                if frozen_contract is not None and (project_record(expected, policy).get('trade_contract') != project_record(data_dict, policy).get('trade_contract') or expected.get('trade_contract_digest') != data_dict.get('trade_contract_digest')):
+                    raise ReconstructionError(f'Permutation {pid}: exact trade rules/source/output identity changed')
+                results = self._manifest.run_model(data_dict, round_params)
             binding = expected.get('learning_binding')
             if binding is not None or '_learning_binding' in data_dict:
                 if not isinstance(binding, Mapping):

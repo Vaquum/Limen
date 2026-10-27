@@ -68,6 +68,18 @@ The reference below gives current package signatures and the behavior of each al
 | `IdentityTarget` | existing column | no | none | Target column already present in the data. Validates the column exists on every split. |
 | `TradeOutcomeTarget` | binary `Int8` or net return `Float64` | no | none | Simulates independent long/short trades under the manifest's execution rules; incomplete outcomes stay null. |
 
+## Candidate target perturbations
+
+`ForwardBreakoutTarget.transform` accepts `horizon_jitter`, `threshold_noise_std`, `noise_seed` and `label_smoothing`. `TripleBarrierTarget.transform` accepts `horizon_jitter`, `barrier_noise_std` and `noise_seed`. All default to zero, retaining the original target calculation.
+
+Jitter is drawn once per candidate and reused across its partitions. A SHA-256 seed over the `limen-target-perturbation-v1` namespace, complete permutation ID and explicit `noise_seed` initializes NumPy's generator. The horizon receives a uniform integer offset in the inclusive jitter range; every possible horizon must remain positive. Thresholds/barrier multiples receive independent multiplicative Gaussian draws `base * (1 + Normal(0, std))`. Nonpositive or nonfinite realized thresholds raise errors. The fitted target retains `perturbation_parameters`, including the realized horizon, thresholds and identity.
+
+UEL, parallel workers and Trainer/fold reconstruction supply the logged candidate ID automatically, including runs with context parameters. `permutation_id` and `training` are reserved framework operands in manifest/YAML transforms. Direct target calls must provide an ID when enabling noise; direct manifest preparation derives an identity from its supplied parameters. Declare the noise controls through ordinary target `transform_params` references so their values and seeds remain in the round log. Enabled permutation-seeded noise is refused by `factorize=True`, whose cross-candidate reuse would otherwise change its meaning.
+
+Binary label smoothing applies `(1 - alpha) * y + alpha / 2` only to the training partition, with `0 <= alpha < 1`. Validation and test labels remain hard. The model must accept continuous training targets; native hard-label classifiers reject them through their normal model validation. The recorded proof uses DLinear for serial/parallel and ordinary Trainer execution, and Ridge for selected-fold reconstruction. It checks unchanged evaluation labels, Python/CLI execution and candidate identity throughout.
+
+The recorded proofs are `tests/test_target_perturbations.py`; they also compare noisy targets directly against the original calculation under their realized parameters.
+
 ## Reference
 
 ### `QuantileBinaryTarget`
@@ -150,7 +162,7 @@ Labels a bar as positive if the close price rises by at least `threshold` over t
 
 <!-- reference: target-forward-breakout-target-transform source=limen/targets/forward_breakout.py region=signature:ForwardBreakoutTarget.transform role=signature -->
 ```python
-def transform(self, data: pl.DataFrame, forward_periods: int=24, threshold: float=0.02, shift: int=-1) -> pl.DataFrame:
+def transform(self, data: pl.DataFrame, forward_periods: int=24, threshold: float=0.02, shift: int=-1, *, horizon_jitter: int=0, threshold_noise_std: float=0.0, noise_seed: int=0, label_smoothing: float=0.0, permutation_id: str | None=None, training: bool=False) -> pl.DataFrame:
     ...
 ```
 
@@ -315,7 +327,7 @@ A bar is null during the volatility warmup (`min_periods`), when its volatility 
 
 <!-- reference: target-triple-barrier-target-transform source=limen/targets/triple_barrier.py region=signature:TripleBarrierTarget.transform role=signature -->
 ```python
-def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+def transform(self, data: pl.DataFrame, *, horizon_jitter: int=0, barrier_noise_std: float=0.0, noise_seed: int=0, permutation_id: str | None=None, training: bool=False) -> pl.DataFrame:
     ...
 ```
 
@@ -611,7 +623,7 @@ Store the target column name; no fitting is performed.
 
 <!-- reference: api-limen-targets-forwardbreakouttarget-transform source=limen/targets/forward_breakout.py region=signature:ForwardBreakoutTarget.transform role=signature -->
 ```python
-def transform(self, data: pl.DataFrame, forward_periods: int=24, threshold: float=0.02, shift: int=-1) -> pl.DataFrame:
+def transform(self, data: pl.DataFrame, forward_periods: int=24, threshold: float=0.02, shift: int=-1, *, horizon_jitter: int=0, threshold_noise_std: float=0.0, noise_seed: int=0, label_smoothing: float=0.0, permutation_id: str | None=None, training: bool=False) -> pl.DataFrame:
     ...
 ```
 
@@ -1168,7 +1180,7 @@ Store barrier settings and validate them; no fitting is performed.
 
 <!-- reference: api-limen-targets-triplebarriertarget-transform source=limen/targets/triple_barrier.py region=signature:TripleBarrierTarget.transform role=signature -->
 ```python
-def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+def transform(self, data: pl.DataFrame, *, horizon_jitter: int=0, barrier_noise_std: float=0.0, noise_seed: int=0, permutation_id: str | None=None, training: bool=False) -> pl.DataFrame:
     ...
 ```
 

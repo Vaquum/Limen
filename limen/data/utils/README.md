@@ -28,6 +28,8 @@ Does **not** own raw data access (owned by `limen.data.HistoricalData`) or the l
 | `split_data_to_prep_output` | Build the `data_dict` (`x_train`, `y_test`, …) | Does not mutate the passed split list or column list |
 | `split_data_to_rule_based_prep_output` | `data_dict` variant for rule-based SFDs | Preserves columns rule strategies read |
 | `random_slice` | Random contiguous window | Sampling helper |
+| `lookback_window` | Trailing elapsed-day window | Ends at the last supplied observation |
+| `sample_regime_blocks` | One contiguous causal-regime block | Explicit regime version, seed and minimum length |
 
 ## Adjacent modules
 
@@ -50,7 +52,9 @@ utils/
 ├── README.md
 ├── __init__.py
 ├── compute_data_bars.py
+├── lookback_window.py
 ├── random_slice.py
+├── sample_regime_blocks.py
 ├── split_walk_forward.py
 └── splits.py
 ```

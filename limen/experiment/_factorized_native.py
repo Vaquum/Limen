@@ -7,6 +7,7 @@ from importlib import import_module
 from typing import Literal, cast
 
 from limen.experiment._factorized_contract import ReuseContract, declared
+from limen.targets._perturbation import NOISE_KEYS, refuse_reuse
 
 
 def native_threads() -> AbstractContextManager[object]:
@@ -70,7 +71,9 @@ def _contracts() -> dict[object, ReuseContract]:
         for name in cast(list[str], getattr(module, '__all__', [])):
             component = getattr(module, name)
             if callable(component):
-                contracts[component] = ReuseContract(_seed if name == 'RandomBinaryTarget' else _pure, validation_keys=('random_state',) if name == 'RandomBinaryTarget' else ())
+                identity_seeded = getattr(component, 'requires_permutation_id', False)
+                validator = _seed if name == 'RandomBinaryTarget' else refuse_reuse if identity_seeded else _pure
+                contracts[component] = ReuseContract(validator, validation_keys=('random_state',) if name == 'RandomBinaryTarget' else NOISE_KEYS if identity_seeded else ())
     for name, validator, kind in (
         ('ridge_regressor', _ridge, 'continuous'), ('dlinear_regressor', _pure, 'continuous'),
         ('lightgbm_binary', _lightgbm, 'binary'), ('logreg_binary', _logreg, 'binary'),

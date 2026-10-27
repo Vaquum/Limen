@@ -20,6 +20,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from limen.data._internal.binance_file_to_polars import binance_file_to_polars
+from limen.data.utils.lookback_window import source_cutoff, clip_window
 
 
 logger = logging.getLogger(__name__)
@@ -590,7 +591,7 @@ def _normalize_datetime_column_by_name(
         )
 
     if isinstance(datetime_dtype, pl.Datetime):
-        expr = pl.col(column_name).dt.cast_time_unit('ms')
+        expr = pl.col(column_name)
         if datetime_dtype.time_zone is None:
             expr = expr.dt.replace_time_zone('UTC')
         else:
@@ -1003,7 +1004,7 @@ class HistoricalData:
         start_date_limit: str | None = None,
         end_date_limit: str | None = None,
         *,
-        n_rows: int | None = None,
+        n_rows: int | None = None, lookback_days: float | None = None,
     ) -> pl.DataFrame:
 
         '''Load BTCUSDT spot klines from a file and aggregate upward when needed.
@@ -1022,6 +1023,7 @@ class HistoricalData:
             'end_date_limit',
             end_of_day=True,
         )
+        lookback_cutoff = source_cutoff(start_date_limit, end_date_limit, lookback_days, row_count_limit)
         if (
             start_date_limit is not None
             and end_date_limit is not None
@@ -1036,7 +1038,7 @@ class HistoricalData:
             self.DEFAULT_SPOT_KLINES_DATASET_REPO,
         )
         base_data = _read_any_file(dataset_repo, has_header=True)
-        base_data = _normalize_generic_frame(base_data)
+        base_data = clip_window(_normalize_generic_frame(base_data), lookback_cutoff)
 
         if start_date_limit is not None:
             start_datetime = datetime.strptime(
@@ -1068,7 +1070,7 @@ class HistoricalData:
         start_date_limit: str | None = None,
         end_date_limit: str | None = None,
         *,
-        n_rows: int | None = None,
+        n_rows: int | None = None, lookback_days: float | None = None,
     ) -> pl.DataFrame:
 
         '''Load BTCUSDT spot dollar klines from Hugging Face snapshots.
@@ -1090,6 +1092,7 @@ class HistoricalData:
             'end_date_limit',
             end_of_day=True,
         )
+        lookback_cutoff = source_cutoff(start_date_limit, end_date_limit, lookback_days, row_count_limit)
         if (
             start_date_limit is not None
             and end_date_limit is not None
@@ -1104,7 +1107,7 @@ class HistoricalData:
             self.DEFAULT_SPOT_DOLLAR_KLINES_DATASET_REPO,
         )
         base_data = _read_any_file(dataset_repo, has_header=True)
-        base_data = _normalize_spot_dollar_klines(base_data)
+        base_data = clip_window(_normalize_spot_dollar_klines(base_data), lookback_cutoff)
 
         if start_date_limit is not None:
             start_datetime = datetime.strptime(

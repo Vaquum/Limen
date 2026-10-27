@@ -19,6 +19,7 @@ import polars as pl
 
 from limen.experiment._parallel_sources import SourceSnapshot
 import limen.experiment._holdout_composition as _protection
+from limen.experiment._target_identity import bind as bind_target_identity
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, Manifest
@@ -221,7 +222,7 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
         with limit(limits=1), warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             manifest = build_manifest(_worker_yaml)
-            with _protection.worker_operation(manifest, _worker_sources.learning, _worker_authority, round_params.get('_id')) as protection:
+            with _protection.worker_operation(manifest, _worker_sources.learning, _worker_authority, round_params.get('_id')) as protection, bind_target_identity(manifest, params, round_params.get('_id')):
                 _require_cpu({name: [value] for name, value in manifest.resolve_model_kwargs(params).items() if name in _CPU_KNOBS})
                 vars(manifest)['_frozen_trade_sources'] = (_worker_sources.execution, _worker_sources.funding)
                 folds = None

@@ -25,15 +25,17 @@ will generalize.
 
 ## The Five Primitives
 
+Data perturbations can select a trailing `lookback_window` or one `sample_regime_blocks` block through `pre_split_data_selector`. Both preserve original row order and values. The [utility contracts](Utilities.md#temporal-perturbation-selectors) describe their bounds and seeded selection. `HistoricalData.get_spot_klines` and `get_spot_dollar_klines` also accept `lookback_days` with an explicit `end_date_limit`; combining it with `start_date_limit` is rejected before acquisition.
+
 | Primitive | What it varies | Round parameter(s) | Manifest method |
 |---|---|---|---|
-| Feature-group selection | which declared feature families run | `feature_groups` | `add_indicator(..., group=)` / `add_feature(..., group=)` |
-| Conditional toggle | whether one optional feature runs | the `include_if` key | `add_feature(..., include_if=)` |
-| Feature ablation | randomly drops N generated feature columns | `feature_drop_count`, `feature_drop_seed` | `set_feature_ablation()` |
-| Scaler from parameters | which scaler preprocesses the matrix | `scaler_type` | `set_scaler_from_params()` |
-| Manifest override | split ratios or data-source params | — (build-time) | `with_params_override()` |
+| Data (rows) | temporal population and sampling clock | `lookback_days`, regime/seed controls, bar thresholds | `set_pre_split_data_selector()` / `set_bar_formation()` |
+| Feature (columns) | selected groups, toggles and Drop-N subsets | `feature_groups`, inclusion keys, `feature_drop_count`, `feature_drop_seed` | `add_indicator()` / `add_feature()` / `set_feature_ablation()` |
+| View (X values) | scaling, fractional differentiation and fitted representation | `scaler_type`, declared transform/shim parameters | `set_scaler_from_params()` / feature transforms and shims |
+| Target (Y values) | target geometry, candidate jitter and training-label smoothing | horizon/threshold/barrier controls, `noise_seed`, `label_smoothing` | `with_target_class()` |
+| Model (function) | learner complexity and optimization | architecture-specific hyperparameters | reference architecture and its consumed round parameters |
 
-The first four are searched across rounds through the `params()` grid. The fifth builds a derived manifest and is used for retrains, smoke runs, and alternate windows rather than in-experiment search.
+All five use the existing parameter grid and manifest references. `with_params_override()` remains a build-time tool for derived manifests; use a pre-split selector when the population must vary inside a sweep. Adaptive [imbalance/run bars](Data-Bars.md#adaptive-trade-point-bars) require individual observed trades. [Target perturbations](Targets.md#candidate-target-perturbations) retain their candidate identity through workers and reconstruction.
 
 ### Feature-Group Selection
 
