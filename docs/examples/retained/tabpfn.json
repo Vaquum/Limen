@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-27T17:50:50.078891+00:00",
-  "execution_checkout_head": "168eb84aeb969ad8de634f24812e35cf9e3049df",
+  "observed_at": "2026-10-27T19:10:33.949535+00:00",
+  "execution_checkout_head": "eca44f386055a0f7b9077e51109d6d94e8834045",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -126,7 +126,7 @@
     "experiment/_resolve_backtest_config.py": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f",
     "experiment/_resolve_trade_policy.py": "93d17a4cd19476017f250c5970d0d67f93c7a8941050902897b8545f7b970ce1",
     "experiment/_result_fields.py": "eabb0690e451db7387da8d8d5aac7eb3413c8b18f65ee80dc2cf6587043d6b34",
-    "experiment/_round_errors.py": "f7be1fbd05694316c8559d0f0d06a7b51716af290ad1d4eb7cb2abb723be1fde",
+    "experiment/_round_errors.py": "b7c1d165f64ff78ce5fe8f21ff7607fc45111d5620eedead5df335c745a86b51",
     "experiment/_round_signals.py": "3988c110f814d1a4389f18d75475767621173648c35b43b7a6eaf8a7d3363b2c",
     "experiment/_round_storage.py": "4ee60af8b55cab53862213e7d99e68897957c24b006296cca4efdf791c6703d2",
     "experiment/_serial_resume.py": "6edfa038ce7acf0e155e438ca19894f619576dbe868726f420501e40cb02fc7a",
