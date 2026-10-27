@@ -283,7 +283,7 @@ def _runtime_slowest_tests_limit() -> int:
 
 def _pytest_args(argv: list[str]) -> list[str]:
     if argv:
-        return ['--assert=plain', *argv]
+        return argv
     # Default discovery includes test_acceptance_gates.py, test_parallel_rounds.py and test_round_signals.py.
     return ['--assert=plain', '-n', '4', '--dist', 'loadgroup', '--max-worker-restart=0', 'tests']
 
