@@ -16,6 +16,7 @@ from limen.experiment import _holdout_research as research
 from limen.experiment import _holdout_checkpoint as checkpoint_binding
 from limen.experiment import _round_storage
 from limen.experiment import UniversalExperimentLoop
+from limen.experiment._round_errors import RoundErrorPolicy
 from limen.experiment.holdout import reserve_holdout, withdraw_holdout, release_holdout
 from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
@@ -572,7 +573,7 @@ def test_protected_factorized_provenance(kind, tmp_path, monkeypatch):
     directory = root / 'results'
     directory.mkdir()
     path = directory / 'round_data.jsonl'
-    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=None,
+    writer = SimpleNamespace(_round_error_policy=RoundErrorPolicy(), manifest=manifest, _walk_forward=None, _recording=None,
         _yaml_reference=config, _record_execution=True, _record_model_outputs=True)
     preparations, values = [], []
     for index, params in enumerate(candidates):
@@ -702,7 +703,7 @@ def test_protected_worker_handoff(cwd_mode, tmp_path):
     occurrence = params | {'_round_index': 0, '_id': identity}
     directory = root / 'results'
     directory.mkdir()
-    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=None,
+    writer = SimpleNamespace(_round_error_policy=RoundErrorPolicy(), manifest=manifest, _walk_forward=None, _recording=None,
         _yaml_reference=config, _record_execution=True, _record_model_outputs=True)
     host = SimpleNamespace(manifest=manifest, data=raw, params=params, _walk_forward=None,
         _append_round_data=partial(UniversalExperimentLoop._append_round_data, writer), experiment_log=None)
@@ -898,7 +899,7 @@ def test_protected_fold_lineage(population, tmp_path, monkeypatch):
     path = directory / 'round_data.jsonl.gz'
     strategy = GridStrategy(ParamDomain(config['sfd']['params']))
     identity = strategy.compute_param_hash(params)
-    writer = SimpleNamespace(manifest=manifest, _walk_forward=runner, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+    writer = SimpleNamespace(_round_error_policy=RoundErrorPolicy(), manifest=manifest, _walk_forward=runner, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
         _yaml_reference=config, _record_execution=True, _record_model_outputs=True, _workers=1, _factorize=False,
         _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_limen_version=UniversalExperimentLoop._get_limen_version)
     with pytest.raises(RuntimeError, match='interruption control'), research.operation(manifest, 'experiment') as campaign:
@@ -1048,7 +1049,7 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
     directory.mkdir()
     strategy = GridStrategy(ParamDomain(config['sfd']['params']))
     identity = strategy.compute_param_hash(params)
-    writer = SimpleNamespace(manifest=manifest, _walk_forward=None, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+    writer = SimpleNamespace(_round_error_policy=RoundErrorPolicy(), manifest=manifest, _walk_forward=None, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
         _yaml_reference=config, _record_execution=True, _record_model_outputs=True, _workers=1, _factorize=False,
         _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_limen_version=UniversalExperimentLoop._get_limen_version)
     with fixed_trade_sources(manifest, config['sfd']['params']) if secondary == 'fixed' else nullcontext(), source_operation(manifest):

@@ -12,7 +12,6 @@ from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.commands._results_dir import admit_output
 from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
-from limen.experiment._round_errors import admit
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
@@ -75,7 +74,7 @@ def run_experiment(yaml_path: Path,
             uel.check_parallel_admission(effective_workers, prep_each_round,
                                          factorize=uel_cfg.get('factorize', False))
             uel.check_fresh_directory()
-            admit(uel, {'workers': effective_workers, 'factorize': uel_cfg.get('factorize', False)})
+            uel._admit_round_errors({'workers': effective_workers, 'factorize': uel_cfg.get('factorize', False)})
         except Exception as exc:  # noqa: BLE001
             click.secho(f'  ✗ Failed to construct experiment: {exc}', fg='red')
             return False

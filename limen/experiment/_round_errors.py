@@ -27,7 +27,7 @@ class RoundErrorPolicy:
         super().__init__()
         if not isinstance(mode, str) or mode not in ('abort', 'record'):
             raise ValueError('on_round_error must be abort or record')
-        if mode == 'record' and (not isinstance(limit, int) or isinstance(limit, bool) or limit < 1):
+        if mode == 'record' and (type(limit) is not int or limit < 1):
             raise ValueError('record requires a positive integer max_round_errors')
         if mode == 'abort' and limit is not None:
             raise ValueError('max_round_errors requires on_round_error=record')
