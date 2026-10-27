@@ -224,7 +224,7 @@ Recorded drops permit a descriptive feature-sensitivity analysis. Association wi
 
 <!-- reference: perturbation-correlation source=limen/log/_experiment_parameter_correlation.py region=signature:experiment_parameter_correlation role=signature -->
 ```python
-def experiment_parameter_correlation(self: Any, metric: str, *, cols_to_drop: list[str] | None=None, sort_key: str | None=None, sort_ascending: bool=False, heads: Sequence[float | int] | None=None, method: Literal['pearson', 'kendall', 'spearman']='spearman', n_boot: int=300, min_n: int=10, random_state: int=0) -> pd.DataFrame:
+def experiment_parameter_correlation(self: Any, metric: str, *, cols_to_drop: list[str] | None=None, sort_key: str | None=None, sort_ascending: bool=False, heads: Sequence[float | int] | None=None, method: Literal['pearson', 'kendall', 'spearman']='spearman', n_boot: int=300, min_n: int=10, random_state: int=0) -> pl.DataFrame:
     ...
 ```
 

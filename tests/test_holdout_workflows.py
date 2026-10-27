@@ -939,7 +939,7 @@ def test_protected_fold_lineage(population, tmp_path, monkeypatch):
         assert restored.restore(path, None, [(0, identity)]) == 1
     captured = Log(uel_object=SimpleNamespace(experiment_log=pl.read_csv(directory / 'results.csv'), fold_results=restored.results, manifest=manifest, data=runner.raw,
         _alignment=[data['_alignment']], round_params=[params]))
-    assert captured.experiment_backtest_results()[['id', 'fold']].to_dict('records') == [{'id': identity, 'fold': 0}, {'id': identity, 'fold': 1}]
+    assert captured.experiment_backtest_results()[['id', 'fold']].to_dicts() == [{'id': identity, 'fold': 0}, {'id': identity, 'fold': 1}]
     with pytest.raises(ValueError, match='fold-specific test set'):
         captured.permutation_prediction_performance(0)
     invalid = Trainer(directory, data=runner.raw, project_root=root)
@@ -1580,8 +1580,8 @@ def _public_recorded_case(case, root, config, raw, monkeypatch=None):
         if 'holdout' in records[0]:
             assert sensor._fitted_params['_holdout']['experiment_record_id'] == records[0]['folds'][0]['holdout']['research_record_id']
         captured = Log(uel_object=loop).experiment_backtest_results()
-        assert captured[['id', 'fold']].to_dict('records') == [{'id': row['round_id'], 'fold': k} for row in records for k in range(2)]
-        for actual, saved in zip(captured.to_dict('records'), [fold for row in records for fold in row['folds']], strict=True):
+        assert captured[['id', 'fold']].to_dicts() == [{'id': row['round_id'], 'fold': k} for row in records for k in range(2)]
+        for actual, saved in zip(captured.to_dicts(), [fold for row in records for fold in row['folds']], strict=True):
             _numeric_equal({key: value for key, value in actual.items() if key not in ('id', 'fold')},
                 {key: saved['results']['backtest_' + key if 'backtest_' + key in saved['results'] else key + '_test'] for key in captured.columns if key not in ('id', 'fold')})
     predictions = [[fold['preds'] for fold in row['folds']] if row.get('folds') else row['preds'] for row in records]

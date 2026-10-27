@@ -181,7 +181,7 @@ def test_artifacts_and_replay_identical(tmp_path: Path) -> None:
                    changed.experiment_log.drop('execution_time').to_dicts())
     for attribute in ('experiment_confusion_metrics', 'experiment_backtest_results'):
         old, new = getattr(baseline, attribute), getattr(changed, attribute)
-        _numeric_equal(old.to_dict('records'), new.to_dict('records'))
+        _numeric_equal(old.to_dicts(), new.to_dicts())
     for i in range(8):
         np.testing.assert_array_equal(baseline.preds[i], changed.preds[i])
         _numeric_equal(baseline._alignment[i]['execution'], changed._alignment[i]['execution'])

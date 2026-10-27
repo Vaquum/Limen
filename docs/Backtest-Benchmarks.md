@@ -69,8 +69,8 @@ from the measured source revision:
 | 2 | `../limen-benchmark-env/bin/python -m pip install --no-deps -e .` |
 | 3 | `../vectorbt-benchmark-env/bin/python -m pip install -r docs/benchmarks/common-strategies-2026-10-18/vectorbt-requirements.txt` |
 
-Limen declares `pandas>=2.3,<3`; vectorbt 1.1.2 declares
-`pandas>=3.0.3,<4`. Separate environments preserve both dependency contracts.
+The recorded reference-engine environment pins pandas 2.3.3; vectorbt 1.1.2 declares
+`pandas>=3.0.3,<4`. Separate environments preserve that recorded comparison. Limen itself no longer requires pandas at runtime.
 The controller prepares NumPy archives once, and competitor workers read those
 archives without importing Limen. No Limen install is needed in the vectorbt
 environment. The installed vectorbt Rust extra must match vectorbt's version;
