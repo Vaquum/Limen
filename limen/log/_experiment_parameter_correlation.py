@@ -56,12 +56,11 @@ def experiment_parameter_correlation(self: Any,
     if not features:
         raise ValueError('experiment_parameter_correlation No numeric features available (besides metric) after cleaning.')
 
-    def correlations(frame: pl.DataFrame) -> npt.NDArray[np.float64]:
+    def correlations(matrix: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
         from scipy.stats import kendalltau, rankdata
-        target = np.asarray(frame[metric].to_numpy(), dtype=np.float64)
+        target = matrix[:, 0]
         values: list[float] = []
-        for name in features:
-            column = np.asarray(frame[name].to_numpy(), dtype=np.float64)
+        for column in matrix[:, 1:].T:
             present = np.isfinite(column) & np.isfinite(target)
             x, y = column[present], target[present]
             if x.size < _MIN_CORRELATION_ROWS or np.ptp(x) == 0 or np.ptp(y) == 0:
@@ -86,7 +85,7 @@ def experiment_parameter_correlation(self: Any,
             continue
         percentage = 100 * n / total_n
         order = cohort_order.setdefault(percentage, len(cohort_order))
-        cohort = num_df.head(n)
+        cohort = np.asarray(num_df.head(n).select(metric, *features).to_numpy(), dtype=np.float64)
         base = correlations(cohort)
         boot = np.asarray([correlations(cohort[rng.integers(0, n, n)]) for _ in range(n_boot)], dtype=np.float64).T
         for index, name in enumerate(features):
