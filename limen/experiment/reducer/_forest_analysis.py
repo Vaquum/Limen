@@ -1,7 +1,10 @@
 from collections.abc import Callable, Mapping
 import logging
 import math
+from numbers import Integral
+from ruamel.yaml.scalarbool import ScalarBoolean
 from types import SimpleNamespace
+from typing import cast
 
 import polars as pl
 
@@ -17,16 +20,16 @@ class ForestAnalyzer:
     def __init__(self, metric: str, maximize: bool, metrics: Mapping[str, bool] | None,
                  repeats: int, minimum_score: float) -> None:
         super().__init__()
-        if metrics is not None and (not metrics or any(type(key) is not str or not key or type(value) is not bool for key, value in metrics.items())):
+        if metrics is not None and (not metrics or any(not isinstance(cast(object, key), str) or not key or not isinstance(cast(object, value), (bool, ScalarBoolean)) for key, value in metrics.items())):
             raise ValueError('metrics must map metric names to explicit maximize booleans')
         if metrics is not None and metric in metrics and metrics[metric] != maximize:
             raise ValueError('Primary metric direction conflicts with metrics')
-        if type(repeats) is not int or repeats < _MIN_REPEATS:
+        if not isinstance(repeats, Integral) or isinstance(repeats, (bool, ScalarBoolean)) or repeats < _MIN_REPEATS:
             raise ValueError('n_repeats must be an integer of at least 2')
-        if not math.isfinite(minimum_score) or not 0 < minimum_score <= 1:
+        if isinstance(minimum_score, (bool, ScalarBoolean)) or not math.isfinite(minimum_score) or not 0 < minimum_score <= 1:
             raise ValueError('min_model_score must be in (0, 1]')
-        self.metrics = {metric: maximize, **(metrics or {})}
-        self.repeats, self.minimum_score = repeats, minimum_score
+        self.metrics = {metric: maximize, **{key: bool(value) for key, value in (metrics or {}).items()}}
+        self.repeats, self.minimum_score = int(repeats), minimum_score
 
     def analyze(self, log: pl.DataFrame, keys: list[str], resolve: Callable[[str, object], tuple[object, ...]], *, threshold: float,
                 seed: int, suggested: set[str], minimum_rows: int) -> list[dict[str, object]]:

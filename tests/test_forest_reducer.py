@@ -92,3 +92,14 @@ def test_yaml_factory_admits_forest_controls():
         'type': 'correlation', 'params': {'metric': METRIC, 'analyzer': 'random_forest',
         'metrics': {'validation_rmse': False}, 'n_repeats': 3, 'random_state': 7}}]}})
     assert len(strategies) == 1 and strategies[0]._forest.metrics == {METRIC: True, 'validation_rmse': False}
+
+
+def test_yaml_anchored_forest_controls_keep_scalar_semantics():
+    from ruamel.yaml import YAML
+    controls = YAML().load('n_repeats: &repeats 3\nmetrics: {loss: &direction false}')
+    strategy = CorrelationReducer(metric=METRIC, analyzer='random_forest', **controls)
+    assert strategy._forest.repeats == 3 and strategy._forest.metrics['loss'] is False
+    for key in ('n_repeats', 'min_model_score'):
+        controls = YAML().load(key + ': &flag true')
+        with pytest.raises(ValueError):
+            CorrelationReducer(metric=METRIC, analyzer='random_forest', **controls)
