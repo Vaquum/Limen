@@ -192,7 +192,7 @@
       "symbol": "BooleanControlsSpec"
     },
     "uel": {
-      "sha256": "9924fee13c196f55738e02adee36608cedbdf8f3817cc0c9045fd79f163decc6",
+      "sha256": "ffac02f431d1b89abe12d712b0537003a9db57e7584477e536587f8358449833",
       "source": "limen/yaml/rules.py",
       "symbol": "UelSpec"
     },
@@ -200,6 +200,16 @@
       "sha256": "48785c958e64c6c0654e95c5e4ab69d86869485e8862ff0a53ec80bbbe348547",
       "source": "limen/yaml/_callback_spec.py",
       "symbol": "callback_error"
+    },
+    "uel.max_round_errors": {
+      "sha256": "98a65ab3bf479d5eff33c8c85a9497a2cfae53951c4ee3d855308231adbd18d6",
+      "source": "limen/experiment/_round_errors.py",
+      "symbol": "configuration"
+    },
+    "uel.on_round_error": {
+      "sha256": "e30273e5a74616634e0937ce6949d02f517b4bf787653285c4d75d61473d51df",
+      "source": "limen/experiment/_round_errors.py",
+      "symbol": "RoundErrorPolicy"
     },
     "uel.output_path": {
       "sha256": "047d83f057f1bb74ff52544cb6ae36bcae71207a95714c961d26aafbd3cafd7d",
@@ -715,7 +725,9 @@
         "checkpoint_interval",
         "factorize",
         "feedback_interval",
+        "max_round_errors",
         "n_permutations",
+        "on_round_error",
         "output_format",
         "output_path",
         "prep_each_round",
@@ -804,6 +816,7 @@
     "limen/experiment/_required_columns.py": "2cd675b12f7cba92d43866fec12d17d167fb6e91a6efae1f28019f5f5a751945",
     "limen/experiment/_resolve_backtest_config.py": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f",
     "limen/experiment/_resolve_trade_policy.py": "93d17a4cd19476017f250c5970d0d67f93c7a8941050902897b8545f7b970ce1",
+    "limen/experiment/_round_errors.py": "b7c1d165f64ff78ce5fe8f21ff7607fc45111d5620eedead5df335c745a86b51",
     "limen/experiment/_shim_fractional_diff.py": "b0fc724b946c4d33ac0998b094c15e3ccc26cf61c883d630a79de3c4d78ff8ac",
     "limen/experiment/_source_contract.py": "915d56e7b9ab835099f8260701e86fa9e0366f1c98b4ae9388841ce0ad928dfa",
     "limen/experiment/_walk_forward_split.py": "485a9605a9ea280d9d2224af0460824f93bfd16e519cfa199a60fb89a4925a15",
@@ -834,8 +847,8 @@
     "limen/yaml/parser.py": "2fa2c1ab9192ce75779cd8844f204faee29731e1e3d4ac53318fd688a4451ed2",
     "limen/yaml/profiler.py": "1e412c4ca48fc0d67fcf05ec6ec7811cdd37d256273af3833a56895a1931dd5d",
     "limen/yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
-    "limen/yaml/rules.py": "ebe6827fcc7c39b38a1e6a239b13ff58f37c913affec37d415837fd8372bad46",
-    "limen/yaml/schema.py": "b33cbd1784125229f8c4c3d6889ab235d60152ae5c4aebdad8b0b2cf3cce18c5",
+    "limen/yaml/rules.py": "59b49fc139484d1b7292de56cc66ed869c931c980a8c46c9d7b0eadf5406eb1d",
+    "limen/yaml/schema.py": "83b1abedaf9f4f01cbf7edb5bc3ed05c458e87954385cdc354f3ebfb1b0a5ec2",
     "limen/yaml/store.py": "53e4eb7724597f09c7bf71739996b5fb854d07950720868d6d93b125b6d3ac0c",
     "limen/yaml/validator.py": "1c67519036c6d4327c35d86bdc7f0dda958a47e43f55d4d94ea9cb2ea535bf18"
   }
