@@ -283,9 +283,9 @@ def _runtime_slowest_tests_limit() -> int:
 
 def _pytest_args(argv: list[str]) -> list[str]:
     if argv:
-        return argv
+        return ['--assert=plain', *argv]
     # Default discovery includes test_acceptance_gates.py, test_parallel_rounds.py and test_round_signals.py.
-    return ['-n', '4', '--dist', 'loadgroup', '--max-worker-restart=0', 'tests']
+    return ['--assert=plain', '-n', '4', '--dist', 'loadgroup', '--max-worker-restart=0', 'tests']
 
 
 def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> None:
