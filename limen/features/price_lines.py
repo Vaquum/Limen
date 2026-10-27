@@ -56,13 +56,10 @@ def price_lines(data: pl.DataFrame,
     It is research-only and not computable live; the end-event columns are causal.
     '''
 
-    _check.integers(lower=1, max_duration_hours=max_duration_hours, big_move_lookback_hours=big_move_lookback_hours, momentum_lookback_hours=momentum_lookback_hours)
+    _check.integers(context='price_lines', lower=1, max_duration_hours=max_duration_hours, big_move_lookback_hours=big_move_lookback_hours, momentum_lookback_hours=momentum_lookback_hours)
     _check.numbers(min_height_pct=min_height_pct)
     if not isinstance(include_research_only, bool):
         raise ValueError('price_lines include_research_only must be a bool')
-
-
-
 
     momentum_col = f"line_momentum_{momentum_lookback_hours}h"
 

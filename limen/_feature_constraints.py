@@ -7,8 +7,10 @@ from typing import cast
 __all__: list[str] = []
 
 
-def integers(*, lower: int | None = None, upper: int | None = None, **values: object) -> None:
-    for name, value in values.items():
+def integers(*, lower: int | None = None, upper: int | None = None,
+             context: str = '', **values: object) -> None:
+    for parameter, value in values.items():
+        name = f'{context} {parameter}'.strip()
         if isinstance(value, bool) or not isinstance(value, Integral):
             raise ValueError(f'{name} must be an integer')
         numeric = int(value)

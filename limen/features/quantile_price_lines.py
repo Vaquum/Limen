@@ -50,15 +50,11 @@ def quantile_price_lines(data: pl.DataFrame,
         ValueError: If a lookback is below 1 or include_research_only is not bool
     '''
 
-    _check.integers(lower=1, max_duration_hours=max_duration_hours, density_lookback_hours=density_lookback_hours, momentum_lookback_hours=momentum_lookback_hours, height_lookback_hours=height_lookback_hours)
+    _check.integers(context='quantile_price_lines', lower=1, max_duration_hours=max_duration_hours, density_lookback_hours=density_lookback_hours, momentum_lookback_hours=momentum_lookback_hours, height_lookback_hours=height_lookback_hours)
     _check.numbers(min_height_pct=min_height_pct)
     _check.numbers(lower=0, upper=1, quantile_threshold=quantile_threshold)
     if not isinstance(include_research_only, bool):
         raise ValueError('quantile_price_lines include_research_only must be a bool')
-
-
-
-
 
     momentum_col = f"quantile_momentum_{momentum_lookback_hours}h"
     height_col = f"avg_quantile_height_{height_lookback_hours}h"

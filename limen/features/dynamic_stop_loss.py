@@ -22,7 +22,12 @@ def dynamic_stop_loss(data: pl.DataFrame,
         pl.DataFrame: The input data with a new column 'dynamic_stop_loss'
     '''
 
-    _check.numbers(base_stop_loss=base_stop_loss, stop_volatility_multiplier=stop_volatility_multiplier, clip_lower_mult=clip_lower_mult, clip_upper_mult=clip_upper_mult)
+    _check.numbers(
+        base_stop_loss=base_stop_loss,
+        stop_volatility_multiplier=stop_volatility_multiplier,
+        clip_lower_mult=clip_lower_mult,
+        clip_upper_mult=clip_upper_mult,
+    )
     _check.ordered('clip_lower_mult', clip_lower_mult, 'clip_upper_mult', clip_upper_mult)
 
     return data.with_columns([

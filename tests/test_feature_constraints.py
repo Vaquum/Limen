@@ -42,8 +42,12 @@ def test_every_public_configuration_parameter_rejects_wrong_types(function):
         values = [object()]
         if hints.get(parameter.name) is int or parameter.name in ('start', 'end'):
             values += [True, 1.5]
+            if parameter.name not in ('crossover_bull', 'crossover_bear'):
+                values.append(-1)
         elif hints.get(parameter.name) is float:
             values += [True, float('nan'), float('inf'), -float('inf')]
+        elif hints.get(parameter.name) is str:
+            values.append('')
         for value in values:
             with pytest.raises((ValueError, TypeError), match=parameter.name):
                 function(frame, **dict(arguments, **{parameter.name: value}))
@@ -74,6 +78,8 @@ def test_valid_causal_zero_controls_and_period_iterators():
     (features.entry_score_microstructure, {'entry_volume_spike_normalizer': 0.}, 'entry_volume_spike_normalizer'),
     (features.conserved_flux_renormalization, {'kline_interval': '0h'}, 'kline_interval'),
     (features.fractional_diff, {'cols': ['close', 2]}, 'cols'),
+    (features.find_min_d, {'col': 'close', 'significance_level': 0.}, 'significance_level'),
+    (features.find_min_d, {'col': 'close', 'significance_level': 1.}, 'significance_level'),
 ])
 def test_invalid_domains_fail_before_data_computation(function, arguments, parameter):
     frame = pl.read_parquet(FIXTURE, n_rows=1).head(0)

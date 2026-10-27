@@ -180,8 +180,8 @@ def find_min_d(data: pl.DataFrame,
 
     from limen.utils.adf_test import adf_test
 
-    if step <= 0:
-        raise ValueError(f"fractional_diff step must be positive, got {step}")
+    if not 0 < significance_level < 1:
+        raise ValueError('significance_level must be strictly between 0 and 1')
 
     fracdiff_col = f"{col}{FRACDIFF_SUFFIX}"
 

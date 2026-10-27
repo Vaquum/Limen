@@ -150,11 +150,11 @@ def test_longest_period():
     ('sma', {'period': 30.5}), ('apo', {'fast_period': 12.0}),
     ('ppo', {'slow_period': 26.0}),
 ])
-def test_float_periods(name, kwargs):
+def test_float_periods_are_rejected_without_truncation(name, kwargs):
     from limen import indicators
     frame = DATA.head(128)
-    expected = getattr(BASELINES, name)(frame, **kwargs)
-    assert_frame_equal(getattr(indicators, name)(frame, **kwargs), expected, check_exact=True)
+    with pytest.raises(ValueError, match=r'period.*integer'):
+        getattr(indicators, name)(frame, **kwargs)
 
 
 def test_sma_bits():

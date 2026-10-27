@@ -36,18 +36,9 @@ def entry_score_microstructure(data: pl.DataFrame,
         micro_momentum_period (int): Period for micro momentum calculation
         volume_spike_period (int): Period for volume spike calculation
         spread_mean_period (int): Period for spread normalization
-        entry_position_weight_base (float): Base weight for position-in-candle factor
-        entry_momentum_weight_base (float): Base weight for momentum factor
-        entry_volume_weight_base (float): Base weight for volume factor
-        entry_spread_weight_base (float): Base weight for spread factor
-        entry_position_weight_low_vol (float): Position weight in low volatility regime
-        entry_momentum_weight_low_vol (float): Momentum weight in low volatility regime
-        entry_volume_weight_low_vol (float): Volume weight in low volatility regime
-        entry_spread_weight_low_vol (float): Spread weight in low volatility regime
-        entry_position_weight_high_vol (float): Position weight in high volatility regime
-        entry_momentum_weight_high_vol (float): Momentum weight in high volatility regime
-        entry_volume_weight_high_vol (float): Volume weight in high volatility regime
-        entry_spread_weight_high_vol (float): Spread weight in high volatility regime
+        entry_*_weight_base (float): Signal weights in the base regime
+        entry_*_weight_low_vol (float): Signal weights in the low-volatility regime
+        entry_*_weight_high_vol (float): Signal weights in the high-volatility regime
         entry_volume_spike_min (float): Minimum volume spike value for clipping
         entry_volume_spike_max (float): Maximum volume spike value for clipping
         entry_volume_spike_normalizer (float): Normalizer for volume spike scaling
@@ -59,7 +50,16 @@ def entry_score_microstructure(data: pl.DataFrame,
     '''
 
     _check.integers(lower=1, micro_momentum_period=micro_momentum_period, volume_spike_period=volume_spike_period, spread_mean_period=spread_mean_period)
-    _check.numbers(entry_position_weight_base=entry_position_weight_base, entry_momentum_weight_base=entry_momentum_weight_base, entry_volume_weight_base=entry_volume_weight_base, entry_spread_weight_base=entry_spread_weight_base, entry_position_weight_low_vol=entry_position_weight_low_vol, entry_momentum_weight_low_vol=entry_momentum_weight_low_vol, entry_volume_weight_low_vol=entry_volume_weight_low_vol, entry_spread_weight_low_vol=entry_spread_weight_low_vol, entry_position_weight_high_vol=entry_position_weight_high_vol, entry_momentum_weight_high_vol=entry_momentum_weight_high_vol, entry_volume_weight_high_vol=entry_volume_weight_high_vol, entry_spread_weight_high_vol=entry_spread_weight_high_vol, entry_volume_spike_min=entry_volume_spike_min, entry_volume_spike_max=entry_volume_spike_max, entry_spread_ratio_min=entry_spread_ratio_min, entry_spread_ratio_max=entry_spread_ratio_max)
+    _check.numbers(
+        entry_position_weight_base=entry_position_weight_base, entry_momentum_weight_base=entry_momentum_weight_base,
+        entry_volume_weight_base=entry_volume_weight_base, entry_spread_weight_base=entry_spread_weight_base,
+        entry_position_weight_low_vol=entry_position_weight_low_vol, entry_momentum_weight_low_vol=entry_momentum_weight_low_vol,
+        entry_volume_weight_low_vol=entry_volume_weight_low_vol, entry_spread_weight_low_vol=entry_spread_weight_low_vol,
+        entry_position_weight_high_vol=entry_position_weight_high_vol, entry_momentum_weight_high_vol=entry_momentum_weight_high_vol,
+        entry_volume_weight_high_vol=entry_volume_weight_high_vol, entry_spread_weight_high_vol=entry_spread_weight_high_vol,
+        entry_volume_spike_min=entry_volume_spike_min, entry_volume_spike_max=entry_volume_spike_max,
+        entry_spread_ratio_min=entry_spread_ratio_min, entry_spread_ratio_max=entry_spread_ratio_max,
+    )
     _check.numbers(positive=True, entry_volume_spike_normalizer=entry_volume_spike_normalizer)
     _check.ordered('entry_volume_spike_min', entry_volume_spike_min, 'entry_volume_spike_max', entry_volume_spike_max)
     _check.ordered('entry_spread_ratio_min', entry_spread_ratio_min, 'entry_spread_ratio_max', entry_spread_ratio_max)

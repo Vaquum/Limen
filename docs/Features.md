@@ -14,7 +14,7 @@ This page covers feature-helper selection, input requirements, and added columns
 
 ## Configuration constraints
 
-Features and indicators validate configuration before computing their output, including on empty input. Periods and windows require integers; Boolean values and fractional numbers are rejected. Rolling windows are positive, with existing TA-compatible bounds retained. Causal shifts may be zero: lag helpers, momentum periods, `micro_momentum`, `window_return`, `price_change_pct`, and Ichimoku displacement preserve that behavior. Negative shifts are rejected.
+Features and indicators validate configuration before computing their output, including on empty input. Periods and windows require integers; Boolean values and floats (including integer-valued floats) are rejected. Periods are never silently truncated. Rolling windows are positive, with existing TA-compatible bounds retained. Causal shifts may be zero: lag helpers, momentum periods, `micro_momentum`, `window_return`, `price_change_pct`, and Ichimoku displacement preserve that behavior. Negative shifts are rejected.
 
 Real coefficients must be finite, Boolean options require `bool`, and column names must be non-empty strings. Closed choices such as `price_vs_band_regime.band` reject unknown values. Period/hour sequences validate every element; calendar hours are `0..23`. Missing input columns still raise native Polars schema errors.
 
