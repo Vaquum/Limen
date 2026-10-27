@@ -2745,3 +2745,133 @@ Compute Yang-Zhang volatility over a rolling window.
 | close_col (`str`) | Column name for close prices |
 
 **Returns:** pl.DataFrame: The input data with a new column 'yang_zhang_volatility'
+
+## Deterministic market regimes
+
+`classify_market_regime` returns one production row per input row, with `series_id` and UTC `datetime` as join keys. It returns a narrow table; join it to the source bars before downstream preparation. Supply an explicit `RegimeConfig` version. `MarketRegimeClassifier.update` runs the same computation on chronological chunks; `snapshot` and `from_snapshot` preserve bounded JSON state across process restarts.
+
+The seven primary labels have stable codes: INITIALIZING=0, TREND_UP=1, TREND_DOWN=2, RANGE_LOW_VOL=3, RANGE_CHOP=4, BREAKOUT_UP=5, BREAKOUT_DOWN=6. The default output has the 12 production fields below; `include_audit=True` adds the 20 audit and eight rank fields. Stress is the maximum of the volatility and volatility-expansion ranks, rounded to Float32 before applying its configured threshold. Its two fields are null while those ranks are unavailable.
+
+These are configurable rule-based baseline hypotheses. Their exact thresholds have no established trading-performance or ML-optimality claim. Validate them for the intended market, sampling interval and downstream use, preserving chronological evaluation, sensitivity checks and selection-bias controls. The [2026 model-risk guidance](https://www.federalreserve.gov/supervisionreg/srletters/SR2602a1.pdf) describes testing assumptions and outcomes; [backtest-overfitting research](https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf) explains why selecting configurations on reported returns requires additional controls. These references support the validation discipline.
+
+### Policy and causality
+
+Each rank compares the current feature against its last 252 finite observations in that series, excluding the current row. Ties receive half weight. The current value enters history after its rank is emitted. Audit windows are fixed at 20/60 bars; prior ranges exclude the current bar. Log ratios are evaluated as differences of logs for numerical stability; means use centered summation. The first true range uses the observed high-low range because no prior close exists. No observations or features are filled.
+
+Candidate precedence is breakout, directional trend, low-volatility range, choppy range, then RANGE_CHOP with `finite_fallback`. The configuration below supplies all numerical thresholds. Trend entry requires matching score/slope signs and the corresponding signed-slope rank. Low-volatility and choppy ranges require weak absolute-trend ranks. A breakout requires a fresh crossing of its ATR threshold, its directional rank and participation rank.
+
+After initialization, ordinary regime changes require the configured consecutive candidate count. Trend/range retention uses separate exit thresholds. Breakouts commit immediately, freeze the broken prior-range boundary, and exit when close returns inside that boundary or their TTL expires. Exit commits the underlying trend/range candidate immediately; that row cannot renew the breakout. Counters and transitions describe committed labels. Other label changes use `flip`; resetting to INITIALIZING uses `none` and its explicit fallback reason.
+
+### Input and fallback contract
+
+Supply an eager Polars frame with String `series_id`, UTC Datetime `datetime`, and numeric open/high/low/close/volume. Keys are non-null; timestamps are unique and increasing within each series, including across chunks. Interleaved series retain independent state. Rejected keys, times or schemas leave the classifier unchanged.
+
+OHLC must be finite and positive, high must cover open/close, low must lie below them, and volume must be finite and non-negative. An invalid observed row emits INITIALIZING with `invalid_input:<column>`, clears pending/breakout state and leaves an unavailable row in rolling windows. Missing history emits `insufficient_history`; complete windows with undefined/non-finite derived features emit `invalid_input:<feature>`. Feature-specific rank histories retain prior finite observations. An unavailable observation never becomes a replacement price.
+
+Checkpoints contain only bounded observed windows, rank histories, timestamps and commitment state. Restore checks their shape, finite values, config hash and implementation hash; use checkpoints from trusted provenance. The implementation fingerprint covers the audit, ranking and state/commitment code. Configuration hashes include the threshold values, fixed windows and stable enum mapping.
+
+### `classify_market_regime`
+
+<!-- reference: regime-classify-market-regime source=limen/features/classify_market_regime.py region=signature:classify_market_regime role=signature -->
+```python
+def classify_market_regime(data: pl.DataFrame, *, config: RegimeConfig, include_audit: bool=False) -> pl.DataFrame:
+    ...
+```
+
+### `MarketRegimeClassifier`
+
+<!-- reference: regime-marketregimeclassifier source=limen/features/classify_market_regime.py region=signature:MarketRegimeClassifier role=signature -->
+```python
+class MarketRegimeClassifier:
+    ...
+```
+
+### `MarketRegimeClassifier.__init__`
+
+<!-- reference: regime-marketregimeclassifier---init-- source=limen/features/classify_market_regime.py region=signature:MarketRegimeClassifier.__init__ role=signature -->
+```python
+def __init__(self, config: RegimeConfig) -> None:
+    ...
+```
+
+### `MarketRegimeClassifier.snapshot`
+
+<!-- reference: regime-marketregimeclassifier-snapshot source=limen/features/classify_market_regime.py region=signature:MarketRegimeClassifier.snapshot role=signature -->
+```python
+def snapshot(self) -> str:
+    ...
+```
+
+### `MarketRegimeClassifier.from_snapshot`
+
+<!-- reference: regime-marketregimeclassifier-from-snapshot source=limen/features/classify_market_regime.py region=signature:MarketRegimeClassifier.from_snapshot role=signature -->
+```python
+@classmethod
+def from_snapshot(cls, config: RegimeConfig, snapshot: str) -> 'MarketRegimeClassifier':
+    ...
+```
+
+### `MarketRegimeClassifier.update`
+
+<!-- reference: regime-marketregimeclassifier-update source=limen/features/classify_market_regime.py region=signature:MarketRegimeClassifier.update role=signature -->
+```python
+def update(self, data: pl.DataFrame, *, include_audit: bool=False) -> pl.DataFrame:
+    ...
+```
+
+### `RegimeConfig`
+
+<!-- reference: regime-regimeconfig source=limen/features/_regime_config.py region=signature:RegimeConfig role=signature -->
+```python
+@dataclass(frozen=True)
+class RegimeConfig:
+    version: str
+    trend_rank_entry: float = 0.65
+    trend_slope_up: float = 0.6
+    trend_slope_down: float = 0.4
+    coherence_entry: float = 0.35
+    trend_rank_exit: float = 0.5
+    coherence_exit: float = 0.2
+    range_vol_entry: float = 0.35
+    range_trend_entry: float = 0.5
+    range_vol_exit: float = 0.45
+    range_trend_exit: float = 0.6
+    chop_rank_entry: float = 0.65
+    breakout_atr: float = 0.25
+    breakout_rank: float = 0.95
+    participation_rank: float = 0.6
+    stress_threshold: float = 0.95
+    confirmation_rows: int = 2
+    breakout_ttl: int = 3
+    eps: float = 1e-12
+```
+
+### `RegimeConfig.config_hash`
+
+<!-- reference: regime-regimeconfig-config-hash source=limen/features/_regime_config.py region=signature:RegimeConfig.config_hash role=signature -->
+```python
+@property
+def config_hash(self) -> str:
+    ...
+```
+
+### Production schema
+
+<!-- reference: regime-production source=limen/features/_regime_contract.py region=definition:PRODUCTION role=definition -->
+```python
+PRODUCTION: dict[str, pl.DataType | type[pl.DataType]] = {'series_id': pl.String, 'datetime': pl.Datetime('ns', 'UTC'), 'market_regime': pl.Enum(REGIMES), 'market_regime_code': pl.UInt8, 'stress_level': pl.Float32, 'is_stress': pl.Boolean, 'transition_kind': pl.Enum(TRANSITIONS), 'bars_in_regime': pl.UInt32, 'fallback_reason': pl.String, 'regime_config_version': pl.String, 'regime_config_hash': pl.String, 'regime_feature_hash': pl.String}
+```
+
+### Audit schema
+
+<!-- reference: regime-audit source=limen/features/_regime_contract.py region=definition:AUDIT role=definition -->
+```python
+AUDIT = ('ret_1_log', 'true_range', 'atr_20', 'atr_pct_20', 'rs_var', 'vol_rs_20', 'vol_rs_60', 'vol_expansion_20_60', 'sma_fast_20', 'sma_slow_60', 'trend_score_20_60', 'trend_slope_20', 'range_high_60_prev', 'range_low_60_prev', 'range_width_atr_60', 'range_position_60', 'breakout_up_atr', 'breakout_down_atr', 'coherence_20', 'participation_20_60')
+```
+
+### Ranks schema
+
+<!-- reference: regime-ranks source=limen/features/_regime_contract.py region=definition:RANKS role=definition -->
+```python
+RANKS = ('rank_abs_trend_score_252', 'rank_trend_slope_252', 'rank_vol_rs_20_252', 'rank_vol_expansion_252', 'rank_breakout_up_252', 'rank_breakout_down_252', 'rank_chop_252', 'rank_participation_252')
+```
