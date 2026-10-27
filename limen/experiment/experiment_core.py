@@ -125,7 +125,7 @@ class UniversalExperimentLoop:
     def fold_results(self) -> pl.DataFrame:
         return self._walk_forward.results if self._walk_forward is not None else pl.DataFrame()
 
-    check_parallel_admission, _admit_round_errors, save, load = _parallel.admit_parallel, _errors.admit, _snapshot.save, classmethod(_snapshot.load)
+    check_parallel_admission, save, load = _parallel.admit_parallel, _snapshot.save, classmethod(_snapshot.load)
 
     @property
     def interrupted(self) -> bool:
