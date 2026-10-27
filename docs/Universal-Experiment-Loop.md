@@ -192,6 +192,7 @@ def __init__(self, *, data: pl.DataFrame | None=None, sfd: Any=None, search_stra
 <!-- reference: uel-run source=limen/experiment/experiment_core.py region=signature:UniversalExperimentLoop.run role=signature -->
 ```python
 @_holdout.run_guard
+@_snapshot.captured
 def run(self, experiment_name: str, n_permutations: int=10000, prep_each_round: bool=False, random_search: bool=True, maintain_details_in_params: bool=False, context_params: dict[str, object] | None=None, params: Callable[[], dict[str, object]] | None=None, prep: Callable[..., dict[str, object]] | None=None, model: Callable[..., dict[str, object]] | None=None, resume: bool=False, post_processing: bool=False, progress_bar: bool=True, record_execution: bool=False, record_model_outputs: bool=False, factorize: bool=False, workers: int | None=None, recording: Mapping[str, bool] | None=None) -> None:
     ...
 ```
