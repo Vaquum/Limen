@@ -47,6 +47,24 @@ def test_lookback_requires_explicit_nonconflicting_source_end():
             transport.assert_not_called()
 
 
+@pytest.mark.parametrize('method,options', [('get_spot_klines', {'kline_size': 900}), ('get_spot_dollar_klines', {})])
+def test_fractional_lookback_does_not_round_the_start_down(market, method, options):
+    with patch('limen.data.historical_data._read_any_file', return_value=market):
+        result = getattr(HistoricalData(), method)(lookback_days=.020826, end_date_limit='2025-01-03T00:30:00', **options)
+    expected = market.filter(pl.col('datetime').is_between(
+        pl.datetime(2025, 1, 3, 0, 0, 0, 633600, time_zone='UTC'),
+        pl.datetime(2025, 1, 3, 0, 30, time_zone='UTC')))
+    assert result.height == expected.height == 2
+    assert result['datetime'].equals(expected['datetime'])
+
+
+def test_recorded_lookback_precision_control_preserves_nanosecond_endpoint(market):
+    clock = pl.col('datetime').cast(pl.Datetime('ns', 'UTC'))
+    precision_control = market.head(193).with_columns(pl.when(pl.int_range(pl.len()) == 192)
+        .then(clock + pl.duration(nanoseconds=1)).otherwise(clock).alias('datetime'))
+    assert_frame_equal(lookback_window(precision_control, 2), precision_control.tail(192))
+
+
 def test_regime_sampling_retains_one_original_contiguous_block(market):
     states = classify_market_regime(market.with_columns(pl.lit('input').alias('series_id')),
                                    config=RegimeConfig(version='label3-test'))['market_regime'].to_list()
