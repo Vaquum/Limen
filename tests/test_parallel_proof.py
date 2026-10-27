@@ -348,3 +348,10 @@ def test_plain_assertions_still_fail_on_a_recorded_control(tmp_path):
     assert result.returncode == 1, result.stdout + result.stderr
     assert profile['suite']['test_count'] == profile['suite']['failed_count'] == 1
     assert 'AssertionError' in profile['tests'][0]['error']
+
+
+def test_native_runner_refuses_disabled_python_assertions():
+    result = subprocess.run([sys.executable, '-O', '-m', 'tests.run', '-n', '0', RECORDED_CASES[0]],
+                            cwd=ROOT, capture_output=True, text=True, check=False, timeout=30)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert 'requires enabled Python assertions' in result.stderr
