@@ -168,6 +168,14 @@ def test_yaml_refuses_invalid_or_unsupported_policy(values):
     assert not validate(reference).valid
 
 
+@pytest.mark.parametrize('literal,accepted', [('1', True), ('true', False)])
+def test_yaml_error_budget_preserves_anchored_scalar_semantics(literal, accepted):
+    from ruamel.yaml import YAML
+    reference = config()
+    reference['uel'].update(YAML().load('max_round_errors: &budget ' + literal))
+    assert validate(reference).valid is accepted
+
+
 def test_real_cli_records_a_later_failure(tmp_path):
     from ruamel.yaml import YAML
     reference = config()

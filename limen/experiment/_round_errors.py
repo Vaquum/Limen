@@ -5,9 +5,11 @@ import csv
 from functools import wraps
 import inspect
 from itertools import islice
+from numbers import Integral
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
+from ruamel.yaml.scalarbool import ScalarBoolean
 
 from limen.experiment._fold_fingerprint import FoldEvidenceError
 from limen.experiment._holdout_history import HoldoutEvidenceError
@@ -29,11 +31,11 @@ class RoundErrorPolicy:
         super().__init__()
         if not isinstance(mode, str) or mode not in ('abort', 'record'):
             raise ValueError('on_round_error must be abort or record')
-        if mode == 'record' and (type(limit) is not int or limit < 1):
+        if mode == 'record' and (not isinstance(limit, Integral) or isinstance(limit, (bool, ScalarBoolean)) or limit < 1):
             raise ValueError('record requires a positive integer max_round_errors')
         if mode == 'abort' and limit is not None:
             raise ValueError('max_round_errors requires on_round_error=record')
-        self.mode, self.limit = mode, cast(int | None, limit)
+        self.mode, self.limit = mode, int(cast(Integral, limit)) if mode == 'record' else None
         self.failures = 0
         self._terminal: Exception | None = None
 
