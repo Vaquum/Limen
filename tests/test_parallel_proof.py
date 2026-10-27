@@ -42,7 +42,7 @@ def _run(directory, args, *, covered=True, launcher=None, environment=None):
             else:
                 env[name] = value
     command.extend(('-m', 'tests.run') if launcher is None else (str(launcher),))
-    result = subprocess.run([*command, *args], cwd=ROOT, env=env, capture_output=True, text=True, check=False)
+    result = subprocess.run([*command, '--assert=plain', *args], cwd=ROOT, env=env, capture_output=True, text=True, check=False)
     assert (directory / 'runtime.json').is_file(), result.stdout + result.stderr
     return result, json.loads((directory / 'runtime.json').read_text())
 
