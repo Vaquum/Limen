@@ -51,6 +51,7 @@ Does **not** own the parameter domain or the search strategies it steers.
 reducer/
 ├── README.md
 ├── __init__.py
+├── _forest_analysis.py
 ├── budget_reducer.py
 ├── correlation_reducer.py
 ├── filter_types.py
