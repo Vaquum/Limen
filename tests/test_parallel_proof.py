@@ -42,7 +42,7 @@ def _run(directory, args, *, covered=True, launcher=None, environment=None):
             else:
                 env[name] = value
     command.extend(('-m', 'tests.run') if launcher is None else (str(launcher),))
-    result = subprocess.run([*command, *args], cwd=ROOT, env=env, capture_output=True, text=True, check=False)
+    result = subprocess.run([*command, '--assert=plain', *args], cwd=ROOT, env=env, capture_output=True, text=True, check=False)
     assert (directory / 'runtime.json').is_file(), result.stdout + result.stderr
     return result, json.loads((directory / 'runtime.json').read_text())
 
@@ -336,3 +336,22 @@ def test_parallel_proof_keeps_required_limits():
     assert 'python -m coverage run -m tests.run || test_exit=$?' in workflow
     assert 'python -m coverage report --fail-under=92' in workflow
     assert 'python -m tests.runtime_gate' in workflow and '--enforce' in workflow
+
+
+def test_plain_assertions_still_fail_on_a_recorded_control(tmp_path):
+    probe = tmp_path / 'test_recorded_assertion.py'
+    source = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'
+    probe.write_text("from limen.data import HistoricalData\n"
+        "def test_observed_price_control():\n"
+        f"    assert HistoricalData().get_any_file({str(source)!r})['close'][0] < 0\n")
+    result, profile = _run(tmp_path, ('-n', '0', '-q', str(probe)))
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert profile['suite']['test_count'] == profile['suite']['failed_count'] == 1
+    assert 'AssertionError' in profile['tests'][0]['error']
+
+
+def test_native_runner_refuses_disabled_python_assertions():
+    result = subprocess.run([sys.executable, '-O', '-m', 'tests.run', '-n', '0', RECORDED_CASES[0]],
+                            cwd=ROOT, capture_output=True, text=True, check=False, timeout=30)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert 'requires enabled Python assertions' in result.stderr

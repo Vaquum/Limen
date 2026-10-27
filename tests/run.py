@@ -285,7 +285,7 @@ def _pytest_args(argv: list[str]) -> list[str]:
     if argv:
         return argv
     # Default discovery includes test_acceptance_gates.py, test_parallel_rounds.py and test_round_signals.py.
-    return ['-n', '4', '--dist', 'loadgroup', '--max-worker-restart=0', 'tests']
+    return ['--assert=plain', '-n', '4', '--dist', 'loadgroup', '--max-worker-restart=0', 'tests']
 
 
 def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> None:
@@ -321,6 +321,9 @@ def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> No
 
 
 def main() -> int:
+    if not __debug__:
+        logger.error('The native test runner requires enabled Python assertions')
+        return 2
     _ = os.environ.setdefault('POLARS_MAX_THREADS', '1')
     for variable in ('OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                      'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'OMP_NUM_THREADS', 'OMP_THREAD_LIMIT'):
