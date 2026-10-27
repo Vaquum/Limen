@@ -165,3 +165,16 @@ def test_walk_forward_reconstruction_replays_the_candidate_noise(tmp_path):
     for sensor, identity in zip(sensors, identities, strict=True):
         assert sensor._fitted_params['_target_cls_up_next'].perturbation_parameters['permutation_id'] == identity
         assert '_permutation_id' not in sensor.round_params
+
+
+def test_training_smoothing_retains_factorized_metric_parity(tmp_path):
+    reference = config()
+    reference['sfd']['params'].update(horizon_jitter=[0], threshold_noise_std=[0.],
+                                      noise_seed=[7], label_smoothing=[0., .2])
+    logs = []
+    for factorize in (False, True):
+        experiment = UniversalExperimentLoop(sfd=CompiledSFD(reference), data=_bars(), yaml_reference=reference,
+            search_strategy=build_search_strategy(reference), experiment_dir=tmp_path / str(factorize))
+        experiment.run('smoothing', n_permutations=2, prep_each_round=True, progress_bar=False, factorize=factorize)
+        logs.append(experiment.experiment_log.drop('execution_time'))
+    assert_frame_equal(*logs, check_exact=True)
