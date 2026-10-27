@@ -11,13 +11,17 @@ def integers(*, lower: int | None = None, upper: int | None = None,
              context: str = '', **values: object) -> None:
     for parameter, value in values.items():
         name = f'{context} {parameter}'.strip()
-        if isinstance(value, bool) or not isinstance(value, Integral):
-            raise ValueError(f'{name} must be an integer')
-        numeric = int(value)
-        if lower is not None and numeric < lower:
-            raise ValueError(f'{name} must be non-negative' if lower == 0 else f'{name} must be at least {lower}')
-        if upper is not None and numeric > upper:
-            raise ValueError(f'{name} must be at most {upper}')
+        _integer(name, value, lower, upper)
+
+
+def _integer(name: str, value: object, lower: int | None, upper: int | None) -> None:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f'{name} must be an integer')
+    numeric = int(value)
+    if lower is not None and numeric < lower:
+        raise ValueError(f'{name} must be non-negative' if lower == 0 else f'{name} must be at least {lower}')
+    if upper is not None and numeric > upper:
+        raise ValueError(f'{name} must be at most {upper}')
 
 
 def numbers(*, lower: float | None = None, upper: float | None = None,
@@ -55,7 +59,7 @@ def integer_sequence(name: str, values: object, *, minimum: int = 0,
         raise ValueError(f'{name} must be an iterable of integers')
     result = list(cast(Iterable[object], values))
     for value in result:
-        integers(lower=minimum, upper=maximum, **{name: value})
+        _integer(name, value, minimum, maximum)
     return cast(list[int], result)
 
 
