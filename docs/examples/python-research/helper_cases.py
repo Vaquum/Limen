@@ -80,6 +80,14 @@ def retained_frame(output, package, name, result, original):
             'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
+# region regime_labels
+def regime_labels(raw):
+    from limen.features.classify_market_regime import RegimeConfig
+    bars = raw.with_columns(pl.lit('recorded-spot').alias('series_id'))
+    return features.classify_market_regime(bars, config=RegimeConfig(version='baseline-v1'), include_audit=True)
+# endregion regime_labels
+
+
 # region helper_diagnostics
 def preparation_helpers(raw, data_dir, output):
     output.mkdir(parents=True)
@@ -106,6 +114,9 @@ def preparation_helpers(raw, data_dir, output):
             result['features'][name] = {'rows': len(profile['bars']), 'path': 'trade-profile.parquet',
                                         'sha256': hashlib.sha256((output / 'trade-profile.parquet').read_bytes()).hexdigest(),
                                         'columns': list(profile['bars'][0]), 'kind': 'recorded-trade diagnostic'}
+        elif name == 'classify_market_regime':
+            value = regime_labels(context)
+            result['features'][name] = retained_frame(output, 'feature', name, value, context)
         else:
             params = PARAMETERS.get(name, {}) | line_arguments.get(name, {})
             value = getattr(features, name)(context.clone(), **params)

@@ -2762,6 +2762,18 @@ The seven primary labels have stable codes: INITIALIZING=0, TREND_UP=1, TREND_DO
 
 These are configurable rule-based baseline hypotheses. Their exact thresholds have no established trading-performance or ML-optimality claim. Validate them for the intended market, sampling interval and downstream use, preserving chronological evaluation, sensitivity checks and selection-bias controls. The [2026 model-risk guidance](https://www.federalreserve.gov/supervisionreg/srletters/SR2602a1.pdf) describes testing assumptions and outcomes; [backtest-overfitting research](https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf) explains why selecting configurations on reported returns requires additional controls. These references support the validation discipline.
 
+### Recorded example
+
+The Python project's helper diagnostics run this on the supplied recorded bars and retain its output. Join the returned table on `series_id` and `datetime` when adding labels to model inputs.
+
+<!-- example: recorded-regime-labels source=docs/examples/python-research/helper_cases.py region=regime_labels scenario=search interface=python role=executed -->
+```python
+def regime_labels(raw):
+    from limen.features.classify_market_regime import RegimeConfig
+    bars = raw.with_columns(pl.lit('recorded-spot').alias('series_id'))
+    return features.classify_market_regime(bars, config=RegimeConfig(version='baseline-v1'), include_audit=True)
+```
+
 ### Policy and causality
 
 Each rank compares the current feature against its last 252 finite observations in that series, excluding the current row. Ties receive half weight. The current value enters history after its rank is emitted. Audit windows are fixed at 20/60 bars; prior ranges exclude the current bar. Log ratios are evaluated as differences of logs for numerical stability; means use centered summation. The first true range uses the observed high-low range because no prior close exists. No observations or features are filled.

@@ -35,6 +35,15 @@ def verify_helpers(result, output, inputs):
     np.testing.assert_allclose(roc[10:], (close[10:] / close[:-10] - 1) * 100, rtol=1e-10, atol=1e-10)
     sma = pl.read_parquet(output / result['indicators']['sma']['path'])['close_sma_30'].to_numpy()
     np.testing.assert_allclose(sma[29:], np.convolve(close, np.ones(30) / 30, 'valid'), rtol=1e-10, atol=1e-8)
+    regimes = pl.read_parquet(output / result['features']['classify_market_regime']['path'])
+    assert regimes.height == raw.height and regimes['market_regime'].null_count() == 0
+    assert (regimes['market_regime_code'].head(312) == 0).all()
+    assert (regimes['market_regime_code'].slice(312) != 0).all()
+    assert regimes['regime_config_version'].unique().to_list() == ['baseline-v1']
+    assert regimes['series_id'].unique().to_list() == ['recorded-spot']
+    expected_stress = pl.max_horizontal('rank_vol_rs_20_252', 'rank_vol_expansion_252').cast(pl.Float32)
+    assert regimes.filter(pl.col('stress_level').is_not_null()).select(
+        (pl.col('stress_level') == expected_stress).all()).item()
     training = raw.head(864)
     later = raw[864:]
     for name, entry in result['scalers'].items():
