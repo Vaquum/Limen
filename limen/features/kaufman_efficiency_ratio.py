@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -31,6 +32,9 @@ def kaufman_efficiency_ratio(
     Returns:
         pl.DataFrame: The input data with the efficiency-ratio column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col, output_col=output_col)
 
     displacement = (pl.col(close_col) - pl.col(close_col).shift(window)).abs()
     path_length = (

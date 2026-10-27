@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def hh_hl_structure_regime(df: pl.DataFrame,
@@ -16,6 +17,9 @@ def hh_hl_structure_regime(df: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'regime_hh_hl'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.integers(lower=0, score_threshold=score_threshold)
 
     hh = (pl.col('high') > pl.col('high').shift(1)).cast(pl.Int8)
     hl = (pl.col('low')  > pl.col('low').shift(1)).cast(pl.Int8)

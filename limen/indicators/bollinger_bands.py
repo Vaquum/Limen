@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def bollinger_bands(
@@ -20,6 +21,10 @@ def bollinger_bands(
     Returns:
         pl.DataFrame: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.numbers(num_std=num_std)
+    _check.names(price_col=price_col)
 
     sma_col = 'bb_middle'
     upper_col = 'bb_upper'

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def rogers_satchell_volatility(
@@ -25,14 +26,16 @@ def rogers_satchell_volatility(
         pl.DataFrame: The input data with a new column 'rogers_satchell_volatility'
     '''
 
+    _check.integers(lower=1, window=window)
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
+
     high_open = pl.col(high_col).log() - pl.col(open_col).log()
     high_close = pl.col(high_col).log() - pl.col(close_col).log()
     low_open = pl.col(low_col).log() - pl.col(open_col).log()
     low_close = pl.col(low_col).log() - pl.col(close_col).log()
 
     return (
-        data
-        .with_columns(((high_open * high_close) + (low_open * low_close)).alias('_rogers_satchell_variance'))
+        data.with_columns(((high_open * high_close) + (low_open * low_close)).alias('_rogers_satchell_variance'))
         .with_columns(
             (
                 pl.col('_rogers_satchell_variance')

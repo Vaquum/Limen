@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -35,6 +36,9 @@ def trade_size_ratio(
     Returns:
         pl.DataFrame: The input data with the trade-size ratio column appended
     '''
+
+    _check.integers(lower=1, short_window=short_window, long_window=long_window)
+    _check.names(volume_col=volume_col, trades_col=trades_col, output_col=output_col)
 
     trade_size = _safe_divide(pl.col(volume_col), pl.col(trades_col))
 

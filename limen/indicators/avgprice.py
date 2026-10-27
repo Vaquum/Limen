@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def avgprice(
@@ -22,6 +23,8 @@ def avgprice(
     Returns:
         pl.DataFrame: The input data with a new column 'avgprice'
     '''
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     avg_price = (
         pl.col(open_col).cast(pl.Float64)

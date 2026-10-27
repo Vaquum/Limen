@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDLMATCHINGLOW_EQUAL_AVG_PERIOD = 5
 CDLMATCHINGLOW_EQUAL_FACTOR = 0.05
@@ -83,16 +84,16 @@ def cdlmatchinglow(
     close_col: str = 'close',
 ) -> pl.DataFrame:
 
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
+
     out_col = 'cdlmatchinglow'
     input_cols = [open_col, high_col, low_col, close_col]
     return data.with_columns(
         pl.struct(input_cols).map_batches(
             lambda s: _cdlmatchinglow_impl(
                 pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
-                open_col=open_col,
-                high_col=high_col,
-                low_col=low_col,
-                close_col=close_col,
+                open_col=open_col, high_col=high_col,
+                low_col=low_col, close_col=close_col,
             ).get_column(out_col),
             return_dtype=pl.Int32,
         ).alias(out_col)

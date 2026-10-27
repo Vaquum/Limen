@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def obv(
@@ -18,6 +19,8 @@ def obv(
     Returns:
         pl.DataFrame: The input data with a new column 'obv'
     '''
+
+    _check.names(price_col=price_col, volume_col=volume_col)
 
     signed_volume = (
         pl.when(pl.col(price_col).diff(1) > 0.0)

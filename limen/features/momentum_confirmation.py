@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def momentum_confirmation(df: pl.DataFrame,
@@ -18,6 +19,9 @@ def momentum_confirmation(df: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
     '''
+
+    _check.integers(lower=0, short_period=short_period, long_period=long_period)
+    _check.numbers(lower=0, upper=1, short_weight=short_weight)
 
     if short_period >= long_period:
         raise ValueError(f"momentum_confirmation short_period ({short_period}) must be less than long_period ({long_period})")

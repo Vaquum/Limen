@@ -4,6 +4,7 @@ from typing import cast
 import polars as pl
 import numpy as np
 import numpy.typing as npt
+import limen._feature_constraints as _check
 
 
 def conserved_flux_renormalization(trades_df: pl.DataFrame,
@@ -27,6 +28,9 @@ def conserved_flux_renormalization(trades_df: pl.DataFrame,
     Returns:
         pl.DataFrame: A klines DataFrame with the CFR features
     '''
+
+    _check.interval(kline_interval)
+    _check.integers(lower=1, base_window_s=base_window_s, levels=levels)
 
     trades = (trades_df
               .with_columns((pl.col('price') * pl.col('quantity')).alias('value'))

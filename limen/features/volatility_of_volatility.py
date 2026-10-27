@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def volatility_of_volatility(
@@ -21,9 +22,11 @@ def volatility_of_volatility(
         pl.DataFrame: The input data with a new column 'volatility_of_volatility'
     '''
 
+    _check.integers(lower=1, volatility_window=volatility_window, window=window)
+    _check.names(close_col=close_col)
+
     return (
-        data
-        .with_columns(pl.col(close_col).pct_change().alias('_vol_of_vol_returns'))
+        data.with_columns(pl.col(close_col).pct_change().alias('_vol_of_vol_returns'))
         .with_columns(
             pl.col('_vol_of_vol_returns').rolling_std(window_size=volatility_window).alias('_vol_of_vol_base')
         )

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
@@ -16,9 +17,10 @@ def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
         pl.DataFrame: The input data with a new column 'atr_sma'
     '''
 
+    _check.integers(lower=1, period=period)
+
     return (
-        data
-        .with_columns([
+        data.with_columns([
             pl.col('close').shift(1).alias('prev_close')
         ])
         .with_columns([

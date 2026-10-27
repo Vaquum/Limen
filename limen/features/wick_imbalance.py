@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -24,6 +25,8 @@ def wick_imbalance(
     Returns:
         pl.DataFrame: The input data with a new column 'wick_imbalance'
     '''
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     upper_wick = pl.col(high_col) - pl.max_horizontal(pl.col(open_col), pl.col(close_col))
     lower_wick = pl.min_horizontal(pl.col(open_col), pl.col(close_col)) - pl.col(low_col)

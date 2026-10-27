@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -10,8 +11,7 @@ def illiquidity_shock(
     volume_col: str = 'volume',
 ) -> pl.DataFrame:
 
-    '''
-    Compute the current Amihud illiquidity level relative to its trailing baseline.
+    '''Compute the current Amihud illiquidity level relative to its trailing baseline.
 
     Args:
         data (pl.DataFrame): Klines dataset with price and volume columns
@@ -23,12 +23,13 @@ def illiquidity_shock(
         pl.DataFrame: The input data with a new column 'illiquidity_shock'
     '''
 
+    _check.integers(lower=1, window=window)
+    _check.names(price_col=price_col, volume_col=volume_col)
+
     amihud_expr = pl.col(price_col).pct_change().abs() / ((pl.col(price_col) * pl.col(volume_col)) + EPSILON)
 
     return (
-        data
-        .with_columns(amihud_expr.alias('_illiquidity_level'))
-        .with_columns(
+        data.with_columns(amihud_expr.alias('_illiquidity_level')).with_columns(
             (
                 pl.col('_illiquidity_level')
                 / (pl.col('_illiquidity_level').rolling_mean(window_size=window).shift(1) + EPSILON)

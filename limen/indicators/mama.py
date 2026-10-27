@@ -4,6 +4,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
+import limen._feature_constraints as _check
 
 CMP_N_0_01 = 0.01
 CMP_N_0_99 = 0.99
@@ -245,6 +246,9 @@ def mama(
     Returns:
         pl.DataFrame: The input data with new columns 'mama' and 'fama'
     '''
+
+    _check.numbers(fast_limit=fast_limit, slow_limit=slow_limit)
+    _check.names(price_col=price_col)
 
     if fast_limit < CMP_N_0_01 or fast_limit > CMP_N_0_99:
         raise ValueError('mama fast_limit must be between 0.01 and 0.99')

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -24,6 +25,9 @@ def volatility_term_structure(
     Returns:
         pl.DataFrame: The input data with a new column 'volatility_term_structure'
     '''
+
+    _check.integers(lower=1, short_window=short_window, medium_window=medium_window, long_window=long_window)
+    _check.names(close_col=close_col)
 
     returns = pl.col(close_col).pct_change()
 

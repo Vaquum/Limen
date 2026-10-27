@@ -1,5 +1,6 @@
 import polars as pl
 from limen.indicators.rolling_volatility import rolling_volatility
+import limen._feature_constraints as _check
 
 
 
@@ -23,9 +24,11 @@ def volatility_weight(data: pl.DataFrame,
         pl.DataFrame: The input data with new columns 'volatility', 'volatility_weight'
     '''
 
-    df = data.with_columns([
-        pl.col('close').pct_change().alias('returns_temp')
-    ])
+    _check.integers(lower=1, period=period)
+    _check.numbers(volatility_scaling_factor=volatility_scaling_factor, volatility_weight_min=volatility_weight_min, volatility_weight_max=volatility_weight_max)
+    _check.ordered('volatility_weight_min', volatility_weight_min, 'volatility_weight_max', volatility_weight_max)
+
+    df = data.with_columns([pl.col('close').pct_change().alias('returns_temp')])
 
     df = rolling_volatility(df, 'returns_temp', period)
     df = df.rename({f'returns_temp_volatility_{period}': 'volatility'})

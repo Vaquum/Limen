@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDLLONGLEGGEDDOJI_BODY_DOJI_AVG_PERIOD = 10
 CDLLONGLEGGEDDOJI_BODY_DOJI_FACTOR = 0.1
@@ -100,6 +101,8 @@ def cdllongleggeddoji(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdllongleggeddoji'
     input_cols = [open_col, high_col, low_col, close_col]

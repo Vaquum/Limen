@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDLHIGHWAVE_BODY_PERIOD_TOTAL = 0.0
 CDLHIGHWAVE_BODY_SHORT_AVG_PERIOD = 10
@@ -74,9 +75,7 @@ def _cdlhighwave_impl(
             shadow_avg = shadow_vl_factor * (shadow_period_total / shadow_vl_avg_period)
 
         if (
-            real_body < body_avg
-            and upper_shadow > shadow_avg
-            and lower_shadow > shadow_avg
+            real_body < body_avg and upper_shadow > shadow_avg and (lower_shadow > shadow_avg)
         ):
             color = 1 if close_values[i] >= open_values[i] else -1
             out[i] = color * 100
@@ -103,6 +102,8 @@ def cdlhighwave(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdlhighwave'
     input_cols = [open_col, high_col, low_col, close_col]

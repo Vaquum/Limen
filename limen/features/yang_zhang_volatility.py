@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def yang_zhang_volatility(
@@ -24,6 +25,9 @@ def yang_zhang_volatility(
     Returns:
         pl.DataFrame: The input data with a new column 'yang_zhang_volatility'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     if window <= 1:
         raise ValueError('window must be greater than 1 for yang_zhang_volatility')

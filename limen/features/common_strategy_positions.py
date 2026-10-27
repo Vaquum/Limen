@@ -1,6 +1,7 @@
 import polars as pl
 
-from limen.sfd.rule_based.common_strategies import strategy_signals
+from limen.sfd.rule_based.common_strategies import STRATEGY_NAMES, strategy_signals
+import limen._feature_constraints as _check
 
 
 __all__ = ['POSITION_COLUMN', 'common_strategy_positions']
@@ -17,6 +18,8 @@ def common_strategy_positions(
     Lazy execution evaluates the complete input frame once, so optimizations
     cannot move a filter or slice ahead of the strategy's indicator history.
     '''
+
+    _check.choice('strategy', strategy, STRATEGY_NAMES)
 
     schema = data.collect_schema()
     if POSITION_COLUMN in schema:

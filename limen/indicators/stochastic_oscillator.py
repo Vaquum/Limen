@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def stochastic_oscillator(
@@ -18,6 +19,8 @@ def stochastic_oscillator(
     Returns:
         pl.DataFrame: The input data with two new columns 'stoch_k' and 'stoch_d'
     '''
+
+    _check.integers(lower=1, window_k=window_k, window_d=window_d)
 
     highest_col = 'stoch_highest'
     lowest_col = 'stoch_lowest'

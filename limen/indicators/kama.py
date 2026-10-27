@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -116,6 +117,9 @@ def kama(
     Returns:
         pl.DataFrame: The input data with a new column 'kama_{period}'
     '''
+
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('kama period must be between 2 and 100000')

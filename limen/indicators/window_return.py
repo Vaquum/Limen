@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def window_return(data: pl.DataFrame,
@@ -14,6 +15,8 @@ def window_return(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column named using the pattern 'ret_{period}'
     '''
+
+    _check.integers(lower=0, period=period)
 
     col = f"ret_{period}"
 

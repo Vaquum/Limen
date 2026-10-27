@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -21,15 +22,16 @@ def roc(
         pl.DataFrame: The input data with a new column 'roc_{period}'
     '''
 
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
+
     if period < 1 or period > CMP_N_100000:
         raise ValueError('roc period must be between 1 and 100000')
 
     out_col = f"roc_{period}"
     trailing = pl.col(price_col).shift(period)
     roc_expr = (
-        pl.when(pl.int_range(0, pl.len()) < period)
-        .then(None)
-        .when(trailing != 0.0)
+        pl.when(pl.int_range(0, pl.len()) < period).then(None).when(trailing != 0.0)
         .then(((pl.col(price_col) / trailing) - 1.0) * 100.0)
         .otherwise(0.0)
         .alias(out_col)

@@ -3,6 +3,7 @@ from decimal import Decimal
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 FRACDIFF_SUFFIX = '_fracdiff'
 
@@ -81,12 +82,11 @@ def fractional_diff(data: pl.DataFrame,
 
     if isinstance(cols, str) or not cols:
         raise ValueError('fractional_diff cols must be a non-empty list of column names')
+    _check.numbers(context='fractional_diff', lower=0, d=d)
+    _check.numbers(context='fractional_diff', positive=True, threshold=threshold)
+    _check.column_sequence('cols', cols)
 
-    if not (isinstance(d, int) or np.isfinite(d)) or d < 0:
-        raise ValueError(f"fractional_diff d must be finite and non-negative, got {d}")
 
-    if not (isinstance(threshold, int) or np.isfinite(threshold)) or threshold <= 0:
-        raise ValueError(f"fractional_diff threshold must be finite and positive, got {threshold}")
 
     schema_names = data.collect_schema().names()
     missing = [col for col in cols if col not in schema_names]
@@ -167,10 +167,16 @@ def find_min_d(data: pl.DataFrame,
         float: Smallest d achieving stationarity, or d_end if none found
     '''
 
+    _check.numbers(lower=0, d_start=d_start, d_end=d_end)
+    _check.numbers(positive=True, step=step, threshold=threshold)
+    _check.numbers(lower=0, upper=1, significance_level=significance_level)
+    _check.names(col=col)
+    _check.ordered('d_start', d_start, 'd_end', d_end)
+
     from limen.utils.adf_test import adf_test
 
-    if step <= 0:
-        raise ValueError(f"fractional_diff step must be positive, got {step}")
+    if not 0 < significance_level < 1:
+        raise ValueError('significance_level must be strictly between 0 and 1')
 
     fracdiff_col = f"{col}{FRACDIFF_SUFFIX}"
 

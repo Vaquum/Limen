@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def return_autocorrelation(
@@ -20,6 +21,9 @@ def return_autocorrelation(
     Returns:
         pl.DataFrame: The input data with the return-autocorrelation column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col, output_col=output_col)
 
     returns = pl.col(close_col).pct_change()
 

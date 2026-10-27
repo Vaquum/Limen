@@ -3,6 +3,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._ema import ema_talib_default_segment
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -59,6 +60,9 @@ def trix(
         pl.DataFrame: The input data with a new column 'trix_{period}'
     '''
 
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
+
     if period < 1 or period > CMP_N_100000:
         raise ValueError('trix period must be between 1 and 100000')
 
@@ -66,10 +70,7 @@ def trix(
     frame = data
     trix_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _trix_from_values(
-                s.to_numpy().astype(float, copy=False),
-                period,
-            )
+            _trix_from_values(s.to_numpy().astype(float, copy=False), period)
         ),
         return_dtype=pl.Float64,
     ).alias(out_col)

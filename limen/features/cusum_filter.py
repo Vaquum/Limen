@@ -3,6 +3,7 @@ import math
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def cusum_filter(
@@ -34,6 +35,9 @@ def cusum_filter(
     NOTE: Column access is expression-based so the feature runs on both eager
     DataFrames and the LazyFrames piped by the manifest feature pipeline.
     '''
+
+    _check.numbers(threshold=threshold)
+    _check.names(close_col=close_col, output_col=output_col)
 
     if threshold <= 0:
         raise ValueError('cusum_filter threshold must be positive')

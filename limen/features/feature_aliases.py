@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def feature_aliases(df: pl.DataFrame,
@@ -17,6 +18,9 @@ def feature_aliases(df: pl.DataFrame,
     '''
 
     # Create basic feature aliases
+    _check.numbers(base_min_breakout=base_min_breakout)
+    _check.booleans(volatility_regime_enabled=volatility_regime_enabled)
+
     df = df.with_columns([
         pl.col('dynamic_target').fill_null(base_min_breakout).alias('dynamic_target_feature'),
         pl.col('entry_score').fill_null(1.0).alias('entry_score_feature'),

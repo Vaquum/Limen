@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.indicators.rsi import rsi_from_values
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -20,6 +21,8 @@ def wilder_rsi(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'wilder_rsi_{period}'
     '''
+
+    _check.integers(period=period)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('wilder_rsi period must be between 2 and 100000')

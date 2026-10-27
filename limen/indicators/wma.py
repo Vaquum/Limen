@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
@@ -75,6 +76,9 @@ def wma(
         pl.DataFrame: The input data with a new column 'wma_{period}'
     '''
 
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
+
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('wma period must be between 2 and 100000')
 
@@ -82,10 +86,7 @@ def wma(
     frame = data
     wma_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            wma_from_values(
-                s.to_numpy().astype(float, copy=False),
-                period,
-            )
+            wma_from_values(s.to_numpy().astype(float, copy=False), period)
         ),
         return_dtype=pl.Float64,
     ).alias(out_col)

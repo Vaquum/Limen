@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def realized_skewness(
@@ -19,9 +20,11 @@ def realized_skewness(
         pl.DataFrame: The input data with a new column 'realized_skewness'
     '''
 
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col)
+
     return (
-        data
-        .with_columns(pl.col(close_col).pct_change().alias('_skew_returns'))
+        data.with_columns(pl.col(close_col).pct_change().alias('_skew_returns'))
         .with_columns([
             pl.col('_skew_returns').rolling_mean(window_size=window).alias('_skew_mean'),
             (pl.col('_skew_returns') ** 2).rolling_mean(window_size=window).alias('_skew_second_moment'),

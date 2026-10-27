@@ -2,6 +2,7 @@ import numpy as np
 import polars as pl
 
 from limen.indicators.cdladvancedblock import candle_totals as _candle_totals
+import limen._feature_constraints as _check
 
 CDLSTALLEDPATTERN_BODY_LONG_AVG_PERIOD = 10
 CDLSTALLEDPATTERN_BODY_SHORT_AVG_PERIOD = 10
@@ -99,6 +100,8 @@ def cdlstalledpattern(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdlstalledpattern'
     input_cols = [open_col, high_col, low_col, close_col]

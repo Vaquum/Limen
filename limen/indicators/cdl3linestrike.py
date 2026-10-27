@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDL3LINESTRIKE_NEAR_AVG_PERIOD = 5
 CDL3LINESTRIKE_NEAR_FACTOR = 0.2
@@ -106,6 +107,8 @@ def cdl3linestrike(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdl3linestrike'
     input_cols = [open_col, high_col, low_col, close_col]

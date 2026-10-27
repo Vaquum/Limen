@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDL3STARSINSOUTH_BODY_LONG_AVG_PERIOD = 10
 CDL3STARSINSOUTH_BODY_LONG_PERIOD_TOTAL = 0.0
@@ -158,6 +159,8 @@ def cdl3starsinsouth(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdl3starsinsouth'
     input_cols = [open_col, high_col, low_col, close_col]

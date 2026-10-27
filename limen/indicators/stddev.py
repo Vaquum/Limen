@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 CMP_NEG_3E37 = -3e37
 CMP_N_100000 = 100000
@@ -81,6 +82,10 @@ def stddev(
     Returns:
         pl.DataFrame: The input data with a new column 'stddev_{period}_{nb_dev:g}'
     '''
+
+    _check.integers(period=period)
+    _check.numbers(nb_dev=nb_dev)
+    _check.names(price_col=price_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('stddev period must be between 2 and 100000')

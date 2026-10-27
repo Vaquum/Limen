@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -20,6 +21,8 @@ def relative_volatility_seasonality(
     Returns:
         pl.DataFrame: The input data with a new column 'relative_volatility_seasonality'
     '''
+
+    _check.names(datetime_col=datetime_col, close_col=close_col)
 
     volatility_proxy = pl.col(close_col).pct_change().abs().alias('_seasonality_value')
     hour_of_week = (((pl.col(datetime_col).dt.weekday() - 1) * 24) + pl.col(datetime_col).dt.hour()).alias('_seasonality_hour_of_week')

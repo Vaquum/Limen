@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def realized_semivariance(
@@ -18,6 +19,9 @@ def realized_semivariance(
     Returns:
         pl.DataFrame: The input data with new columns 'upside_semivariance' and 'downside_semivariance'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col)
 
     returns = pl.col(close_col).pct_change()
 

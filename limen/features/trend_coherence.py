@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def trend_coherence(
@@ -22,6 +23,9 @@ def trend_coherence(
     Returns:
         pl.DataFrame: The input data with a new column 'trend_coherence'
     '''
+
+    _check.integers(lower=1, short_window=short_window, medium_window=medium_window, long_window=long_window)
+    _check.names(close_col=close_col)
 
     short_sign = pl.col(close_col).pct_change(short_window).sign()
     medium_sign = pl.col(close_col).pct_change(medium_window).sign()

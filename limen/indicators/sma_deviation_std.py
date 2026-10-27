@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def sma_deviation_std(data: pl.DataFrame,
@@ -17,13 +18,14 @@ def sma_deviation_std(data: pl.DataFrame,
         pl.DataFrame: The input data with a new column named using the pattern 'sma{period}_dev_std'
     '''
 
+    _check.integers(lower=1, period=period, window=window)
+
     sma_col = f"sma_{period}"
     dev_col = f"sma{period}_dev"
     out_col = f"sma{period}_dev_std"
 
     return (
-        data
-        .with_columns([
+        data.with_columns([
             pl.col('close').rolling_mean(window_size=period).alias(sma_col)
         ])
         .with_columns([
