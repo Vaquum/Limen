@@ -204,7 +204,7 @@
   {"name": "sma_ratios", "type": "feature", "category": "trend"},
   {"name": "spread", "type": "feature", "category": "volatility"},
   {"name": "spread_percent", "type": "feature", "category": "volatility"},
-  {"name": "stochastic_k_abs", "type": "feature", "category": "volatility"},
+  {"name": "stochastic_k_abs", "type": "feature", "category": "market_structure"},
   {"name": "tail_event_intensity", "type": "feature", "category": "volatility"},
   {"name": "taker_imbalance_ratio", "type": "feature", "category": "volume"},
   {"name": "time_to_funding", "type": "feature", "category": "temporal"},
