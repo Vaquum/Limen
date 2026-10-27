@@ -10,12 +10,14 @@ from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import GridStrategy
 from limen.experiment.reducer import CorrelationReducer
 from limen.log._experiment_parameter_importance import experiment_parameter_importance
-from limen.yaml import build_pruning_strategies
-from tests.test_parameter_importance import METRIC, recorded_importance
+from limen.yaml.compiler import build_pruning_strategies
+from tests.test_parameter_importance import METRIC
+
+pytest_plugins = ['tests.test_parameter_importance']
 
 
 def queue(loop):
-    domain = ParamDomain(loop.params())
+    domain = ParamDomain(loop.params)
     return MSQ(GridStrategy(domain), domain)
 
 
@@ -38,7 +40,7 @@ def test_real_sweep_forest_suggestions_and_checkpoint(recorded_importance):
     for action in actions:
         row = analysis.filter(pl.col('parameter') == action['param']).row(0, named=True)
         assert max(0, row['importance_mean']) + 2 * row['importance_std'] < .05
-        assert action['value'] in loop.params()[action['param']]
+        assert action['value'] in loop.params[action['param']]
     assert msq.get_state() == original
     restored = reducer()
     restored.set_state(json.loads(json.dumps(strategy.get_state())))

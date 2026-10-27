@@ -117,8 +117,7 @@ class CorrelationReducer(PruningStrategy):
         self._n_boot = n_boot
         self._negative_correlation_threshold = negative_correlation_threshold
         self._maximize = maximize
-        self._random_state = random_state
-        self._forest = configure(metric, maximize, analyzer, metrics, n_repeats, min_model_score)
+        self._random_state, self._forest = random_state, configure(metric, maximize, analyzer, metrics, n_repeats, min_model_score)
         self._applied: dict[str, tuple[str, Any]] = {}
         self._suggested: set[str] = set()
 
@@ -137,15 +136,9 @@ class CorrelationReducer(PruningStrategy):
 
         '''
 
-        if not self._active:
-            return []
-
         df = log
 
-        if df.is_empty() or self._metric not in df.columns:
-            return []
-
-        if len(df) < self._min_observations:
+        if not self._active or df.is_empty() or self._metric not in df.columns or len(df) < self._min_observations:
             return []
 
         if self._forest is not None:
