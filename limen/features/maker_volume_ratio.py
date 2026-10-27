@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -33,6 +34,9 @@ def maker_volume_ratio(
     Returns:
         pl.DataFrame: The input data with the rolling maker-volume ratio appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(maker_volume_col=maker_volume_col, volume_col=volume_col, output_col=output_col)
 
     return data.with_columns(
         _safe_divide(pl.col(maker_volume_col), pl.col(volume_col))

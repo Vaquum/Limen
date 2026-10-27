@@ -1,5 +1,6 @@
 import polars as pl
 from limen.indicators.window_return import window_return
+import limen._feature_constraints as _check
 
 
 def window_return_regime(df: pl.DataFrame,
@@ -19,6 +20,10 @@ def window_return_regime(df: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'regime_window_return'
     '''
+
+    _check.integers(lower=0, period=period)
+    _check.numbers(r_hi=r_hi, r_lo=r_lo)
+    _check.ordered('r_lo', r_lo, 'r_hi', r_hi)
 
     ret_col = f'ret_{period}'
     df2 = window_return(df, period)

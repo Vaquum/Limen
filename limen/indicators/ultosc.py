@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -126,6 +127,9 @@ def ultosc(
     Returns:
         pl.DataFrame: The input data with a new column 'ultosc_{period1}_{period2}_{period3}'
     '''
+
+    _check.integers(period1=period1, period2=period2, period3=period3)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     if period1 < 1 or period1 > CMP_N_100000:
         raise ValueError('ultosc period1 must be between 1 and 100000')

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -20,6 +21,8 @@ def return_per_dollar_volume(
     Returns:
         pl.DataFrame: The input data with a new column 'return_per_dollar_volume'
     '''
+
+    _check.names(price_col=price_col, volume_col=volume_col)
 
     dollar_volume_expr = pl.col(price_col) * pl.col(volume_col)
 

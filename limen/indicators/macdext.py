@@ -3,6 +3,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators.ma import ma
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -150,6 +151,9 @@ def macdext(
     Returns:
         pl.DataFrame: The input data with columns 'macdext', 'macdext_signal', 'macdext_hist'
     '''
+
+    _check.integers(fast_period=fast_period, fast_ma_type=fast_ma_type, slow_period=slow_period, slow_ma_type=slow_ma_type, signal_period=signal_period, signal_ma_type=signal_ma_type)
+    _check.names(price_col=price_col)
 
     if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
         raise ValueError('macdext fast_period must be between 2 and 100000')

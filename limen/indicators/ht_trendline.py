@@ -4,6 +4,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
+import limen._feature_constraints as _check
 
 CMP_N_3 = 3
 CMP_N_50_0 = 50.0
@@ -243,6 +244,8 @@ def ht_trendline(
     Returns:
         pl.DataFrame: The input data with a new column 'ht_trendline'
     '''
+
+    _check.names(price_col=price_col)
 
     frame = data
     trendline_expr = pl.col(price_col).map_batches(

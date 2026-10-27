@@ -8,6 +8,7 @@ from limen.features.price_lines import line_active_count, line_recency
 from limen.utils.find_price_lines import LineArrays
 from limen.utils._line_arrays import cached_price_line_arrays
 from limen.utils._computation_cache import ComputationCache, current_cache, reuse_series
+import limen._feature_constraints as _check
 
 DEFAULT_QUANTILE_THRESHOLD = 0.75
 DEFAULT_DENSITY_LOOKBACK_HOURS = 48
@@ -48,6 +49,11 @@ def quantile_price_lines(data: pl.DataFrame,
     Raises:
         ValueError: If a lookback is below 1 or include_research_only is not bool
     '''
+
+    _check.integers(lower=1, max_duration_hours=max_duration_hours, density_lookback_hours=density_lookback_hours, momentum_lookback_hours=momentum_lookback_hours, height_lookback_hours=height_lookback_hours)
+    _check.numbers(min_height_pct=min_height_pct)
+    _check.numbers(lower=0, upper=1, quantile_threshold=quantile_threshold)
+    _check.booleans(include_research_only=include_research_only)
 
     if density_lookback_hours < 1:
         raise ValueError('quantile_price_lines density_lookback_hours must be at least 1')

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def volatility_1h(df: pl.DataFrame, volatility_column: str = 'returns_volatility_12') -> pl.DataFrame:
@@ -12,6 +13,8 @@ def volatility_1h(df: pl.DataFrame, volatility_column: str = 'returns_volatility
     Returns:
         pl.DataFrame: The input data with a new column 'volatility_1h'
     '''
+
+    _check.names(volatility_column=volatility_column)
 
     return df.with_columns([
         pl.col(volatility_column).alias('volatility_1h')

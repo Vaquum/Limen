@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def ema_alignment(data: pl.DataFrame, ema_span: int = 21, power: float = 2.0) -> pl.DataFrame:
@@ -14,6 +15,9 @@ def ema_alignment(data: pl.DataFrame, ema_span: int = 21, power: float = 2.0) ->
     Returns:
         pl.DataFrame: The input data with new columns 'ema', 'ema_alignment'
     '''
+
+    _check.integers(lower=1, ema_span=ema_span)
+    _check.numbers(power=power)
 
     df = data.with_columns([
         pl.col('close').ewm_mean(span=ema_span, adjust=False).alias('ema')

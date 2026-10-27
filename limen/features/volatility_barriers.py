@@ -1,6 +1,7 @@
 import math
 
 import polars as pl
+import limen._feature_constraints as _check
 
 __all__ = ['volatility_barriers']
 _MIN_OBSERVATIONS = 2
@@ -14,6 +15,9 @@ def volatility_barriers(data: pl.DataFrame, *, span: int = 24, regime_span: int 
                         high_regime_ratio: float = 1.25, low_multiplier: float = 0.8,
                         normal_multiplier: float = 1.0, high_multiplier: float = 1.2) -> pl.DataFrame:
     """Produce entry distances from strictly prior simple-return EWMA volatility."""
+    _check.integers(lower=1, span=span, regime_span=regime_span, min_periods=min_periods)
+    _check.numbers(take_profit_multiple=take_profit_multiple, stop_loss_multiple=stop_loss_multiple, minimum_bps=minimum_bps, maximum_bps=maximum_bps, low_regime_ratio=low_regime_ratio, high_regime_ratio=high_regime_ratio, low_multiplier=low_multiplier, normal_multiplier=normal_multiplier, high_multiplier=high_multiplier)
+
     if any(type(value) is not int for value in (span, regime_span, min_periods)) or not _MIN_OBSERVATIONS <= min_periods <= span <= regime_span:
         raise ValueError('Require integer 2 <= min_periods <= span <= regime_span')
     positive = (take_profit_multiple, stop_loss_multiple, minimum_bps, maximum_bps,

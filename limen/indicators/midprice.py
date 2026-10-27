@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 
 __all__ = ['midprice', 'window_extrema']
@@ -50,6 +51,9 @@ def midprice(
 ) -> pl.DataFrame:
 
     '''Compute the trailing high/low midpoint over period (2..100000).'''
+
+    _check.integers(period=period)
+    _check.names(high_col=high_col, low_col=low_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('midprice period must be between 2 and 100000')

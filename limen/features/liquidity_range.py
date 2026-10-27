@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -33,6 +34,9 @@ def liquidity_range(
     Returns:
         pl.DataFrame: The input data with the liquidity-range column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(high_liquidity_col=high_liquidity_col, low_liquidity_col=low_liquidity_col, output_col=output_col)
 
     return data.with_columns(
         _safe_divide(pl.col(high_liquidity_col), pl.col(low_liquidity_col))

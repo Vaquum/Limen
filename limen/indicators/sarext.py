@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_NEG_3E37 = -3e37
@@ -180,6 +181,9 @@ def sarext(
     Returns:
         pl.DataFrame: The input data with a new column 'sarext'
     '''
+
+    _check.numbers(start_value=start_value, offset_on_reverse=offset_on_reverse, acceleration_init_long=acceleration_init_long, acceleration_long=acceleration_long, acceleration_max_long=acceleration_max_long, acceleration_init_short=acceleration_init_short, acceleration_short=acceleration_short, acceleration_max_short=acceleration_max_short)
+    _check.names(high_col=high_col, low_col=low_col)
 
     if start_value < CMP_NEG_3E37 or start_value > CMP_N_3E37:
         raise ValueError('sarext start_value must be between -3e37 and 3e37')

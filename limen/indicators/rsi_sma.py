@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def rsi_sma(data: pl.DataFrame,
@@ -16,6 +17,8 @@ def rsi_sma(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'rsi_sma_{period}'
     '''
+
+    _check.integers(lower=1, period=period)
 
     return (
         data

@@ -1,6 +1,7 @@
 import polars as pl
 
 from limen.features.price_range_position import price_range_position
+import limen._feature_constraints as _check
 
 
 def breakout_percentile_regime(df: pl.DataFrame,
@@ -20,6 +21,10 @@ def breakout_percentile_regime(df: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'regime_breakout_pct'
     '''
+
+    _check.integers(lower=1, period=period)
+    _check.numbers(lower=0, upper=1, p_hi=p_hi, p_lo=p_lo)
+    _check.ordered('p_lo', p_lo, 'p_hi', p_hi)
 
     pos_df = price_range_position(df, period)
     pos = pl.col('price_range_position')

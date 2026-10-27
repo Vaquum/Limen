@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -51,6 +52,9 @@ def close_ma_distance_atr(
     Returns:
         pl.DataFrame: The input data with the ATR-normalized distance column appended
     '''
+
+    _check.integers(lower=1, ma_window=ma_window, atr_window=atr_window)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col, output_col=output_col)
 
     moving_average = pl.col(close_col).rolling_mean(window_size=ma_window)
     smoothed_range = _true_range(high_col, low_col, close_col).rolling_mean(

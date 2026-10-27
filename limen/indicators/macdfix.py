@@ -3,6 +3,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._ema import ema_talib_default_segment, ema_talib_segment_with_k
+import limen._feature_constraints as _check
 
 CMP_N_100000 = 100000
 
@@ -80,6 +81,9 @@ def macdfix(
     Returns:
         pl.DataFrame: The input data with columns 'macdfix', 'macdfix_signal', 'macdfix_hist'
     '''
+
+    _check.integers(signal_period=signal_period)
+    _check.names(price_col=price_col)
 
     if signal_period < 1 or signal_period > CMP_N_100000:
         raise ValueError('macdfix signal_period must be between 1 and 100000')

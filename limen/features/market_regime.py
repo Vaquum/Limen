@@ -2,6 +2,7 @@ import polars as pl
 from limen.indicators.sma import sma
 from limen.features.trend_strength import trend_strength
 from limen.features.volume_regime import volume_regime
+import limen._feature_constraints as _check
 
 
 def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, long_sma: int = 50) -> pl.DataFrame:
@@ -16,6 +17,8 @@ def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, lon
     Incoming fixed aliases raise DuplicateError. SMA warmup remains NaN; derived
     trend, volatility, volume-regime and favorability warmup remains null.
     '''
+
+    _check.integers(lower=1, lookback=lookback, short_sma=short_sma, long_sma=long_sma)
 
     conflicts = {'sma_20', 'sma_50', 'volume_sma'} & set(df.collect_schema().names())
     if conflicts:

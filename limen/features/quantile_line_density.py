@@ -1,5 +1,6 @@
 import polars as pl
 import numpy as np
+import limen._feature_constraints as _check
 
 
 def quantile_line_density(data: pl.DataFrame,
@@ -19,6 +20,8 @@ def quantile_line_density(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'quantile_line_density_{lookback_hours}h'
     '''
+
+    _check.integers(lower=1, lookback_hours=lookback_hours)
 
     out_col = f"quantile_line_density_{lookback_hours}h"
     n_rows = data.height

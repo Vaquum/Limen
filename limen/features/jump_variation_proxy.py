@@ -1,6 +1,7 @@
 import math
 
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def jump_variation_proxy(
@@ -20,6 +21,9 @@ def jump_variation_proxy(
     Returns:
         pl.DataFrame: The input data with a new column 'jump_variation_proxy'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col)
 
     mu1_inverse_sq = math.pi / 2.0
     returns = pl.col(close_col).log() - pl.col(close_col).shift(1).log()

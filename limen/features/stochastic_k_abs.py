@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -35,6 +36,9 @@ def stochastic_k_abs(
     Returns:
         pl.DataFrame: The input data with the stochastic distance column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col, output_col=output_col)
 
     rolling_low = pl.col(low_col).rolling_min(window_size=window)
     rolling_high = pl.col(high_col).rolling_max(window_size=window)

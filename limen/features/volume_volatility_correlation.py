@@ -1,6 +1,7 @@
 import math
 
 import polars as pl
+import limen._feature_constraints as _check
 
 
 PARKINSON_SCALE = 4.0 * math.log(2.0)
@@ -33,6 +34,9 @@ def volume_volatility_correlation(
     Returns:
         pl.DataFrame: The input data with the volume-volatility correlation appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(volume_col=volume_col, high_col=high_col, low_col=low_col, output_col=output_col)
 
     return data.with_columns(
         pl.rolling_corr(

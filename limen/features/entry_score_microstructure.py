@@ -3,6 +3,7 @@ from limen.features.position_in_candle import position_in_candle
 from limen.features.micro_momentum import micro_momentum
 from limen.features.volume_spike import volume_spike
 from limen.features.spread_percent import spread_percent
+import limen._feature_constraints as _check
 
 
 def entry_score_microstructure(data: pl.DataFrame,
@@ -56,6 +57,12 @@ def entry_score_microstructure(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'entry_score'
     '''
+
+    _check.integers(lower=1, micro_momentum_period=micro_momentum_period, volume_spike_period=volume_spike_period, spread_mean_period=spread_mean_period)
+    _check.numbers(entry_position_weight_base=entry_position_weight_base, entry_momentum_weight_base=entry_momentum_weight_base, entry_volume_weight_base=entry_volume_weight_base, entry_spread_weight_base=entry_spread_weight_base, entry_position_weight_low_vol=entry_position_weight_low_vol, entry_momentum_weight_low_vol=entry_momentum_weight_low_vol, entry_volume_weight_low_vol=entry_volume_weight_low_vol, entry_spread_weight_low_vol=entry_spread_weight_low_vol, entry_position_weight_high_vol=entry_position_weight_high_vol, entry_momentum_weight_high_vol=entry_momentum_weight_high_vol, entry_volume_weight_high_vol=entry_volume_weight_high_vol, entry_spread_weight_high_vol=entry_spread_weight_high_vol, entry_volume_spike_min=entry_volume_spike_min, entry_volume_spike_max=entry_volume_spike_max, entry_spread_ratio_min=entry_spread_ratio_min, entry_spread_ratio_max=entry_spread_ratio_max)
+    _check.numbers(positive=True, entry_volume_spike_normalizer=entry_volume_spike_normalizer)
+    _check.ordered('entry_volume_spike_min', entry_volume_spike_min, 'entry_volume_spike_max', entry_volume_spike_max)
+    _check.ordered('entry_spread_ratio_min', entry_spread_ratio_min, 'entry_spread_ratio_max', entry_spread_ratio_max)
 
     df = position_in_candle(data)
     df = micro_momentum(df, micro_momentum_period)

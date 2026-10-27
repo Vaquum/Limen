@@ -1,5 +1,6 @@
 import polars as pl
 from limen.features.lagged_features import lag_range
+import limen._feature_constraints as _check
 
 
 def returns_lags(data: pl.DataFrame, max_lag: int = 24, returns_col: str = 'returns') -> pl.DataFrame:
@@ -17,6 +18,9 @@ def returns_lags(data: pl.DataFrame, max_lag: int = 24, returns_col: str = 'retu
     '''
 
     # Ensure returns column exists
+    _check.integers(lower=0, max_lag=max_lag)
+    _check.names(returns_col=returns_col)
+
     if returns_col not in data.columns:
         data = data.with_columns([
             pl.col('close').pct_change().alias(returns_col)

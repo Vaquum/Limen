@@ -1,6 +1,7 @@
 from typing import Literal
 
 import polars as pl
+import limen._feature_constraints as _check
 
 
 ZscoreTransform = Literal['identity', 'log1p', 'abs']
@@ -28,6 +29,12 @@ def rolling_zscore(
     Returns:
         pl.DataFrame: The input data with the rolling z-score column appended
     '''
+
+    _check.choice('transform', transform, ('identity', 'log1p', 'abs'))
+    if output_col is not None:
+        _check.names(output_col=output_col)
+    _check.integers(lower=1, window=window)
+    _check.names(column=column)
 
     if window <= 0:
         raise ValueError('rolling_zscore window must be positive')

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def lag_range_cols(data: pl.DataFrame,
@@ -18,6 +19,10 @@ def lag_range_cols(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with the lagged columns appended
     '''
+
+    _check.integers(lower=0, start=start, end=end)
+    if cols is not None:
+        _check.column_sequence('cols', cols)
 
     if not cols:
         raise ValueError('lagged_features cols cannot be empty')
@@ -59,6 +64,9 @@ def lag_range(data: pl.DataFrame,
 
     '''
 
+    _check.integers(lower=0, start=start, end=end)
+    _check.names(col=col)
+
     return lag_range_cols(data, [col], start, end)
 
 
@@ -77,6 +85,10 @@ def lag_columns(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with the lagged columns appended
     '''
+
+    _check.integers(lower=0, lag=lag)
+    if cols is not None:
+        _check.column_sequence('cols', cols)
 
     return lag_range_cols(data, cols, lag, lag)
 
@@ -98,6 +110,11 @@ def lag_column(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with the lagged column appended
     '''
+
+    if alias is not None:
+        _check.names(alias=alias)
+    _check.integers(lower=0, lag=lag)
+    _check.names(col=col)
 
     if alias is not None and not isinstance(alias, str):
         raise TypeError('lagged_features alias must be a string or None')

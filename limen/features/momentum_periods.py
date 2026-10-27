@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 DEFAULT_MOMENTUM_PERIODS = [12, 24, 48]
 
@@ -17,7 +18,9 @@ def momentum_periods(data: pl.DataFrame, periods: list[int] | None = None, price
         pl.DataFrame: The input data with new columns 'momentum_{period}' for each period
     '''
 
-    periods = DEFAULT_MOMENTUM_PERIODS if periods is None else list(periods)
+    _check.names(price_col=price_col)
+
+    periods = _check.integer_sequence('periods', DEFAULT_MOMENTUM_PERIODS if periods is None else periods, minimum=0)
     if any(period < 0 for period in periods):
         raise ValueError('periods must be non-negative to avoid future prices')
     momentum_expressions = [

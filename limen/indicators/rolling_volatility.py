@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def rolling_volatility(data: pl.DataFrame,
@@ -15,6 +16,9 @@ def rolling_volatility(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column '{column}_volatility_{window}'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(column=column)
 
     return data.with_columns([
         pl.col(column).rolling_std(window_size=window).alias(

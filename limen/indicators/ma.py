@@ -9,6 +9,7 @@ from limen.indicators.t3 import t3_from_values
 from limen.indicators.tema import tema_from_values
 from limen.indicators.trima import trima_from_values
 from limen.indicators.wma import wma_from_values
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -39,6 +40,9 @@ def ma(
     Returns:
         pl.DataFrame: The input data with a new column 'ma_{period}_{ma_type}'
     '''
+
+    _check.integers(period=period, ma_type=ma_type)
+    _check.names(price_col=price_col)
 
     if period < 1 or period > CMP_N_100000:
         raise ValueError('ma period must be between 1 and 100000')

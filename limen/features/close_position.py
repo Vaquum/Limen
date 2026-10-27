@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -27,6 +28,9 @@ def close_position(
     Returns:
         pl.DataFrame: The input data with a new close-position column
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col, output_col=output_col)
 
     price_range = pl.col(high_col) - pl.col(low_col)
     position = (

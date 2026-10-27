@@ -4,6 +4,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators._hilbert import phase_weights as _phase_weights, do_hilbert_transform, init_hilbert_state
+import limen._feature_constraints as _check
 
 CMP_N_0_01 = 0.01
 CMP_N_3 = 3
@@ -259,6 +260,8 @@ def ht_sine(
         pl.DataFrame: The input data with new columns 'ht_sine' and
             'ht_sine_lead'
     '''
+
+    _check.names(price_col=price_col)
 
     def calculate(s: pl.Series) -> pl.Series:
         first, second = _ht_sine_from_values(s.to_numpy().astype(float, copy=False))

@@ -1,5 +1,6 @@
 import polars as pl
 from typing import Literal
+import limen._feature_constraints as _check
 
 
 def price_vs_band_regime(df: pl.DataFrame,
@@ -19,6 +20,10 @@ def price_vs_band_regime(df: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'regime_price_band'
     '''
+
+    _check.choice('band', band, ('std', 'dev_std'))
+    _check.integers(lower=1, period=period)
+    _check.numbers(k=k)
 
     center = pl.col('close').rolling_mean(window_size=period)
 

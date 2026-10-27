@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def typprice(
@@ -20,6 +21,8 @@ def typprice(
     Returns:
         pl.DataFrame: The input data with a new column 'typprice'
     '''
+
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     typ_price = (
         pl.col(high_col).cast(pl.Float64)

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def tail_event_intensity(
@@ -20,6 +21,10 @@ def tail_event_intensity(
     Returns:
         pl.DataFrame: The input data with a new column 'tail_event_intensity'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.numbers(z_threshold=z_threshold)
+    _check.names(close_col=close_col)
 
     return (
         data

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -28,6 +29,9 @@ def absorption_intensity(
     Returns:
         pl.DataFrame: The input data with a new column 'absorption_intensity'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col, volume_col=volume_col)
 
     body_to_range_expr = (pl.col(close_col) - pl.col(open_col)).abs() / ((pl.col(high_col) - pl.col(low_col)) + EPSILON)
     volume_baseline = pl.col(volume_col).rolling_mean(window_size=window).shift(1)

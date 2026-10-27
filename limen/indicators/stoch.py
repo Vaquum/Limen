@@ -3,6 +3,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators.ma import ma
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -170,6 +171,9 @@ def stoch(
     Returns:
         pl.DataFrame: The input data with 'stoch_slowk' and 'stoch_slowd'
     '''
+
+    _check.integers(fastk_period=fastk_period, slowk_period=slowk_period, slowk_ma_type=slowk_ma_type, slowd_period=slowd_period, slowd_ma_type=slowd_ma_type)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     if fastk_period < 1 or fastk_period > CMP_N_100000:
         raise ValueError('stoch fastk_period must be between 1 and 100000')

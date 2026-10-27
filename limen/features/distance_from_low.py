@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def distance_from_low(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
@@ -13,6 +14,8 @@ def distance_from_low(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'distance_from_low'
     '''
+
+    _check.integers(lower=1, period=period)
 
     return data.with_columns([
         ((pl.col('close') - pl.col('low').rolling_min(window_size=period)) / pl.col('close'))

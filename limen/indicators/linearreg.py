@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 __all__ = ['linearreg', 'linearreg_components']
 
@@ -56,6 +57,9 @@ def linearreg(
 ) -> pl.DataFrame:
 
     '''Append the trailing least-squares line value with the original warmup.'''
+
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('linearreg period must be between 2 and 100000')

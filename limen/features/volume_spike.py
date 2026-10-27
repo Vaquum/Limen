@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -16,6 +17,9 @@ def volume_spike(data: pl.DataFrame, period: int = 20, use_zscore: bool = False)
     Returns:
         pl.DataFrame: The input data with a new column 'volume_spike'
     '''
+
+    _check.integers(lower=1, period=period)
+    _check.booleans(use_zscore=use_zscore)
 
     if use_zscore:
         return data.with_columns([

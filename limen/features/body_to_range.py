@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -24,6 +25,8 @@ def body_to_range(
     Returns:
         pl.DataFrame: The input data with a new column 'body_to_range'
     '''
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     return data.with_columns(
         ((pl.col(close_col) - pl.col(open_col)).abs() / ((pl.col(high_col) - pl.col(low_col)) + EPSILON))

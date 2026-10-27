@@ -1,5 +1,6 @@
 import polars as pl
 from scipy.special import ndtr
+import limen._feature_constraints as _check
 
 
 def bulk_volume_classification(
@@ -27,6 +28,9 @@ def bulk_volume_classification(
     Returns:
         pl.DataFrame: The input data with new columns 'bvc_buy_volume' and 'bvc_sell_volume'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col, volume_col=volume_col)
 
     if window <= 0:
         raise ValueError('bulk_volume_classification window must be positive')

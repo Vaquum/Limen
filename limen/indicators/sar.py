@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_N_3E37 = 3e37
@@ -136,6 +137,9 @@ def sar(
     Returns:
         pl.DataFrame: The input data with a new column 'sar'
     '''
+
+    _check.numbers(acceleration=acceleration, maximum=maximum)
+    _check.names(high_col=high_col, low_col=low_col)
 
     if acceleration < 0.0 or acceleration > CMP_N_3E37:
         raise ValueError('sar acceleration must be between 0 and 3e37')

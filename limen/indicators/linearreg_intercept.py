@@ -3,6 +3,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.indicators.linearreg import linearreg_components as _linearreg_components
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -39,6 +40,9 @@ def linearreg_intercept(
     Returns:
         pl.DataFrame: The input data with a new column 'linearreg_intercept_{period}'
     '''
+
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('linearreg_intercept period must be between 2 and 100000')

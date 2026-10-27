@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+import limen._feature_constraints as _check
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
@@ -57,6 +58,9 @@ def cci(
 ) -> pl.DataFrame:
 
     '''Append CCI with the original chronological mean/deviation sums (period 2..100000).'''
+
+    _check.integers(period=period)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('cci period must be between 2 and 100000')

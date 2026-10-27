@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDLONNECK_BODY_LONG_AVG_PERIOD = 10
 CDLONNECK_BODY_LONG_PERIOD_TOTAL = 0.0
@@ -101,6 +102,8 @@ def cdlonneck(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdlonneck'
     input_cols = [open_col, high_col, low_col, close_col]

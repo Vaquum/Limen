@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def ma_slope_regime(df: pl.DataFrame,
@@ -18,6 +19,10 @@ def ma_slope_regime(df: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'regime_ma_slope'
     '''
+
+    _check.integers(lower=1, period=period)
+    _check.numbers(threshold=threshold)
+    _check.booleans(normalize_by_std=normalize_by_std)
 
     sma = pl.col('close').rolling_mean(window_size=period)
     slope = (sma - sma.shift(period)) / period

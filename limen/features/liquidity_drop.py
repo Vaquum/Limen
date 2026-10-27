@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -31,6 +32,9 @@ def liquidity_drop(
     Returns:
         pl.DataFrame: The input data with the liquidity-drop column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(liquidity_col=liquidity_col, output_col=output_col)
 
     liquidity = pl.col(liquidity_col)
 

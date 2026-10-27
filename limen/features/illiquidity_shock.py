@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -22,6 +23,9 @@ def illiquidity_shock(
     Returns:
         pl.DataFrame: The input data with a new column 'illiquidity_shock'
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(price_col=price_col, volume_col=volume_col)
 
     amihud_expr = pl.col(price_col).pct_change().abs() / ((pl.col(price_col) * pl.col(volume_col)) + EPSILON)
 

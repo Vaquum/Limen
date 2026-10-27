@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -35,6 +36,9 @@ def volume_to_range(
     Returns:
         pl.DataFrame: The input data with the volume-to-range column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(volume_col=volume_col, high_col=high_col, low_col=low_col, output_col=output_col)
 
     return data.with_columns(
         _safe_divide(pl.col(volume_col), pl.col(high_col) - pl.col(low_col))

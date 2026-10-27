@@ -1,5 +1,6 @@
 import polars as pl
 from limen.indicators.ma import ma
+import limen._feature_constraints as _check
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
@@ -30,6 +31,9 @@ def ppo(
     Returns:
         pl.DataFrame: The input data with a new column 'ppo_{fast_period}_{slow_period}_{ma_type}'
     '''
+
+    _check.integers(fast_period=fast_period, slow_period=slow_period, ma_type=ma_type)
+    _check.names(price_col=price_col)
 
     if fast_period < CMP_N_2 or fast_period > CMP_N_100000:
         raise ValueError('ppo fast_period must be between 2 and 100000')

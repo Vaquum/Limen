@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def micro_momentum(data: pl.DataFrame, period: int = 3) -> pl.DataFrame:
@@ -13,6 +14,8 @@ def micro_momentum(data: pl.DataFrame, period: int = 3) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'micro_momentum'
     '''
+
+    _check.integers(lower=0, period=period)
 
     return data.with_columns([
         pl.col('close').pct_change(period).alias('micro_momentum')

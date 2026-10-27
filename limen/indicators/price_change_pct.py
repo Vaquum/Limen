@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def price_change_pct(data: pl.DataFrame,
@@ -14,6 +15,8 @@ def price_change_pct(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with a new column 'price_change_pct_{period}'
     '''
+
+    _check.integers(lower=0, period=period)
 
     return data.with_columns([
         (

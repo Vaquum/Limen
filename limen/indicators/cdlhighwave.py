@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import limen._feature_constraints as _check
 
 CDLHIGHWAVE_BODY_PERIOD_TOTAL = 0.0
 CDLHIGHWAVE_BODY_SHORT_AVG_PERIOD = 10
@@ -103,6 +104,8 @@ def cdlhighwave(
     low_col: str = 'low',
     close_col: str = 'close',
 ) -> pl.DataFrame:
+
+    _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdlhighwave'
     input_cols = [open_col, high_col, low_col, close_col]

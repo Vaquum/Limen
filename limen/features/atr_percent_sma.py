@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def atr_percent_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
@@ -13,6 +14,8 @@ def atr_percent_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'atr_percent_sma'
     '''
+
+    _check.integers(lower=1, period=period)
 
     return (
         data

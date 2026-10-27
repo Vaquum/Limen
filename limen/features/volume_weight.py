@@ -1,5 +1,6 @@
 import polars as pl
 from limen.indicators.sma import sma
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -21,6 +22,10 @@ def volume_weight(data: pl.DataFrame,
     Returns:
         pl.DataFrame: The input data with new columns 'volume_ma', 'volume_weight'
     '''
+
+    _check.integers(lower=1, period=period)
+    _check.numbers(volume_weight_min=volume_weight_min, volume_weight_max=volume_weight_max)
+    _check.ordered('volume_weight_min', volume_weight_min, 'volume_weight_max', volume_weight_max)
 
     df = sma(data, 'volume', period)
     df = df.rename({f'volume_sma_{period}': 'volume_ma'})

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -33,6 +34,9 @@ def taker_imbalance_ratio(
     Returns:
         pl.DataFrame: The input data with the taker-imbalance ratio column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(volume_col=volume_col, maker_ratio_col=maker_ratio_col, output_col=output_col)
 
     imbalance = (pl.col(volume_col) * (1.0 - (2.0 * pl.col(maker_ratio_col)))).abs()
 

@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def ichimoku_cloud(
@@ -23,6 +24,9 @@ def ichimoku_cloud(
         pl.DataFrame: The input data with new columns:
             'tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'
     '''
+
+    _check.integers(lower=1, tenkan_period=tenkan_period, kijun_period=kijun_period, senkou_b_period=senkou_b_period)
+    _check.integers(lower=0, displacement=displacement)
 
     if displacement < 0:
         raise ValueError('displacement must be non-negative to avoid future prices')

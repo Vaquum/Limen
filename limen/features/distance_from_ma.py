@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -31,6 +32,9 @@ def distance_from_ma(
     Returns:
         pl.DataFrame: The input data with the moving-average distance column appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col, output_col=output_col)
 
     moving_average = pl.col(close_col).rolling_mean(window_size=window)
 

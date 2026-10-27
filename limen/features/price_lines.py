@@ -5,6 +5,7 @@ import polars as pl
 from limen.utils.find_price_lines import LineArrays
 from limen.utils._line_arrays import cached_price_line_arrays
 from limen.utils._computation_cache import ComputationCache, current_cache, reuse_series
+import limen._feature_constraints as _check
 
 __all__ = ['line_active_count', 'line_recency', 'price_lines']
 
@@ -54,6 +55,10 @@ def price_lines(data: pl.DataFrame,
     is knowable, a within-line lookahead inherited from the research design.
     It is research-only and not computable live; the end-event columns are causal.
     '''
+
+    _check.integers(lower=1, max_duration_hours=max_duration_hours, big_move_lookback_hours=big_move_lookback_hours, momentum_lookback_hours=momentum_lookback_hours)
+    _check.numbers(min_height_pct=min_height_pct)
+    _check.booleans(include_research_only=include_research_only)
 
     if big_move_lookback_hours < 1:
         raise ValueError('price_lines big_move_lookback_hours must be at least 1')

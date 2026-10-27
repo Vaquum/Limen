@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def sma_crossover(
@@ -22,6 +23,9 @@ def sma_crossover(
     Returns:
         pl.DataFrame: The input data with new columns 'crossover', and 'signal'
     '''
+
+    _check.integers(lower=1, short_window=short_window, long_window=long_window)
+    _check.integers(crossover_bull=crossover_bull, crossover_bear=crossover_bear)
 
     return (
         df.with_columns([

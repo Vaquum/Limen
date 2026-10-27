@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 EPSILON = 1e-10
@@ -31,6 +32,9 @@ def downside_volatility_ratio(
     Returns:
         pl.DataFrame: The input data with the downside-volatility ratio appended
     '''
+
+    _check.integers(lower=1, window=window)
+    _check.names(close_col=close_col, output_col=output_col)
 
     returns = pl.col(close_col).pct_change()
     squared = returns ** 2

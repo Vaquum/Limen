@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 EPSILON = 1e-10
 
@@ -20,6 +21,8 @@ def relative_volume_seasonality(
     Returns:
         pl.DataFrame: The input data with a new column 'relative_volume_seasonality'
     '''
+
+    _check.names(datetime_col=datetime_col, volume_col=volume_col)
 
     hour_of_week = (((pl.col(datetime_col).dt.weekday() - 1) * 24) + pl.col(datetime_col).dt.hour()).alias('_seasonality_hour_of_week')
 

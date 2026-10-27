@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -20,6 +21,9 @@ def rocr100(
     Returns:
         pl.DataFrame: The input data with a new column 'rocr100_{period}'
     '''
+
+    _check.integers(period=period)
+    _check.names(price_col=price_col)
 
     if period < 1 or period > CMP_N_100000:
         raise ValueError('rocr100 period must be between 1 and 100000')

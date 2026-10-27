@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 CMP_N_100000 = 100000
@@ -27,6 +28,9 @@ def mfi(
     Returns:
         pl.DataFrame: The input data with a new column 'mfi_{period}'
     '''
+
+    _check.integers(period=period)
+    _check.names(high_col=high_col, low_col=low_col, close_col=close_col, volume_col=volume_col)
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('mfi period must be between 2 and 100000')

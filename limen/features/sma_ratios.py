@@ -1,5 +1,6 @@
 import polars as pl
 from limen.indicators.sma import sma
+import limen._feature_constraints as _check
 
 DEFAULT_SMA_PERIODS = [5, 10, 20, 50]
 EPSILON = 1e-10
@@ -19,8 +20,11 @@ def sma_ratios(data: pl.DataFrame, periods: list[int] | None = None, price_col: 
         pl.DataFrame: The input data with new columns 'sma_{period}_ratio'
     '''
 
+    _check.names(price_col=price_col)
+
     if periods is None:
         periods = DEFAULT_SMA_PERIODS
+    periods = _check.integer_sequence('periods', periods, minimum=2, maximum=100000)
     df = data.clone()
 
     for period in periods:

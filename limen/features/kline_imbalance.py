@@ -1,4 +1,5 @@
 import polars as pl
+import limen._feature_constraints as _check
 
 
 def kline_imbalance(data: pl.DataFrame, window: int = 14) -> pl.DataFrame:
@@ -13,6 +14,8 @@ def kline_imbalance(data: pl.DataFrame, window: int = 14) -> pl.DataFrame:
     Returns:
         pl.DataFrame: The input data with a new column 'imbalance'
     '''
+
+    _check.integers(lower=1, window=window)
 
     return (
         data
