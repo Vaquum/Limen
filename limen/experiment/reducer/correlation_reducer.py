@@ -142,7 +142,7 @@ class CorrelationReducer(PruningStrategy):
             return []
 
         if self._forest is not None:
-            return self._forest.analyze(df, msq, threshold=self._prune_threshold, seed=self._random_state,
+            return self._forest.analyze(df, msq.domain_keys, msq._logged_choices, threshold=self._prune_threshold, seed=self._random_state,
                                         suggested=self._suggested, minimum_rows=self._min_observations)
 
         try:

@@ -2,7 +2,6 @@ from collections.abc import Callable, Mapping
 import logging
 import math
 from types import SimpleNamespace
-from typing import Protocol, cast
 
 import polars as pl
 
@@ -12,11 +11,6 @@ from limen.log._experiment_parameter_importance import experiment_parameter_impo
 __all__: list[str] = []
 logger = logging.getLogger(__name__)
 _MIN_REPEATS, _MIN_CONFIGURATIONS = 2, 20
-
-
-class Queue(Protocol):
-    @property
-    def domain_keys(self) -> list[str]: ...
 
 
 class ForestAnalyzer:
@@ -34,10 +28,9 @@ class ForestAnalyzer:
         self.metrics = {metric: maximize, **(metrics or {})}
         self.repeats, self.minimum_score = repeats, minimum_score
 
-    def analyze(self, log: pl.DataFrame, queue: Queue, *, threshold: float,
+    def analyze(self, log: pl.DataFrame, keys: list[str], resolve: Callable[[str, object], tuple[object, ...]], *, threshold: float,
                 seed: int, suggested: set[str], minimum_rows: int) -> list[dict[str, object]]:
         successful = log.filter(pl.col('strict_mode_error').is_null() | (pl.col('strict_mode_error') == '')) if 'strict_mode_error' in log.columns else log
-        keys = queue.domain_keys
         if successful.height < minimum_rows or successful.select(keys).unique().height < _MIN_CONFIGURATIONS:
             return []
         analyses = [experiment_parameter_importance(SimpleNamespace(_captured_log=successful), metric,
@@ -57,7 +50,7 @@ class ForestAnalyzer:
             choices = [means.sort(metric, descending=maximize, maintain_order=True)[key][0] for metric, maximize in self.metrics.items()]
             if len({execution_hash({key: value}) for value in choices}) != 1:
                 continue
-            native = cast(Callable[[str, object], tuple[object, ...]], getattr(queue, '_logged_choices'))(key, choices[0])
+            native = resolve(key, choices[0])
             if len(native) != 1:
                 logger.warning('No forest suggestion for ambiguous logged parameter %s', key)
                 continue
