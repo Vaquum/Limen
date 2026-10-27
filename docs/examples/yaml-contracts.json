@@ -1,264 +1,48 @@
 {
-  "nested": {
-    "assessment": {
-      "sha256": "accf5b8d6571499eb3a146a7545417a787f8da192e2d88c8f63e05ed881be2fb",
-      "source": "limen/yaml/_assessment_spec.py",
-      "symbol": "assessment_spec"
-    },
-    "holdout": {
-      "sha256": "5add451583077a3589f211e314f7e081c8279c4bef78059b041550a0536fbd98",
-      "source": "limen/yaml/_assessment_spec.py",
-      "symbol": "holdout_spec"
-    },
-    "metadata": {
-      "sha256": "6e9b1285b52a21ed1a5074419bde46df488397dbc0e7c0420607ea42fa9699f3",
-      "source": "limen/yaml/_metadata_spec.py",
-      "symbol": "check_metadata"
-    },
-    "schema_version": {
-      "sha256": "c979966f0648bb6121bfd7ef41f5c7075c4d811362df3db5ae4fbb6cc729455b",
-      "source": "limen/yaml/_schema_version.py",
-      "symbol": "schema_errors"
-    },
-    "sfd.manifest": {
-      "sha256": "45088af4b86830a7a4dbc754f8e45575c912493edcafa88facf12ab54fdc6874",
-      "source": "limen/yaml/_parameter_refs.py",
-      "symbol": "lookup_references"
-    },
-    "sfd.manifest.acceptance": {
-      "sha256": "b5051d8f5249da538f9f7d6c426d95fbaff977704898ebff8c18976ee0314cc5",
-      "source": "limen/experiment/_acceptance_settings.py",
-      "symbol": "read_acceptance"
-    },
-    "sfd.manifest.allocation": {
-      "fields": {
-        "method": {
-          "default": "required",
-          "type": "Callable[..., dict[str, object]]"
-        },
-        "params": {
-          "default": "required",
-          "type": "Mapping[str, object]"
-        }
-      },
-      "sha256": "1c808f61826d92e3841678b365d0de8689a75558029433d6c745acdd6c82ec32",
-      "source": "limen/experiment/_allocation.py",
-      "symbol": "AllocationConfig"
-    },
-    "sfd.manifest.backtest.funding": {
-      "fields": {
-        "adapter": {
-          "default": "funding_adapter",
-          "type": "FundingAdapter"
-        },
-        "adapter_version": {
-          "default": "ADAPTER_VERSION",
-          "type": "str"
-        },
-        "data_source": {
-          "default": "None",
-          "type": "SourceConfig | None"
-        },
-        "params": {
-          "default": "field(default_factory=dict[str, object])",
-          "type": "dict[str, object]"
-        },
-        "preset": {
-          "default": "None",
-          "type": "str | None"
-        }
-      },
-      "sha256": "faaeefc6a830dd668a0d1d9fcd5ef331c733305467456b32e3b530bdaba16c33",
-      "source": "limen/experiment/_resolve_trade_policy.py",
-      "symbol": "FundingConfig"
-    },
-    "sfd.manifest.backtest.product": {
-      "fields": {
-        "base_currency": {
-          "default": "required",
-          "type": "str"
-        },
-        "initial_margin_fraction": {
-          "default": "1.0",
-          "type": "float | str"
-        },
-        "instrument": {
-          "default": "required",
-          "type": "str"
-        },
-        "kind": {
-          "default": "required",
-          "type": "Literal['cash_spot', 'linear_perpetual']"
-        },
-        "maintenance_margin_fraction": {
-          "default": "0.0",
-          "type": "float | str"
-        },
-        "min_notional": {
-          "default": "required",
-          "type": "float | str"
-        },
-        "quantity_step": {
-          "default": "required",
-          "type": "float | str"
-        },
-        "quote_currency": {
-          "default": "required",
-          "type": "str"
-        }
-      },
-      "sha256": "78f9b6b89aa64c7d74515e5734d6a92f921a7d2058b1b44f0a1fa12e7cdd6bda",
-      "source": "limen/experiment/_resolve_trade_policy.py",
-      "symbol": "ProductConfig"
-    },
-    "sfd.manifest.feature_shims[]": {
-      "fields": [
-        "columns",
-        "d",
-        "method",
-        "reference",
-        "significance_level",
-        "threshold"
-      ],
-      "sha256": "ef576c858edae5b586f1e3337e3f904b7d91d01a155f9707898425cdca87ff88",
-      "source": "limen/experiment/_column_shims.py",
-      "symbol": "_FIELDS"
-    },
-    "sfd.manifest.indicators[]": {
-      "sha256": "48cad1af4c770cdbb1be68a9e4b1a5aaad7d6e498b3c957e680e006c200f806e",
-      "source": "limen/yaml/rules.py",
-      "symbol": "_check_func_block"
-    },
-    "sfd.manifest.objective": {
-      "sha256": "c151d10d8ec78f7696930d8568c499f20144008276a4ad5b8a42b93eb169d3e5",
-      "source": "limen/yaml/_objective_spec.py",
-      "symbol": "_read_objective"
-    },
-    "sfd.manifest.required_columns": {
-      "sha256": "b0ff6f84ef669d43d17b331a096b4feb5cdeb40acae8063dfc50962d2fa14483",
-      "source": "limen/experiment/_required_columns.py",
-      "symbol": "column_issue"
-    },
-    "sfd.manifest.split_walk_forward": {
-      "fields": {
-        "anchored": {
-          "default": "required",
-          "type": "bool"
-        },
-        "embargo_bars": {
-          "default": "required",
-          "type": "int"
-        },
-        "n_folds": {
-          "default": "required",
-          "type": "int"
-        },
-        "purge_bars": {
-          "default": "required",
-          "type": "int"
-        },
-        "test_bars": {
-          "default": "required",
-          "type": "int"
-        }
-      },
-      "sha256": "79ee5ae260ee27ffe6925aea93dd03d93b639c334fb0f029bb479b08d0687897",
-      "source": "limen/experiment/_walk_forward_split.py",
-      "symbol": "WalkForwardConfig"
-    },
-    "sfd.manifest.strategy.conditions[]": {
-      "sha256": "66ecc28d690cbaa598de178e2b91041cedf6e35cb56a93683ed5d992bd59234f",
-      "source": "limen/yaml/rules.py",
-      "symbol": "ConditionsList"
-    },
-    "sfd.manifest.strict_mode": {
-      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
-      "source": "limen/yaml/_boolean_spec.py",
-      "symbol": "BooleanControlsSpec"
-    },
-    "sfd.params": {
-      "sha256": "2b7ae1bb6d28f8c3b8e44cc81f72d838128d5dca063c5527954c9757c96a5b3c",
-      "source": "limen/yaml/rules.py",
-      "symbol": "ParamCoverage"
-    },
-    "sfd.params.use_calibration[]": {
-      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
-      "source": "limen/yaml/_boolean_spec.py",
-      "symbol": "BooleanControlsSpec"
-    },
-    "sfd.params.use_threshold[]": {
-      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
-      "source": "limen/yaml/_boolean_spec.py",
-      "symbol": "BooleanControlsSpec"
-    },
-    "uel": {
-      "sha256": "9924fee13c196f55738e02adee36608cedbdf8f3817cc0c9045fd79f163decc6",
-      "source": "limen/yaml/rules.py",
-      "symbol": "UelSpec"
-    },
-    "uel.intra_callback": {
-      "sha256": "48785c958e64c6c0654e95c5e4ab69d86869485e8862ff0a53ec80bbbe348547",
-      "source": "limen/yaml/_callback_spec.py",
-      "symbol": "callback_error"
-    },
-    "uel.output_path": {
-      "sha256": "047d83f057f1bb74ff52544cb6ae36bcae71207a95714c961d26aafbd3cafd7d",
-      "source": "limen/cli/commands/_results_dir.py",
-      "symbol": "admit_output"
-    },
-    "uel.pruning_strategies[]": {
-      "sha256": "b103fa31ff6e36d3909f3d90df89e88e610beff0079f01fbaf86f16e7af954c9",
-      "source": "limen/yaml/rules.py",
-      "symbol": "PruningStrategiesSpec"
-    },
-    "uel.recording": {
-      "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d",
-      "source": "limen/experiment/_recording.py",
-      "symbol": "parse_recording"
-    }
-  },
   "rules": [
     {
       "kind": "Required",
       "path": "metadata",
-      "type": "dict",
-      "when": "always"
+      "when": "always",
+      "type": "dict"
     },
     {
       "kind": "Required",
       "path": "sfd",
-      "type": "dict",
-      "when": "always"
+      "when": "always",
+      "type": "dict"
     },
     {
       "kind": "Required",
       "path": "uel",
-      "type": "dict",
-      "when": "always"
+      "when": "always",
+      "type": "dict"
     },
     {
       "kind": "Required",
       "path": "metadata.name",
-      "type": "str",
-      "when": "always"
+      "when": "always",
+      "type": "str"
     },
     {
       "kind": "Required",
       "path": "metadata.mode",
-      "type": "str",
-      "when": "always"
+      "when": "always",
+      "type": "str"
     },
     {
+      "kind": "OneOf",
+      "path": "metadata.mode",
+      "when": "always",
       "choices": [
         "development",
         "production"
-      ],
-      "kind": "OneOf",
-      "path": "metadata.mode",
-      "when": "always"
+      ]
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "metadata",
+      "when": "always",
       "known": [
         "author",
         "created_at",
@@ -268,49 +52,49 @@
         "name",
         "tags"
       ],
-      "path": "metadata",
-      "severity": "error",
-      "when": "always"
+      "severity": "error"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest",
-      "type": "dict",
-      "when": "always"
+      "when": "always",
+      "type": "dict"
     },
     {
       "kind": "Required",
       "path": "sfd.params",
-      "type": "dict",
-      "when": "always"
+      "when": "always",
+      "type": "dict"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.type",
-      "type": "str",
-      "when": "always"
+      "when": "always",
+      "type": "str"
     },
     {
+      "kind": "OneOf",
+      "path": "sfd.manifest.type",
+      "when": "always",
       "choices": [
         "ml",
         "rule_based"
-      ],
-      "kind": "OneOf",
-      "path": "sfd.manifest.type",
-      "when": "always"
+      ]
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.data_source",
+      "when": "always",
       "known": [
         "method",
         "params"
       ],
-      "path": "sfd.manifest.data_source",
-      "severity": "error",
-      "when": "always"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.split_dates",
+      "when": "always",
       "known": [
         "test_end",
         "test_predict_guard",
@@ -321,15 +105,13 @@
         "val_predict_guard",
         "val_start"
       ],
-      "path": "sfd.manifest.split_dates",
-      "severity": "error",
-      "when": "always"
+      "severity": "error"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.reference_architecture",
-      "type": "str",
-      "when": "always"
+      "when": "always",
+      "type": "str"
     },
     {
       "kind": "Resolvable",
@@ -338,6 +120,8 @@
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.backtest",
+      "when": "always",
       "known": [
         "barrier_features",
         "execution_data_source",
@@ -363,27 +147,25 @@
         "timer_interval_seconds",
         "timer_phase_utc_seconds"
       ],
-      "path": "sfd.manifest.backtest",
-      "severity": "error",
-      "when": "always"
+      "severity": "error"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.target",
-      "type": "dict",
-      "when": "sfd.manifest.type = ml"
+      "when": "sfd.manifest.type = ml",
+      "type": "dict"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.target.name",
-      "type": "str",
-      "when": "sfd.manifest.type = ml"
+      "when": "sfd.manifest.type = ml",
+      "type": "str"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.target.class",
-      "type": "str",
-      "when": "sfd.manifest.type = ml"
+      "when": "sfd.manifest.type = ml",
+      "type": "str"
     },
     {
       "kind": "Resolvable",
@@ -392,162 +174,164 @@
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.target",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "class",
         "fit_params",
         "name",
         "transform_params"
       ],
-      "path": "sfd.manifest.target",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
       "kind": "FuncList",
-      "known": [
-        "func",
-        "include_if",
-        "params"
-      ],
       "path": "sfd.manifest.indicators",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
-    },
-    {
-      "kind": "FuncList",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "func",
         "include_if",
         "params"
       ],
+      "severity": "error"
+    },
+    {
+      "kind": "FuncList",
       "path": "sfd.manifest.features",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "when": "sfd.manifest.type = ml",
+      "known": [
+        "func",
+        "include_if",
+        "params"
+      ],
+      "severity": "error"
     },
     {
       "kind": "SingleFuncBlock",
-      "known": [
-        "func",
-        "params"
-      ],
       "path": "sfd.manifest.pre_split_data_selector",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
-    },
-    {
-      "kind": "SingleFuncBlock",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "func",
         "params"
       ],
+      "severity": "error"
+    },
+    {
+      "kind": "SingleFuncBlock",
       "path": "sfd.manifest.bar_formation",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
-    },
-    {
-      "kind": "SingleFuncBlock",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "func",
         "params"
       ],
+      "severity": "error"
+    },
+    {
+      "kind": "SingleFuncBlock",
       "path": "sfd.manifest.data_dict_extension",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "when": "sfd.manifest.type = ml",
+      "known": [
+        "func",
+        "params"
+      ],
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.data_dict_extension",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "func"
       ],
-      "path": "sfd.manifest.data_dict_extension",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.scaler",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "class",
         "from_params",
         "params"
       ],
-      "path": "sfd.manifest.scaler",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.feature_ablation",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "drop_count_key",
         "seed_key"
       ],
-      "path": "sfd.manifest.feature_ablation",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
+      "kind": "ParamKeyFields",
+      "path": "sfd.manifest.feature_ablation",
+      "when": "sfd.manifest.type = ml",
       "fields": [
         "drop_count_key",
         "seed_key"
-      ],
-      "kind": "ParamKeyFields",
-      "path": "sfd.manifest.feature_ablation",
-      "when": "sfd.manifest.type = ml"
+      ]
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.pca_compression",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "component_prefix",
         "enabled_param",
         "n_components_param",
         "scaler_param_name"
       ],
-      "path": "sfd.manifest.pca_compression",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
+      "kind": "ParamKeyFields",
+      "path": "sfd.manifest.pca_compression",
+      "when": "sfd.manifest.type = ml",
       "fields": [
         "component_prefix",
         "enabled_param",
         "n_components_param",
         "scaler_param_name"
-      ],
-      "kind": "ParamKeyFields",
-      "path": "sfd.manifest.pca_compression",
-      "when": "sfd.manifest.type = ml"
+      ]
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.calibration",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "probability_calibration",
         "threshold_function"
       ],
-      "path": "sfd.manifest.calibration",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
-      "known": [
-        "func",
-        "params"
-      ],
       "path": "sfd.manifest.calibration.probability_calibration",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
-    },
-    {
-      "kind": "NoUnknownKeys",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "func",
         "params"
       ],
-      "path": "sfd.manifest.calibration.threshold_function",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.calibration.threshold_function",
+      "when": "sfd.manifest.type = ml",
+      "known": [
+        "func",
+        "params"
+      ],
+      "severity": "error"
+    },
+    {
+      "kind": "NoUnknownKeys",
+      "path": "sfd.manifest",
+      "when": "sfd.manifest.type = ml",
       "known": [
         "acceptance",
         "allocation",
@@ -575,30 +359,30 @@
         "target",
         "type"
       ],
-      "path": "sfd.manifest",
-      "severity": "error",
-      "when": "sfd.manifest.type = ml"
+      "severity": "error"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.strategy",
-      "type": "dict",
-      "when": "sfd.manifest.type = rule_based"
+      "when": "sfd.manifest.type = rule_based",
+      "type": "dict"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.strategy.conditions",
-      "type": "list",
-      "when": "sfd.manifest.type = rule_based"
+      "when": "sfd.manifest.type = rule_based",
+      "type": "list"
     },
     {
       "kind": "Required",
       "path": "sfd.manifest.strategy.entry",
-      "type": "str",
-      "when": "sfd.manifest.type = rule_based"
+      "when": "sfd.manifest.type = rule_based",
+      "type": "str"
     },
     {
       "kind": "ConditionsList",
+      "path": "sfd.manifest.strategy.conditions",
+      "when": "sfd.manifest.type = rule_based",
       "known": [
         "column",
         "direction",
@@ -614,33 +398,33 @@
         "type",
         "value"
       ],
-      "path": "sfd.manifest.strategy.conditions",
-      "severity": "error",
-      "when": "sfd.manifest.type = rule_based"
+      "severity": "error"
     },
     {
       "kind": "FuncList",
+      "path": "sfd.manifest.indicators",
+      "when": "sfd.manifest.type = rule_based",
       "known": [
         "func",
         "include_if",
         "params"
       ],
-      "path": "sfd.manifest.indicators",
-      "severity": "error",
-      "when": "sfd.manifest.type = rule_based"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest.strategy",
+      "when": "sfd.manifest.type = rule_based",
       "known": [
         "conditions",
         "entry"
       ],
-      "path": "sfd.manifest.strategy",
-      "severity": "error",
-      "when": "sfd.manifest.type = rule_based"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd.manifest",
+      "when": "sfd.manifest.type = rule_based",
       "known": [
         "acceptance",
         "allocation",
@@ -655,67 +439,69 @@
         "strategy",
         "type"
       ],
-      "path": "sfd.manifest",
-      "rejected": {
-        "bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded",
-        "target": "Field 'target' is unsupported in rule_based YAML and would be discarded"
-      },
       "severity": "error",
-      "when": "sfd.manifest.type = rule_based"
+      "rejected": {
+        "target": "Field 'target' is unsupported in rule_based YAML and would be discarded",
+        "bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded"
+      }
     },
     {
       "kind": "Required",
       "path": "uel.n_permutations",
-      "type": "int",
-      "when": "always"
+      "when": "always",
+      "type": "int"
     },
     {
+      "kind": "OneOf",
+      "path": "uel.search_strategy.type",
+      "when": "always",
       "choices": [
         "grid",
         "random",
         "sobol"
-      ],
-      "kind": "OneOf",
-      "path": "uel.search_strategy.type",
-      "when": "always"
+      ]
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "uel.search_strategy",
+      "when": "always",
       "known": [
         "seed",
         "shuffle",
         "type"
       ],
-      "path": "uel.search_strategy",
-      "severity": "error",
-      "when": "always"
+      "severity": "error"
     },
     {
+      "kind": "OneOf",
+      "path": "uel.output_format",
+      "when": "always",
       "choices": [
         "csv",
         "parquet"
-      ],
-      "kind": "OneOf",
-      "path": "uel.output_format",
-      "when": "always"
+      ]
     },
     {
       "kind": "PruningStrategiesSpec",
+      "path": "uel.pruning_strategies",
+      "when": "always",
       "known": [
         "params",
         "type"
       ],
-      "path": "uel.pruning_strategies",
-      "severity": "error",
-      "when": "always"
+      "severity": "error"
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "uel",
+      "when": "always",
       "known": [
         "checkpoint_interval",
         "factorize",
         "feedback_interval",
+        "max_round_errors",
         "n_permutations",
+        "on_round_error",
         "output_format",
         "output_path",
         "prep_each_round",
@@ -726,18 +512,18 @@
         "search_strategy",
         "workers"
       ],
-      "path": "uel",
-      "rejected": {
-        "acceptance": "Declare acceptance under sfd.manifest",
-        "feature_shims": "Declare feature_shims only under sfd.manifest",
-        "intra_callback": "YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention",
-        "objective": "Declare the objective only at sfd.manifest.objective"
-      },
       "severity": "error",
-      "when": "always"
+      "rejected": {
+        "intra_callback": "YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention",
+        "objective": "Declare the objective only at sfd.manifest.objective",
+        "acceptance": "Declare acceptance under sfd.manifest",
+        "feature_shims": "Declare feature_shims only under sfd.manifest"
+      }
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "",
+      "when": "always",
       "known": [
         "assessment",
         "holdout",
@@ -747,42 +533,268 @@
         "sfd",
         "uel"
       ],
-      "path": "",
-      "rejected": {
-        "acceptance": "Declare acceptance under sfd.manifest",
-        "feature_shims": "Declare feature_shims only under sfd.manifest",
-        "objective": "Declare the objective only at sfd.manifest.objective",
-        "recording": "Declare recording only under uel"
-      },
       "severity": "error",
-      "when": "always"
+      "rejected": {
+        "objective": "Declare the objective only at sfd.manifest.objective",
+        "acceptance": "Declare acceptance under sfd.manifest",
+        "recording": "Declare recording only under uel",
+        "feature_shims": "Declare feature_shims only under sfd.manifest"
+      }
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "sfd",
+      "when": "always",
       "known": [
         "manifest",
         "params"
       ],
-      "path": "sfd",
-      "rejected": {
-        "feature_shims": "Declare feature_shims only under sfd.manifest",
-        "recording": "Declare recording only under uel"
-      },
       "severity": "error",
-      "when": "always"
+      "rejected": {
+        "recording": "Declare recording only under uel",
+        "feature_shims": "Declare feature_shims only under sfd.manifest"
+      }
     },
     {
       "kind": "NoUnknownKeys",
+      "path": "lineage",
+      "when": "always",
       "known": [
         "committed_at",
         "id",
         "parent_id"
       ],
-      "path": "lineage",
-      "severity": "error",
-      "when": "always"
+      "severity": "error"
     }
   ],
+  "nested": {
+    "uel": {
+      "source": "limen/yaml/rules.py",
+      "symbol": "UelSpec",
+      "sha256": "957ea2553703c055d9299e4829186110e57cb2e6bf65710a677c6bbf11e0749e"
+    },
+    "uel.on_round_error": {
+      "source": "limen/experiment/_round_errors.py",
+      "symbol": "RoundErrorPolicy",
+      "sha256": "e49eddd51afa733274e49b55e9e7f1ee05a2cb19a3b1182d8139eabe08836f6d"
+    },
+    "uel.max_round_errors": {
+      "source": "limen/experiment/_round_errors.py",
+      "symbol": "configuration",
+      "sha256": "a599a34a6d33da62ee4914c9debb052e844788588d31df4407b62784687c9e87"
+    },
+    "metadata": {
+      "source": "limen/yaml/_metadata_spec.py",
+      "symbol": "check_metadata",
+      "sha256": "6e9b1285b52a21ed1a5074419bde46df488397dbc0e7c0420607ea42fa9699f3"
+    },
+    "sfd.manifest.required_columns": {
+      "source": "limen/experiment/_required_columns.py",
+      "symbol": "column_issue",
+      "sha256": "b0ff6f84ef669d43d17b331a096b4feb5cdeb40acae8063dfc50962d2fa14483"
+    },
+    "schema_version": {
+      "source": "limen/yaml/_schema_version.py",
+      "symbol": "schema_errors",
+      "sha256": "c979966f0648bb6121bfd7ef41f5c7075c4d811362df3db5ae4fbb6cc729455b"
+    },
+    "sfd.manifest": {
+      "source": "limen/yaml/_parameter_refs.py",
+      "symbol": "lookup_references",
+      "sha256": "45088af4b86830a7a4dbc754f8e45575c912493edcafa88facf12ab54fdc6874"
+    },
+    "sfd.params": {
+      "source": "limen/yaml/rules.py",
+      "symbol": "ParamCoverage",
+      "sha256": "2b7ae1bb6d28f8c3b8e44cc81f72d838128d5dca063c5527954c9757c96a5b3c"
+    },
+    "sfd.manifest.strict_mode": {
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec",
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9"
+    },
+    "sfd.params.use_calibration[]": {
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec",
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9"
+    },
+    "sfd.params.use_threshold[]": {
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec",
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9"
+    },
+    "sfd.manifest.split_walk_forward": {
+      "source": "limen/experiment/_walk_forward_split.py",
+      "symbol": "WalkForwardConfig",
+      "sha256": "79ee5ae260ee27ffe6925aea93dd03d93b639c334fb0f029bb479b08d0687897",
+      "fields": {
+        "n_folds": {
+          "type": "int",
+          "default": "required"
+        },
+        "test_bars": {
+          "type": "int",
+          "default": "required"
+        },
+        "purge_bars": {
+          "type": "int",
+          "default": "required"
+        },
+        "embargo_bars": {
+          "type": "int",
+          "default": "required"
+        },
+        "anchored": {
+          "type": "bool",
+          "default": "required"
+        }
+      }
+    },
+    "sfd.manifest.backtest.product": {
+      "source": "limen/experiment/_resolve_trade_policy.py",
+      "symbol": "ProductConfig",
+      "sha256": "78f9b6b89aa64c7d74515e5734d6a92f921a7d2058b1b44f0a1fa12e7cdd6bda",
+      "fields": {
+        "kind": {
+          "type": "Literal['cash_spot', 'linear_perpetual']",
+          "default": "required"
+        },
+        "instrument": {
+          "type": "str",
+          "default": "required"
+        },
+        "base_currency": {
+          "type": "str",
+          "default": "required"
+        },
+        "quote_currency": {
+          "type": "str",
+          "default": "required"
+        },
+        "quantity_step": {
+          "type": "float | str",
+          "default": "required"
+        },
+        "min_notional": {
+          "type": "float | str",
+          "default": "required"
+        },
+        "initial_margin_fraction": {
+          "type": "float | str",
+          "default": "1.0"
+        },
+        "maintenance_margin_fraction": {
+          "type": "float | str",
+          "default": "0.0"
+        }
+      }
+    },
+    "sfd.manifest.backtest.funding": {
+      "source": "limen/experiment/_resolve_trade_policy.py",
+      "symbol": "FundingConfig",
+      "sha256": "faaeefc6a830dd668a0d1d9fcd5ef331c733305467456b32e3b530bdaba16c33",
+      "fields": {
+        "adapter": {
+          "type": "FundingAdapter",
+          "default": "funding_adapter"
+        },
+        "adapter_version": {
+          "type": "str",
+          "default": "ADAPTER_VERSION"
+        },
+        "preset": {
+          "type": "str | None",
+          "default": "None"
+        },
+        "params": {
+          "type": "dict[str, object]",
+          "default": "field(default_factory=dict[str, object])"
+        },
+        "data_source": {
+          "type": "SourceConfig | None",
+          "default": "None"
+        }
+      }
+    },
+    "sfd.manifest.allocation": {
+      "source": "limen/experiment/_allocation.py",
+      "symbol": "AllocationConfig",
+      "sha256": "1c808f61826d92e3841678b365d0de8689a75558029433d6c745acdd6c82ec32",
+      "fields": {
+        "method": {
+          "type": "Callable[..., dict[str, object]]",
+          "default": "required"
+        },
+        "params": {
+          "type": "Mapping[str, object]",
+          "default": "required"
+        }
+      }
+    },
+    "sfd.manifest.feature_shims[]": {
+      "source": "limen/experiment/_column_shims.py",
+      "symbol": "_FIELDS",
+      "sha256": "ef576c858edae5b586f1e3337e3f904b7d91d01a155f9707898425cdca87ff88",
+      "fields": [
+        "columns",
+        "d",
+        "method",
+        "reference",
+        "significance_level",
+        "threshold"
+      ]
+    },
+    "sfd.manifest.objective": {
+      "source": "limen/yaml/_objective_spec.py",
+      "symbol": "_read_objective",
+      "sha256": "c151d10d8ec78f7696930d8568c499f20144008276a4ad5b8a42b93eb169d3e5"
+    },
+    "sfd.manifest.acceptance": {
+      "source": "limen/experiment/_acceptance_settings.py",
+      "symbol": "read_acceptance",
+      "sha256": "b5051d8f5249da538f9f7d6c426d95fbaff977704898ebff8c18976ee0314cc5"
+    },
+    "sfd.manifest.strategy.conditions[]": {
+      "source": "limen/yaml/rules.py",
+      "symbol": "ConditionsList",
+      "sha256": "66ecc28d690cbaa598de178e2b91041cedf6e35cb56a93683ed5d992bd59234f"
+    },
+    "uel.intra_callback": {
+      "source": "limen/yaml/_callback_spec.py",
+      "symbol": "callback_error",
+      "sha256": "48785c958e64c6c0654e95c5e4ab69d86869485e8862ff0a53ec80bbbe348547"
+    },
+    "uel.pruning_strategies[]": {
+      "source": "limen/yaml/rules.py",
+      "symbol": "PruningStrategiesSpec",
+      "sha256": "b103fa31ff6e36d3909f3d90df89e88e610beff0079f01fbaf86f16e7af954c9"
+    },
+    "sfd.manifest.indicators[]": {
+      "source": "limen/yaml/rules.py",
+      "symbol": "_check_func_block",
+      "sha256": "48cad1af4c770cdbb1be68a9e4b1a5aaad7d6e498b3c957e680e006c200f806e"
+    },
+    "uel.recording": {
+      "source": "limen/experiment/_recording.py",
+      "symbol": "parse_recording",
+      "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d"
+    },
+    "uel.output_path": {
+      "source": "limen/cli/commands/_results_dir.py",
+      "symbol": "admit_output",
+      "sha256": "047d83f057f1bb74ff52544cb6ae36bcae71207a95714c961d26aafbd3cafd7d"
+    },
+    "assessment": {
+      "source": "limen/yaml/_assessment_spec.py",
+      "symbol": "assessment_spec",
+      "sha256": "accf5b8d6571499eb3a146a7545417a787f8da192e2d88c8f63e05ed881be2fb"
+    },
+    "holdout": {
+      "source": "limen/yaml/_assessment_spec.py",
+      "symbol": "holdout_spec",
+      "sha256": "5add451583077a3589f211e314f7e081c8279c4bef78059b041550a0536fbd98"
+    }
+  },
   "sources": {
     "limen/_parameter_identity.py": "e20965624d19d949f3707fa22e1bb0bdce704e99d80d4e3c968ad11d1ced3283",
     "limen/backtest/_long_flat_tp_sl.py": "b2802f3940a11694c830f8320ccd3f56fff3f4aa1acfcbcab42d09c4612abee3",
@@ -804,6 +816,7 @@
     "limen/experiment/_required_columns.py": "2cd675b12f7cba92d43866fec12d17d167fb6e91a6efae1f28019f5f5a751945",
     "limen/experiment/_resolve_backtest_config.py": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f",
     "limen/experiment/_resolve_trade_policy.py": "93d17a4cd19476017f250c5970d0d67f93c7a8941050902897b8545f7b970ce1",
+    "limen/experiment/_round_errors.py": "4d9a0673d430c537a5c905e1cd13277d5fdf1645cbc4811041bdd7d6d4c4e0ac",
     "limen/experiment/_shim_fractional_diff.py": "b0fc724b946c4d33ac0998b094c15e3ccc26cf61c883d630a79de3c4d78ff8ac",
     "limen/experiment/_source_contract.py": "915d56e7b9ab835099f8260701e86fa9e0366f1c98b4ae9388841ce0ad928dfa",
     "limen/experiment/_walk_forward_split.py": "485a9605a9ea280d9d2224af0460824f93bfd16e519cfa199a60fb89a4925a15",
@@ -834,8 +847,8 @@
     "limen/yaml/parser.py": "2fa2c1ab9192ce75779cd8844f204faee29731e1e3d4ac53318fd688a4451ed2",
     "limen/yaml/profiler.py": "1e412c4ca48fc0d67fcf05ec6ec7811cdd37d256273af3833a56895a1931dd5d",
     "limen/yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
-    "limen/yaml/rules.py": "ebe6827fcc7c39b38a1e6a239b13ff58f37c913affec37d415837fd8372bad46",
-    "limen/yaml/schema.py": "b33cbd1784125229f8c4c3d6889ab235d60152ae5c4aebdad8b0b2cf3cce18c5",
+    "limen/yaml/rules.py": "2a167bb69b6427725b8d898cb903c0b06ecf2b6466a12914641731484444be3d",
+    "limen/yaml/schema.py": "828a1585d2add84d1c73ac74b2d5494a5fff32dbec25b95a465b031907c9c0d5",
     "limen/yaml/store.py": "53e4eb7724597f09c7bf71739996b5fb854d07950720868d6d93b125b6d3ac0c",
     "limen/yaml/validator.py": "1c67519036c6d4327c35d86bdc7f0dda958a47e43f55d4d94ea9cb2ea535bf18"
   }

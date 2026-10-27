@@ -3,6 +3,7 @@ import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import limen.experiment._result_fields as _fields
+import limen.experiment._round_errors as _round_errors
 import csv
 import importlib.metadata
 import json
@@ -51,9 +52,7 @@ logger = logging.getLogger(__name__)
 
 def _validate_prep_each_round_arg(value: object) -> None:
     if not isinstance(value, bool):
-        raise TypeError(
-            'UniversalExperimentLoop prep_each_round must be a bool.'
-        )
+        raise TypeError('UniversalExperimentLoop prep_each_round must be a bool.')
 
 STANDARD_RUN_LOG_BATCH_SIZE = 1000
 
@@ -72,11 +71,12 @@ class UniversalExperimentLoop:
                  intra_callback: Callable[[Any, MSQ], None] | None = None,
                  test_mode: bool = False,
                  yaml_reference: dict[str, Any] | None = None,
-                 project_root: str | Path | None = None) -> None:
+                 project_root: str | Path | None = None, on_round_error: str = 'abort', max_round_errors: int | None = None) -> None:
 
         '''Configure the manifest or custom SFD and optional MSQ persistence.'''
 
         super().__init__()
+        self._round_error_policy = _round_errors.RoundErrorPolicy(on_round_error, max_round_errors)
 
         if sfd is None:
             raise ValueError('UniversalExperimentLoop sfd is required')
@@ -133,6 +133,7 @@ class UniversalExperimentLoop:
         return self._shutdown_requested
 
     @_holdout.run_guard
+    @_round_errors.guarded
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
             context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
@@ -634,9 +635,8 @@ class UniversalExperimentLoop:
                             data=data_dict, round_params=sfd_params,
                         )
                 round_succeeded = True
-            except StrictModeError as exc:
-                logger.error('Round %d failed strict mode check: %s', current_round, exc)
-                round_results: dict[str, Any] = {'strict_mode_error': str(exc) or type(exc).__name__}
+            except Exception as exc:
+                round_results = self._round_error_policy.failure(self, exc, current_round)
             except KeyboardInterrupt:
                 if self._shutdown_requested:
                     logger.info(
@@ -745,7 +745,7 @@ class UniversalExperimentLoop:
 
             checkpoint_due = (
                 self._experiment_dir
-                and checkpoint_manager.should_checkpoint(current_round)
+                and (checkpoint_manager.should_checkpoint(current_round) or self._round_error_policy.exhausted)
             )
 
             if feedback_controller.should_trigger(current_round):
@@ -1032,6 +1032,7 @@ class UniversalExperimentLoop:
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(), 'round_storage': _storage.FORMAT,
         }, context_parameter_keys=context_parameter_keys)
+        metadata.update(self._round_error_policy.metadata)
         if self._record_execution:
             metadata['record_execution'] = True
         if self._record_model_outputs:
