@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Mapping
 from typing import Any, Literal
 
 import polars as pl
@@ -7,6 +8,7 @@ from typing_extensions import override
 from limen._parameter_identity import execution_hash
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST, PruningStrategy
 from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
+from limen.experiment.reducer._forest_analysis import configure
 
 _CorrelationMethod = Literal['pearson', 'kendall', 'spearman']
 
@@ -35,7 +37,7 @@ class CorrelationReducer(PruningStrategy):
     - Low-impact: parameters with negligible |correlation| and high
       sign stability get a keep_is suggestion for the best value
 
-    NOTE: Only acts on numeric parameters. Categorical/string parameters
+    NOTE: Correlation analysis only acts on numeric parameters. Categorical/string parameters
     are coerced to numeric internally and silently skipped when coercion
     produces all-NaN or constant columns.
 
@@ -52,6 +54,8 @@ class CorrelationReducer(PruningStrategy):
                  negative_correlation_threshold: float = -0.3,
                  maximize: bool = True,
                  random_state: int = 0,
+                 analyzer: str = 'correlation', metrics: Mapping[str, bool] | None = None,
+                 n_repeats: int = 10, min_model_score: float = 0.1,
                  active: bool = True) -> None:
 
         '''
@@ -113,7 +117,7 @@ class CorrelationReducer(PruningStrategy):
         self._n_boot = n_boot
         self._negative_correlation_threshold = negative_correlation_threshold
         self._maximize = maximize
-        self._random_state = random_state
+        self._random_state, self._forest = random_state, configure(metric, maximize, analyzer, metrics, n_repeats, min_model_score)
         self._applied: dict[str, tuple[str, Any]] = {}
         self._suggested: set[str] = set()
 
@@ -132,16 +136,14 @@ class CorrelationReducer(PruningStrategy):
 
         '''
 
-        if not self._active:
-            return []
-
         df = log
 
-        if df.is_empty() or self._metric not in df.columns:
+        if not self._active or df.is_empty() or (self._forest is None and self._metric not in df.columns) or len(df) < self._min_observations:
             return []
 
-        if len(df) < self._min_observations:
-            return []
+        if self._forest is not None:
+            return self._forest.analyze(df, msq.domain_keys, msq._logged_choices, threshold=self._prune_threshold, seed=self._random_state,
+                                        suggested=self._suggested, minimum_rows=self._min_observations)
 
         try:
             corr_df = self._compute_correlations(df, msq.domain_keys)

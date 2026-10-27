@@ -92,6 +92,7 @@
   "limen/experiment/reducer/__init__.py": 30,
   "limen/experiment/reducer/budget_reducer.py": 230,
   "limen/experiment/reducer/correlation_reducer.py": 250,
+  "limen/experiment/reducer/_forest_analysis.py": 100,
   "limen/experiment/reducer/filter_types.py": 50,
   "limen/experiment/reducer/focus_reducer.py": 320,
   "limen/experiment/reducer/pruning_strategy.py": 50,
