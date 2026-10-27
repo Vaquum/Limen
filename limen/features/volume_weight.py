@@ -23,7 +23,7 @@ def volume_weight(data: pl.DataFrame,
         pl.DataFrame: The input data with new columns 'volume_ma', 'volume_weight'
     '''
 
-    _check.integers(lower=1, period=period)
+    _check.integers(lower=2, upper=100000, period=period)
     _check.numbers(volume_weight_min=volume_weight_min, volume_weight_max=volume_weight_max)
     _check.ordered('volume_weight_min', volume_weight_min, 'volume_weight_max', volume_weight_max)
 

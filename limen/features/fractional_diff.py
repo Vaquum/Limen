@@ -87,11 +87,6 @@ def fractional_diff(data: pl.DataFrame,
     _check.column_sequence('cols', cols)
 
 
-    if not (isinstance(d, int) or np.isfinite(d)) or d < 0:
-        raise ValueError(f"fractional_diff d must be finite and non-negative, got {d}")
-
-    if not (isinstance(threshold, int) or np.isfinite(threshold)) or threshold <= 0:
-        raise ValueError(f"fractional_diff threshold must be finite and positive, got {threshold}")
 
     schema_names = data.collect_schema().names()
     missing = [col for col in cols if col not in schema_names]

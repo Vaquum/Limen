@@ -18,7 +18,7 @@ def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, lon
     trend, volatility, volume-regime and favorability warmup remains null.
     '''
 
-    _check.integers(lower=1, lookback=lookback, short_sma=short_sma, long_sma=long_sma)
+    _check.integers(lower=2, upper=100000, lookback=lookback, short_sma=short_sma, long_sma=long_sma)
 
     conflicts = {'sma_20', 'sma_50', 'volume_sma'} & set(df.collect_schema().names())
     if conflicts:
