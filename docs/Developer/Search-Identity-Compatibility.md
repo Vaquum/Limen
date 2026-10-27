@@ -4,6 +4,11 @@ This is the design decision for [#1281](https://github.com/Vaquum/Limen/issues/1
 It specifies a future versioned identity protocol. It does not change the shipped
 hashes, parameter admission, checkpoint codec or supported recovery paths.
 
+## Prerequisites
+
+Read the [search reference](../Search-Reference.md) and retain a matching released
+wheel and recorded run before evaluating any recovery-format change.
+
 ## Existing behavior
 
 Ordinary search uses `limen._parameter_identity.execution_hash`: SHA-256 of sorted
