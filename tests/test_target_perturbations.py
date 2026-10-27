@@ -144,3 +144,24 @@ def test_yaml_anchored_noise_controls(market):
     settings['noise_seed'] = YAML().load('value: &flag true')['value']
     with pytest.raises(ValueError, match='noise_seed'):
         target.transform(market, permutation_id='recorded-control', **settings)
+
+
+def test_walk_forward_reconstruction_replays_the_candidate_noise(tmp_path):
+    reference = config()
+    manifest = reference['sfd']['manifest']
+    manifest.pop('split_dates')
+    manifest['split_walk_forward'] = {'n_folds': 2, 'test_bars': 30, 'purge_bars': 3,
+                                     'embargo_bars': 1, 'anchored': True}
+    manifest['reference_architecture'] = 'limen.sfd.reference_architecture.ridge_regressor'
+    reference['sfd']['params'].update(alpha=[1.], solver=['svd'])
+    experiment = UniversalExperimentLoop(sfd=CompiledSFD(reference), data=_bars(), yaml_reference=reference,
+        search_strategy=build_search_strategy(reference), experiment_dir=tmp_path)
+    experiment.run('fold_noise', n_permutations=2, prep_each_round=True, progress_bar=False, post_processing=True,
+                   record_execution=True, record_model_outputs=True,
+                   recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
+    identities = experiment.experiment_log['id'].to_list()
+    sensors = Trainer(tmp_path, data=_bars()).train(identities, fold=1)
+    assert len(sensors) == 2
+    for sensor, identity in zip(sensors, identities, strict=True):
+        assert sensor._fitted_params['_target_cls_up_next'].perturbation_parameters['permutation_id'] == identity
+        assert '_permutation_id' not in sensor.round_params

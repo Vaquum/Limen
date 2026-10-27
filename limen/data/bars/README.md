@@ -1,6 +1,6 @@
 # `limen.data.bars`
 
-> Threshold-bar constructors that resample kline rows into information-driven bars.
+> Fixed activity bars over klines and adaptive directional-volume bars over trade points.
 
 ## Canonical docs
 
@@ -12,7 +12,7 @@ Both projects run `bars`. The [Python project](../../../docs/examples/python-res
 
 ## What this package owns
 
-Owns the standard threshold-bar implementations that aggregate raw kline rows once a running quantity crosses a threshold.
+Owns fixed activity thresholds over kline rows and adaptive imbalance/run thresholds over individual trade points.
 Does **not** own raw data retrieval (owned by `limen.data.HistoricalData`) or the public `compute_data_bars()` entry point (owned by `limen.data.utils`).
 
 ## Key entry points

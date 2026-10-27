@@ -80,6 +80,22 @@ Aggregate rows until cumulative trade count reaches `trade_threshold`.
 
 Aggregate rows until cumulative liquidity reaches `liquidity_threshold`.
 
+### `imbalance_bars` callable contract
+
+<!-- reference: data-bars-imbalance_bars source=limen/data/bars/adaptive_bars.py region=signature:imbalance_bars role=signature -->
+```python
+def imbalance_bars(data: pl.DataFrame, expected_num_ticks: int=100, ema_span: int=20) -> pl.DataFrame:
+    ...
+```
+
+### `run_bars` callable contract
+
+<!-- reference: data-bars-run_bars source=limen/data/bars/adaptive_bars.py region=signature:run_bars role=signature -->
+```python
+def run_bars(data: pl.DataFrame, expected_num_ticks: int=100, ema_span: int=20) -> pl.DataFrame:
+    ...
+```
+
 ## Form bars in either project
 
 The [Python project's](examples/python-research/README.md) `bars` scenario forms each of the three supported bar types from 384 recorded hourly rows. It derives a diagnostic threshold from that bounded population, writes the complete bars, and records the omitted incomplete tail. This is a bar-formation diagnostic; a model comparison must still choose fitting and assessment populations separately.
@@ -132,7 +148,7 @@ It currently supports these `bar_type` values:
 - `imbalance`
 - `run`
 
-`base` returns the input data unchanged. The other values dispatch to the corresponding threshold-bar function and require the matching threshold parameter. Unknown `bar_type` values raise `ValueError`; they are not silently treated as `base`.
+`base` returns the input data unchanged. Fixed threshold types require their matching threshold parameter. Adaptive types use `expected_num_ticks` and `ema_span`. Unknown `bar_type` values raise `ValueError`; they are not silently treated as `base`.
 
 ## How bars fit into the manifest pipeline
 
@@ -157,19 +173,3 @@ The Python diagnostic reports each threshold and the number of source rows admit
 ## Read next
 
 Continue to [define the experiment](Compiled-Research.md); helper details remain in the [bar reference](../limen/data/bars/README.md).
-
-### `imbalance_bars` callable contract
-
-<!-- reference: data-bars-imbalance_bars source=limen/data/bars/adaptive_bars.py region=signature:imbalance_bars role=signature -->
-```python
-def imbalance_bars(data: pl.DataFrame, expected_num_ticks: int=100, ema_span: int=20) -> pl.DataFrame:
-    ...
-```
-
-### `run_bars` callable contract
-
-<!-- reference: data-bars-run_bars source=limen/data/bars/adaptive_bars.py region=signature:run_bars role=signature -->
-```python
-def run_bars(data: pl.DataFrame, expected_num_ticks: int=100, ema_span: int=20) -> pl.DataFrame:
-    ...
-```
