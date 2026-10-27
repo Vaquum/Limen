@@ -38,6 +38,4 @@ def liquidity_drop(
 
     liquidity = pl.col(liquidity_col)
 
-    return data.with_columns(
-        _safe_divide(liquidity, liquidity.shift(window)).alias(output_col)
-    )
+    return data.with_columns(_safe_divide(liquidity, liquidity.shift(window)).alias(output_col))

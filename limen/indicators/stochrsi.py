@@ -52,9 +52,7 @@ def stochrsi(
     fastd_ma_type: int = 0,
 ) -> pl.DataFrame:
 
-    '''
-    Compute Stochastic RSI (TA_STOCHRSI): fast %K and fast %D on RSI values.
-
+    '''Compute Stochastic RSI (TA_STOCHRSI): fast %K and fast %D on RSI values.
     Args:
         data (pl.DataFrame): Dataset with input price column
         price_col (str): Column name for input price

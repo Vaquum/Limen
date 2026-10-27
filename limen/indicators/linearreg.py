@@ -68,10 +68,7 @@ def linearreg(
     return data.with_columns(
         pl.col(price_col).map_batches(
             lambda s: pl.Series(
-                _linearreg_from_values(
-                    s.to_numpy().astype(float, copy=False),
-                    period,
-                )
+                _linearreg_from_values(s.to_numpy().astype(float, copy=False), period)
             ),
             return_dtype=pl.Float64,
         ).alias(out_col)

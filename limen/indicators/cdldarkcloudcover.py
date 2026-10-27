@@ -94,7 +94,7 @@ def cdldarkcloudcover(
     penetration: float = 0.5,
 ) -> pl.DataFrame:
 
-    _check.numbers(penetration=penetration)
+    _check.numbers(lower=0, upper=3e37, penetration=penetration)
     _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdldarkcloudcover'
@@ -103,10 +103,8 @@ def cdldarkcloudcover(
         pl.struct(input_cols).map_batches(
             lambda s: _cdldarkcloudcover_impl(
                 pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
-                open_col=open_col,
-                high_col=high_col,
-                low_col=low_col,
-                close_col=close_col,
+                open_col=open_col, high_col=high_col,
+                low_col=low_col, close_col=close_col,
                 penetration=penetration,
             ).get_column(out_col),
             return_dtype=pl.Int32,

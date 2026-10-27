@@ -21,10 +21,7 @@ def rsi_sma(data: pl.DataFrame,
     _check.integers(lower=1, period=period)
 
     return (
-        data
-        .with_columns([
-            pl.col('close').diff(1).alias('delta')
-        ])
+        data.with_columns([pl.col('close').diff(1).alias('delta')])
         .with_columns([
             pl.when(pl.col('delta') > 0).then(pl.col('delta')).otherwise(0).alias('gain'),
             pl.when(pl.col('delta') < 0).then(-pl.col('delta')).otherwise(0).alias('loss'),

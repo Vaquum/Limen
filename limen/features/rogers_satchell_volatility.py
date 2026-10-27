@@ -35,8 +35,7 @@ def rogers_satchell_volatility(
     low_close = pl.col(low_col).log() - pl.col(close_col).log()
 
     return (
-        data
-        .with_columns(((high_open * high_close) + (low_open * low_close)).alias('_rogers_satchell_variance'))
+        data.with_columns(((high_open * high_close) + (low_open * low_close)).alias('_rogers_satchell_variance'))
         .with_columns(
             (
                 pl.col('_rogers_satchell_variance')

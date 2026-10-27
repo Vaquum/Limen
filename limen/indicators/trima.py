@@ -154,10 +154,7 @@ def trima(
     frame = data
     trima_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            trima_from_values(
-                s.to_numpy().astype(float, copy=False),
-                period,
-            )
+            trima_from_values(s.to_numpy().astype(float, copy=False), period)
         ),
         return_dtype=pl.Float64,
     ).alias(out_col)

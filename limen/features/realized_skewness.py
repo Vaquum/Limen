@@ -24,8 +24,7 @@ def realized_skewness(
     _check.names(close_col=close_col)
 
     return (
-        data
-        .with_columns(pl.col(close_col).pct_change().alias('_skew_returns'))
+        data.with_columns(pl.col(close_col).pct_change().alias('_skew_returns'))
         .with_columns([
             pl.col('_skew_returns').rolling_mean(window_size=window).alias('_skew_mean'),
             (pl.col('_skew_returns') ** 2).rolling_mean(window_size=window).alias('_skew_second_moment'),

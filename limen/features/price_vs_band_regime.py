@@ -8,9 +8,7 @@ def price_vs_band_regime(df: pl.DataFrame,
                          band: Literal['std', 'dev_std'] = 'std',
                          k: float = 0.75) -> pl.DataFrame:
 
-    '''
-    Compute regime by comparing 'close' to center ± k × band width over a rolling window.
-
+    '''Compute regime by comparing 'close' to center ± k × band width over a rolling window.
     Args:
         df (pl.DataFrame): Klines dataset with 'close' column
         period (int): Rolling period for center and band width
@@ -28,8 +26,7 @@ def price_vs_band_regime(df: pl.DataFrame,
     center = pl.col('close').rolling_mean(window_size=period)
 
     if band == 'dev_std':
-        dev = pl.col('close') - center
-        width = dev.rolling_std(window_size=period)
+        width = (pl.col('close') - center).rolling_std(window_size=period)
     else:
         width = pl.col('close').rolling_std(window_size=period)
 
@@ -37,7 +34,6 @@ def price_vs_band_regime(df: pl.DataFrame,
     lower = center - k * width
 
     return df.with_columns([
-        pl.when(pl.col('close') > upper).then(pl.lit('Up'))
-         .when(pl.col('close') < lower).then(pl.lit('Down'))
+        pl.when(pl.col('close') > upper).then(pl.lit('Up')).when(pl.col('close') < lower).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_price_band')
     ])

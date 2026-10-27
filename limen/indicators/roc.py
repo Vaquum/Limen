@@ -31,9 +31,7 @@ def roc(
     out_col = f"roc_{period}"
     trailing = pl.col(price_col).shift(period)
     roc_expr = (
-        pl.when(pl.int_range(0, pl.len()) < period)
-        .then(None)
-        .when(trailing != 0.0)
+        pl.when(pl.int_range(0, pl.len()) < period).then(None).when(trailing != 0.0)
         .then(((pl.col(price_col) / trailing) - 1.0) * 100.0)
         .otherwise(0.0)
         .alias(out_col)

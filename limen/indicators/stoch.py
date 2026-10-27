@@ -113,12 +113,7 @@ def _stoch_from_arrays(
 
     fastk_df = pl.DataFrame({'_x': fastk_buffer})
     slowk_col = f"ma_{slowk_period}_{slowk_ma_type}"
-    slowk_full = ma(
-        fastk_df,
-        price_col='_x',
-        period=slowk_period,
-        ma_type=slowk_ma_type,
-    )[slowk_col].to_numpy().astype(float, copy=False)
+    slowk_full = ma(fastk_df, price_col='_x', period=slowk_period, ma_type=slowk_ma_type)[slowk_col].to_numpy().astype(float, copy=False)
 
     slowk_valid = slowk_full[lookback_k_slow:]
 

@@ -1,6 +1,6 @@
 import math
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from numbers import Integral, Real
 from typing import cast
 
@@ -11,24 +11,27 @@ def integers(*, lower: int | None = None, upper: int | None = None, **values: ob
     for name, value in values.items():
         if isinstance(value, bool) or not isinstance(value, Integral):
             raise ValueError(f'{name} must be an integer')
-        if lower is not None and value < lower:
-            raise ValueError(f'{name} must be at least {lower}')
-        if upper is not None and value > upper:
+        numeric = int(value)
+        if lower is not None and numeric < lower:
+            raise ValueError(f'{name} must be non-negative' if lower == 0 else f'{name} must be at least {lower}')
+        if upper is not None and numeric > upper:
             raise ValueError(f'{name} must be at most {upper}')
 
 
 def numbers(*, lower: float | None = None, upper: float | None = None,
-            positive: bool = False, **values: object) -> None:
-    for name, value in values.items():
+            positive: bool = False, context: str = '', **values: object) -> None:
+    for parameter, value in values.items():
+        name = f'{context} {parameter}'.strip()
         if isinstance(value, bool) or not isinstance(value, Real):
             raise ValueError(f'{name} must be a finite real number')
         if not isinstance(value, Integral) and not math.isfinite(value):
             raise ValueError(f'{name} must be finite')
-        if positive and value <= 0:
+        numeric = int(value) if isinstance(value, Integral) else float(value)
+        if positive and numeric <= 0:
             raise ValueError(f'{name} must be positive')
-        if lower is not None and value < lower:
-            raise ValueError(f'{name} must be at least {lower}')
-        if upper is not None and value > upper:
+        if lower is not None and numeric < lower:
+            raise ValueError(f'{name} must be non-negative' if lower == 0 else f'{name} must be at least {lower}')
+        if upper is not None and numeric > upper:
             raise ValueError(f'{name} must be at most {upper}')
 
 
@@ -57,7 +60,7 @@ def integer_sequence(name: str, values: object, *, minimum: int = 0,
 def column_sequence(name: str, values: object) -> None:
     if isinstance(values, (str, bytes)) or not isinstance(values, (list, tuple)):
         raise ValueError(f'{name} must be a sequence of column names')
-    for value in values:
+    for value in cast(Sequence[object], values):
         names(**{name: value})
 
 

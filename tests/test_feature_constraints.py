@@ -6,8 +6,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-import limen.features as features
-import limen.indicators as indicators
+from limen import features, indicators
 from limen.features.volatility_barriers import volatility_barriers
 
 FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'

@@ -37,7 +37,6 @@ def parkinson_vol_of_vol(
     _check.names(high_col=high_col, low_col=low_col, output_col=output_col)
 
     return data.with_columns(
-        _parkinson_variance(high_col, low_col)
-        .rolling_std(window_size=window)
+        _parkinson_variance(high_col, low_col).rolling_std(window_size=window)
         .alias(output_col)
     )

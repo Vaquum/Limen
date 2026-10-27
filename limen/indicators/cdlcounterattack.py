@@ -116,10 +116,8 @@ def cdlcounterattack(
         pl.struct(input_cols).map_batches(
             lambda s: _cdlcounterattack_impl(
                 pl.DataFrame({col: s.struct.field(col) for col in input_cols}),
-                open_col=open_col,
-                high_col=high_col,
-                low_col=low_col,
-                close_col=close_col,
+                open_col=open_col, high_col=high_col,
+                low_col=low_col, close_col=close_col,
             ).get_column(out_col),
             return_dtype=pl.Int32,
         ).alias(out_col)

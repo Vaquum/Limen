@@ -60,6 +60,4 @@ def apo(
     else:
         frame = ma(frame, price_col=price_col, period=slow_period, ma_type=ma_type)
 
-    return frame.with_columns(
-        (pl.col(fast_col) - pl.col(slow_col)).alias(out_col)
-    ).drop([fast_col, slow_col])
+    return frame.with_columns((pl.col(fast_col) - pl.col(slow_col)).alias(out_col)).drop([fast_col, slow_col])

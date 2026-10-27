@@ -31,9 +31,7 @@ def rocr100(
     out_col = f"rocr100_{period}"
     trailing = pl.col(price_col).shift(period)
     rocr100_expr = (
-        pl.when(pl.int_range(0, pl.len()) < period)
-        .then(None)
-        .when(trailing != 0.0)
+        pl.when(pl.int_range(0, pl.len()) < period).then(None).when(trailing != 0.0)
         .then((pl.col(price_col) / trailing) * 100.0)
         .otherwise(0.0)
         .alias(out_col)

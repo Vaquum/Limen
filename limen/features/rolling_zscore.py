@@ -36,24 +36,17 @@ def rolling_zscore(
     _check.integers(lower=1, window=window)
     _check.names(column=column)
 
-    if window <= 0:
-        raise ValueError('rolling_zscore window must be positive')
-
     x = pl.col(column)
     if transform == 'log1p':
         x = x.log1p()
     elif transform == 'abs':
         x = x.abs()
-    elif transform != 'identity':
-        raise ValueError("rolling_zscore transform must be one of 'identity', 'log1p', or 'abs'")
 
     mean = x.rolling_mean(window_size=window)
     std = x.rolling_std(window_size=window)
     name = output_col or f'{column}_zscore_{window}'
 
     return data.with_columns(
-        pl.when(std.is_null() | (std == 0.0))
-        .then(None)
-        .otherwise((x - mean) / std)
+        pl.when(std.is_null() | (std == 0.0)).then(None).otherwise((x - mean) / std)
         .alias(name)
     )

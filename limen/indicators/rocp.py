@@ -31,9 +31,7 @@ def rocp(
     out_col = f"rocp_{period}"
     trailing = pl.col(price_col).shift(period)
     rocp_expr = (
-        pl.when(pl.int_range(0, pl.len()) < period)
-        .then(None)
-        .when(trailing != 0.0)
+        pl.when(pl.int_range(0, pl.len()) < period).then(None).when(trailing != 0.0)
         .then((pl.col(price_col) - trailing) / trailing)
         .otherwise(0.0)
         .alias(out_col)

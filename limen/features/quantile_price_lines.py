@@ -53,19 +53,12 @@ def quantile_price_lines(data: pl.DataFrame,
     _check.integers(lower=1, max_duration_hours=max_duration_hours, density_lookback_hours=density_lookback_hours, momentum_lookback_hours=momentum_lookback_hours, height_lookback_hours=height_lookback_hours)
     _check.numbers(min_height_pct=min_height_pct)
     _check.numbers(lower=0, upper=1, quantile_threshold=quantile_threshold)
-    _check.booleans(include_research_only=include_research_only)
-
-    if density_lookback_hours < 1:
-        raise ValueError('quantile_price_lines density_lookback_hours must be at least 1')
-
-    if momentum_lookback_hours < 1:
-        raise ValueError('quantile_price_lines momentum_lookback_hours must be at least 1')
-
-    if height_lookback_hours < 1:
-        raise ValueError('quantile_price_lines height_lookback_hours must be at least 1')
-
     if not isinstance(include_research_only, bool):
         raise ValueError('quantile_price_lines include_research_only must be a bool')
+
+
+
+
 
     momentum_col = f"quantile_momentum_{momentum_lookback_hours}h"
     height_col = f"avg_quantile_height_{height_lookback_hours}h"

@@ -70,10 +70,7 @@ def trix(
     frame = data
     trix_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            _trix_from_values(
-                s.to_numpy().astype(float, copy=False),
-                period,
-            )
+            _trix_from_values(s.to_numpy().astype(float, copy=False), period)
         ),
         return_dtype=pl.Float64,
     ).alias(out_col)

@@ -10,9 +10,7 @@ PARKINSON_SCALE = 4.0 * math.log(2.0)
 
 def _safe_divide(numerator: pl.Expr, denominator: pl.Expr) -> pl.Expr:
     return (
-        pl.when(denominator.is_null() | (denominator.abs() <= EPSILON))
-        .then(None)
-        .otherwise(numerator / denominator)
+        pl.when(denominator.is_null() | (denominator.abs() <= EPSILON)).then(None).otherwise(numerator / denominator)
     )
 
 

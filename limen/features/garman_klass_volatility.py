@@ -36,8 +36,7 @@ def garman_klass_volatility(
     variance = (0.5 * (high_low ** 2)) - (((2.0 * math.log(2.0)) - 1.0) * (close_open ** 2))
 
     return (
-        data
-        .with_columns(variance.alias('_garman_klass_variance'))
+        data.with_columns(variance.alias('_garman_klass_variance'))
         .with_columns(
             (
                 pl.col('_garman_klass_variance')

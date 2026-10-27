@@ -38,6 +38,4 @@ def distance_from_ma(
 
     moving_average = pl.col(close_col).rolling_mean(window_size=window)
 
-    return data.with_columns(
-        _safe_divide(pl.col(close_col) - moving_average, moving_average).alias(output_col)
-    )
+    return data.with_columns(_safe_divide(pl.col(close_col) - moving_average, moving_average).alias(output_col))

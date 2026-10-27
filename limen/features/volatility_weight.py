@@ -28,9 +28,7 @@ def volatility_weight(data: pl.DataFrame,
     _check.numbers(volatility_scaling_factor=volatility_scaling_factor, volatility_weight_min=volatility_weight_min, volatility_weight_max=volatility_weight_max)
     _check.ordered('volatility_weight_min', volatility_weight_min, 'volatility_weight_max', volatility_weight_max)
 
-    df = data.with_columns([
-        pl.col('close').pct_change().alias('returns_temp')
-    ])
+    df = data.with_columns([pl.col('close').pct_change().alias('returns_temp')])
 
     df = rolling_volatility(df, 'returns_temp', period)
     df = df.rename({f'returns_temp_volatility_{period}': 'volatility'})

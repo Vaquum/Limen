@@ -28,12 +28,9 @@ def ichimoku_cloud(
     _check.integers(lower=1, tenkan_period=tenkan_period, kijun_period=kijun_period, senkou_b_period=senkou_b_period)
     _check.integers(lower=0, displacement=displacement)
 
-    if displacement < 0:
-        raise ValueError('displacement must be non-negative to avoid future prices')
 
     return (
-        data
-        .with_columns(
+        data.with_columns(
             ((pl.col('high').rolling_max(tenkan_period) + pl.col('low').rolling_min(tenkan_period)) / 2).alias('tenkan')
         )
         .with_columns(

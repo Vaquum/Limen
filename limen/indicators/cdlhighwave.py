@@ -75,9 +75,7 @@ def _cdlhighwave_impl(
             shadow_avg = shadow_vl_factor * (shadow_period_total / shadow_vl_avg_period)
 
         if (
-            real_body < body_avg
-            and upper_shadow > shadow_avg
-            and lower_shadow > shadow_avg
+            real_body < body_avg and upper_shadow > shadow_avg and (lower_shadow > shadow_avg)
         ):
             color = 1 if close_values[i] >= open_values[i] else -1
             out[i] = color * 100

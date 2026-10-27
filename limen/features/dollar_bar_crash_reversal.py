@@ -59,16 +59,16 @@ def _validate_threshold(value: float, name: str) -> float:
     return float(value)
 
 
-def _validate_hold_minutes(hold_minutes: int) -> int:
+def _validate_hold_minutes(hold_minutes: int, name: str = 'hold_minutes') -> int:
     if isinstance(hold_minutes, bool) or not isinstance(
         hold_minutes, numbers.Integral
     ):
         raise TypeError(
-            'dollar_bar_crash_reversal hold_minutes must be a positive integer'
+            f'dollar_bar_crash_reversal {name} must be a positive integer'
         )
     if hold_minutes <= 0:
         raise ValueError(
-            'dollar_bar_crash_reversal hold_minutes must be a positive integer'
+            f'dollar_bar_crash_reversal {name} must be a positive integer'
         )
     return int(hold_minutes)
 
@@ -128,7 +128,7 @@ def dollar_bar_crash_reversal(
     lazy = validated_data.lazy() if eager else validated_data
     next_time = pl.col('datetime').shift(-1)
     if bar_interval_seconds is not None:
-        interval = _validate_hold_minutes(bar_interval_seconds)
+        interval = _validate_hold_minutes(bar_interval_seconds, 'bar_interval_seconds')
         times = lazy.select('datetime').collect()['datetime'].dt.epoch('ns')
         differences = times.diff().drop_nulls()
         if not times.is_sorted() or ((differences < interval * 1000000000) | (differences % (interval * 1000000000) != 0)).any():

@@ -110,12 +110,7 @@ def stochf_from_arrays(
 
     fastk_df = pl.DataFrame({'_x': fastk_buffer})
     fastd_col = f"ma_{fastd_period}_{fastd_ma_type}"
-    fastd_full = ma(
-        fastk_df,
-        price_col='_x',
-        period=fastd_period,
-        ma_type=fastd_ma_type,
-    )[fastd_col].to_numpy().astype(float, copy=False)
+    fastd_full = ma(fastk_df, price_col='_x', period=fastd_period, ma_type=fastd_ma_type)[fastd_col].to_numpy().astype(float, copy=False)
 
     fastd_valid = fastd_full[lookback_fastd:]
     fastk_out = fastk_buffer[lookback_fastd:]

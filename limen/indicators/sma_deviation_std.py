@@ -25,8 +25,7 @@ def sma_deviation_std(data: pl.DataFrame,
     out_col = f"sma{period}_dev_std"
 
     return (
-        data
-        .with_columns([
+        data.with_columns([
             pl.col('close').rolling_mean(window_size=period).alias(sma_col)
         ])
         .with_columns([

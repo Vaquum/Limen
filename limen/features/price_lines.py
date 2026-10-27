@@ -58,16 +58,11 @@ def price_lines(data: pl.DataFrame,
 
     _check.integers(lower=1, max_duration_hours=max_duration_hours, big_move_lookback_hours=big_move_lookback_hours, momentum_lookback_hours=momentum_lookback_hours)
     _check.numbers(min_height_pct=min_height_pct)
-    _check.booleans(include_research_only=include_research_only)
-
-    if big_move_lookback_hours < 1:
-        raise ValueError('price_lines big_move_lookback_hours must be at least 1')
-
-    if momentum_lookback_hours < 1:
-        raise ValueError('price_lines momentum_lookback_hours must be at least 1')
-
     if not isinstance(include_research_only, bool):
         raise ValueError('price_lines include_research_only must be a bool')
+
+
+
 
     momentum_col = f"line_momentum_{momentum_lookback_hours}h"
 

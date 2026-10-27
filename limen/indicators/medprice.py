@@ -22,9 +22,6 @@ def medprice(
 
     _check.names(high_col=high_col, low_col=low_col)
 
-    med_price = (
-        pl.col(high_col).cast(pl.Float64)
-        + pl.col(low_col).cast(pl.Float64)
-    ) / 2.0
+    med_price = (pl.col(high_col).cast(pl.Float64) + pl.col(low_col).cast(pl.Float64)) / 2.0
 
     return data.with_columns(med_price.alias('medprice'))

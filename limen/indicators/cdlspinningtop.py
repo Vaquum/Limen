@@ -58,9 +58,7 @@ def _cdlspinningtop_impl(
         body_short_avg = body_period_total / body_short_avg_period
 
         if (
-            real_body < body_short_avg
-            and upper_shadow > real_body
-            and lower_shadow > real_body
+            real_body < body_short_avg and upper_shadow > real_body and (lower_shadow > real_body)
         ):
             color = 1 if close_values[i] >= open_values[i] else -1
             out[i] = color * 100

@@ -20,8 +20,7 @@ def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     _check.integers(lower=1, period=period)
 
     return (
-        data
-        .with_columns([
+        data.with_columns([
             pl.col('close').shift(1).alias('prev_close')
         ])
         .with_columns([

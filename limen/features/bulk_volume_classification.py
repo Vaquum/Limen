@@ -32,8 +32,6 @@ def bulk_volume_classification(
     _check.integers(lower=1, window=window)
     _check.names(close_col=close_col, volume_col=volume_col)
 
-    if window <= 0:
-        raise ValueError('bulk_volume_classification window must be positive')
 
     log_return = pl.col(close_col).log() - pl.col(close_col).shift(1).log()
     rolling_std = log_return.rolling_std(window_size=window)

@@ -136,13 +136,7 @@ def _ht_trendmode_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np
                 hilbert_idx,
                 True,
             )
-            jq = do_hilbert_transform(
-                jq_state,
-                q1,
-                adjusted_prev_period,
-                hilbert_idx,
-                True,
-            )
+            jq = do_hilbert_transform(jq_state, q1, adjusted_prev_period, hilbert_idx, True)
 
             hilbert_idx += 1
             if hilbert_idx == CMP_N_3:

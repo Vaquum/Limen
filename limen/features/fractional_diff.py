@@ -82,10 +82,9 @@ def fractional_diff(data: pl.DataFrame,
 
     if isinstance(cols, str) or not cols:
         raise ValueError('fractional_diff cols must be a non-empty list of column names')
-    _check.numbers(lower=0, d=d)
-    _check.numbers(positive=True, threshold=threshold)
-    if cols is not None:
-        _check.column_sequence('cols', cols)
+    _check.numbers(context='fractional_diff', lower=0, d=d)
+    _check.numbers(context='fractional_diff', positive=True, threshold=threshold)
+    _check.column_sequence('cols', cols)
 
 
     if not (isinstance(d, int) or np.isfinite(d)) or d < 0:

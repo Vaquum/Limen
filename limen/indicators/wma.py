@@ -86,10 +86,7 @@ def wma(
     frame = data
     wma_expr = pl.col(price_col).map_batches(
         lambda s: pl.Series(
-            wma_from_values(
-                s.to_numpy().astype(float, copy=False),
-                period,
-            )
+            wma_from_values(s.to_numpy().astype(float, copy=False), period)
         ),
         return_dtype=pl.Float64,
     ).alias(out_col)

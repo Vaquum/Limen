@@ -10,9 +10,7 @@ def return_per_dollar_volume(
     volume_col: str = 'volume',
 ) -> pl.DataFrame:
 
-    '''
-    Compute signed return per traded dollar as a simple impact-efficiency proxy.
-
+    '''Compute signed return per traded dollar as a simple impact-efficiency proxy.
     Args:
         data (pl.DataFrame): Klines dataset with price and volume columns
         price_col (str): Column name used for close-to-close returns
@@ -26,6 +24,5 @@ def return_per_dollar_volume(
 
     dollar_volume_expr = pl.col(price_col) * pl.col(volume_col)
 
-    return data.with_columns(
-        (pl.col(price_col).pct_change() / (dollar_volume_expr + EPSILON)).alias('return_per_dollar_volume')
-    )
+    impact = pl.col(price_col).pct_change() / (dollar_volume_expr + EPSILON)
+    return data.with_columns(impact.alias('return_per_dollar_volume'))

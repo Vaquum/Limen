@@ -137,7 +137,7 @@ def cdlmathold(
     penetration: float = 0.5,
 ) -> pl.DataFrame:
 
-    _check.numbers(penetration=penetration)
+    _check.numbers(lower=0, upper=3e37, penetration=penetration)
     _check.names(open_col=open_col, high_col=high_col, low_col=low_col, close_col=close_col)
 
     out_col = 'cdlmathold'

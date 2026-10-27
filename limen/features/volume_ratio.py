@@ -25,7 +25,4 @@ def volume_ratio(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     if volume_sma_col not in data.collect_schema().names():
         data = sma(data, 'volume', period)
 
-    return data.with_columns([
-        (pl.col('volume') / (pl.col(volume_sma_col) + EPSILON))
-        .alias('volume_ratio')
-    ])
+    return data.with_columns([(pl.col('volume') / (pl.col(volume_sma_col) + EPSILON)).alias('volume_ratio')])
