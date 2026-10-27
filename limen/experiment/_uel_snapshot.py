@@ -1,14 +1,31 @@
 import hashlib
+from collections.abc import Callable
+from functools import wraps
 from importlib import import_module, metadata
+import inspect
 import json
 from pathlib import Path
 import sys
 import tempfile
-from typing import Protocol, TypeVar, cast
+from typing import Concatenate, ParamSpec, Protocol, TypeVar, cast
 
 __all__: list[str] = []
 _MAGIC = b'LIMEN-UEL\x00\x01'
 _Loop = TypeVar('_Loop')
+_P = ParamSpec('_P')
+_Result = TypeVar('_Result')
+
+
+def captured(func: Callable[Concatenate[_Loop, _P], _Result]) -> Callable[Concatenate[_Loop, _P], _Result]:
+    @wraps(func)
+    def run(host: _Loop, *args: _P.args, **kwargs: _P.kwargs) -> _Result:
+        attributes = vars(host)
+        attributes['_snapshot_ready'] = False
+        name = inspect.signature(func).bind(host, *args, **kwargs).arguments['experiment_name']
+        result = func(host, *args, **kwargs)
+        attributes.update(_snapshot_name=name, _snapshot_ready=True)
+        return result
+    return run
 
 
 class _Serializer(Protocol):
@@ -21,7 +38,7 @@ def _environment() -> dict[str, object]:
     digest = hashlib.sha256()
     for path in sorted(root.rglob('*.py')):
         digest.update(path.relative_to(root).as_posix().encode() + b'\x00' + path.read_bytes() + b'\x00')
-    packages = {cast(str, dist.metadata['Name']).lower().replace('_', '-'): dist.version for dist in metadata.distributions()}
+    packages = {dist.metadata['Name'].lower().replace('_', '-'): dist.version for dist in metadata.distributions()}
     return {'python': list(sys.version_info[:3]), 'source_sha256': digest.hexdigest(), 'packages': packages}
 
 

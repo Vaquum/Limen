@@ -2,8 +2,7 @@ import limen.experiment._holdout_research as _holdout
 import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
-import limen.experiment._result_fields as _fields
-import limen.experiment._uel_snapshot as _snapshot
+from limen.experiment import _result_fields as _fields, _uel_snapshot as _snapshot
 import csv
 import importlib.metadata
 import json
@@ -61,8 +60,7 @@ STANDARD_RUN_LOG_BATCH_SIZE = 1000
 
 class UniversalExperimentLoop:
 
-    save = _snapshot.save
-    load = classmethod(_snapshot.load)
+    save, load = _snapshot.save, classmethod(_snapshot.load)
 
     def __init__(self,
                  *,
@@ -117,8 +115,6 @@ class UniversalExperimentLoop:
         self.scalers: list[Any] = []
         self._alignment: list[Any] = []
         self.experiment_log: pl.DataFrame | None = None
-        self._snapshot_ready = False
-        self._snapshot_name = ''
         self.convergence_report: dict[str, object] | None = None
         self._convergence_caught: list[warnings.WarningMessage] = []
         self.param_space: ParamSpace | None = None
@@ -139,6 +135,7 @@ class UniversalExperimentLoop:
         return self._shutdown_requested
 
     @_holdout.run_guard
+    @_snapshot.captured
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
             context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
@@ -147,7 +144,6 @@ class UniversalExperimentLoop:
             progress_bar: bool = True, record_execution: bool = False,
             record_model_outputs: bool = False, factorize: bool = False, workers: int | None = None,
             recording: Mapping[str, bool] | None = None) -> None:
-        self._snapshot_ready = False
         applicable = ('predictions', 'alignment')
         if resume and self.manifest is not None:
             domains = self._search_strategy.domain.params if self._search_strategy is not None else self.params
@@ -187,7 +183,6 @@ class UniversalExperimentLoop:
         if self._experiment_dir is not None:
             _ = (self._experiment_dir / 'convergence_report.json').write_text(json.dumps(self.convergence_report, indent=2, allow_nan=False))
         logger.info('Convergence-warning percentage: %s; observed=%s; unavailable=%s', self.convergence_report['convergence_warning_pct'], self.convergence_report['observed_rounds'], self.convergence_report['unavailable_rounds'])
-        self._snapshot_name, self._snapshot_ready = experiment_name, True
 
     def _run(self,
             experiment_name: str,
