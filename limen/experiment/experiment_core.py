@@ -3,6 +3,7 @@ import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import limen.experiment._result_fields as _fields
+import limen.experiment._round_errors as _errors
 import limen.experiment._uel_snapshot as _snapshot
 import csv
 import importlib.metadata
@@ -71,7 +72,7 @@ class UniversalExperimentLoop:
                  intra_callback: Callable[[Any, MSQ], None] | None = None,
                  test_mode: bool = False,
                  yaml_reference: dict[str, Any] | None = None,
-                 project_root: str | Path | None = None) -> None:
+                 project_root: str | Path | None = None, on_round_error: str = 'abort', max_round_errors: int | None = None) -> None:
 
         '''Configure the manifest or custom SFD and optional MSQ persistence.'''
 
@@ -97,14 +98,12 @@ class UniversalExperimentLoop:
         self._pause_requested: bool = False
         self._search_strategy = search_strategy
         self._pruning_strategies = pruning_strategies or []
-        self._feedback_interval = feedback_interval
-        self._checkpoint_interval = checkpoint_interval
+        self._feedback_interval, self._checkpoint_interval = feedback_interval, checkpoint_interval
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
         self._yaml_reference, self._compiled_yaml, self._workers, self._parallel_sources = _parallel.configuration(sfd, yaml_reference)
         self._walk_forward: WalkForwardRun | None = None
-        self._record_execution = False
-        self._record_model_outputs = False
+        self._record_execution, self._record_model_outputs = False, False
         self._recording: dict[str, bool] | None = None
         self._factorize = False
         self.round_params: list[dict[str, Any]] = []
@@ -120,6 +119,7 @@ class UniversalExperimentLoop:
         self.experiment_backtest_results: pl.DataFrame | None = None
         self.experiment_parameter_correlation: Callable[..., pl.DataFrame] | None = None
         self._clear_post_processing_outputs()
+        self._round_error_policy = _errors.initialize(self, on_round_error, max_round_errors)
 
     @property
     def fold_results(self) -> pl.DataFrame:
@@ -133,6 +133,7 @@ class UniversalExperimentLoop:
 
     @_holdout.run_guard
     @_snapshot.captured
+    @_errors.guarded
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
             context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
@@ -634,9 +635,9 @@ class UniversalExperimentLoop:
                             data=data_dict, round_params=sfd_params,
                         )
                 round_succeeded = True
-            except StrictModeError as exc:
-                logger.error('Round %d failed strict mode check: %s', current_round, exc)
-                round_results: dict[str, Any] = {'strict_mode_error': str(exc) or type(exc).__name__}
+            except Exception as exc:
+                logger.exception('Round %d failed', current_round)
+                round_results = self._round_error_policy.failure(self, exc, current_round)
             except KeyboardInterrupt:
                 if self._shutdown_requested:
                     logger.info(
@@ -745,7 +746,7 @@ class UniversalExperimentLoop:
 
             checkpoint_due = (
                 self._experiment_dir
-                and checkpoint_manager.should_checkpoint(current_round)
+                and (checkpoint_manager.should_checkpoint(current_round) or self._round_error_policy.exhausted)
             )
 
             if feedback_controller.should_trigger(current_round):
@@ -1028,7 +1029,7 @@ class UniversalExperimentLoop:
             )
 
         metadata: dict[str, object] = _parallel.worker_metadata(self._workers, {
-            'sfd_module': self._sfd_module_name,
+            'sfd_module': self._sfd_module_name, **self._round_error_policy.metadata,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(), 'round_storage': _storage.FORMAT,
         }, context_parameter_keys=context_parameter_keys)

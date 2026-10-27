@@ -166,7 +166,7 @@ limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 
 <!-- reference: uel-constructor source=limen/experiment/experiment_core.py region=signature:UniversalExperimentLoop.__init__ role=signature -->
 ```python
-def __init__(self, *, data: pl.DataFrame | None=None, sfd: Any=None, search_strategy: SearchStrategy | None=None, pruning_strategies: list[PruningStrategy] | None=None, feedback_interval: int=100, checkpoint_interval: int=1000, experiment_dir: str | Path | None=None, intra_callback: Callable[[Any, MSQ], None] | None=None, test_mode: bool=False, yaml_reference: dict[str, Any] | None=None, project_root: str | Path | None=None) -> None:
+def __init__(self, *, data: pl.DataFrame | None=None, sfd: Any=None, search_strategy: SearchStrategy | None=None, pruning_strategies: list[PruningStrategy] | None=None, feedback_interval: int=100, checkpoint_interval: int=1000, experiment_dir: str | Path | None=None, intra_callback: Callable[[Any, MSQ], None] | None=None, test_mode: bool=False, yaml_reference: dict[str, Any] | None=None, project_root: str | Path | None=None, on_round_error: str='abort', max_round_errors: int | None=None) -> None:
     ...
 ```
 
@@ -193,6 +193,7 @@ def __init__(self, *, data: pl.DataFrame | None=None, sfd: Any=None, search_stra
 ```python
 @_holdout.run_guard
 @_snapshot.captured
+@_errors.guarded
 def run(self, experiment_name: str, n_permutations: int=10000, prep_each_round: bool=False, random_search: bool=True, maintain_details_in_params: bool=False, context_params: dict[str, object] | None=None, params: Callable[[], dict[str, object]] | None=None, prep: Callable[..., dict[str, object]] | None=None, model: Callable[..., dict[str, object]] | None=None, resume: bool=False, post_processing: bool=False, progress_bar: bool=True, record_execution: bool=False, record_model_outputs: bool=False, factorize: bool=False, workers: int | None=None, recording: Mapping[str, bool] | None=None) -> None:
     ...
 ```
@@ -304,6 +305,14 @@ On the ordinary MSQ path, UEL calls the SFD's preparation and model functions fo
 When `search_strategy` is set, `run()` rejects non-`None` `params`, `prep`, and `model` overrides before round execution or output recovery. Configure candidate values in the strategy and custom functions on the SFD. Existing recording, parallel and protected-run admission checks retain precedence. The legacy loop controls `prep_each_round`, `random_search`, and `maintain_details_in_params` remain ignored on the MSQ path.
 
 For saved custom runs, the SFD must expose `__name__` and preparation must supply the expected `_alignment` metadata. Arbitrary custom SFD execution does not imply Trainer compatibility: Trainer reconstructs a manifest from a saved `yaml_reference`.
+
+## Failed candidates
+
+Ordinary serial MSQ execution can record later preparation or model failures and continue. Set `on_round_error="record"` and a positive integer `max_round_errors` on the constructor, or declare both under YAML `uel`. The default is `"abort"`.
+
+The first candidate must succeed. Each later failure keeps its candidate ID and parameters in `results.csv`, with exception type and message in `strict_mode_error`, empty scientific metrics, and no successful round payload. The budget counts failures across the experiment, including resumed execution. When the count exceeds the budget, UEL retains the failed prefix and checkpoint and raises an error; the CLI exits unsuccessfully. Resume requires the same policy and budget and refuses an exhausted budget.
+
+Record mode requires ordinary unprotected serial MSQ execution. Parallel, factorized, walk-forward, protected-holdout and legacy execution reject it before creating experiment artifacts. Evidence-integrity errors always propagate. Failed candidates remain part of the declared search history and must be considered when interpreting its results.
 
 ## What UEL stores after a run
 
