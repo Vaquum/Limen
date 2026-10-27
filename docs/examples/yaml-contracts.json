@@ -817,7 +817,7 @@
     "limen/yaml/_callable_binding.py": "d40661369dd2b1551d642c5c146e403e49f3189305174369cec69c0e0e865ea7",
     "limen/yaml/_callback_spec.py": "2004a2788f706a9f27fdbb6a791ef2dfa402146f27eb533ab74624394c43be33",
     "limen/yaml/_feature_shim_spec.py": "bed2f7cf08d3f4587ce836b548d8c73540d3801699432519a57ee507ff8f2d07",
-    "limen/yaml/_fitted_binding.py": "05b281b287bf97bae89f0cfdd4ba1a0fd55e2e527f6f3add53d4b88cb0dec9d9",
+    "limen/yaml/_fitted_binding.py": "da69a7589195c064c41d288815f0efae7074e993ad5aa2486529c3f2752776b3",
     "limen/yaml/_metadata_spec.py": "6f5abbe96f437d458c8d2e96b35073231ab01c3e5a7f41d486b0dd79e866a342",
     "limen/yaml/_objective_spec.py": "16932a3cefd7d60347560baeb1733fd4862569cbb51bcfdf9ed7292050ae5467",
     "limen/yaml/_parameter_refs.py": "33c809e19bdd8fc0b731f2d94ce90ef76d423b238b2588f508c569dbdea94015",

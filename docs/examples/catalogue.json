@@ -635,7 +635,9 @@
         "source": "limen/data/bars/__init__.py",
         "entry_point": "limen.data.bars",
         "names": [
+          "imbalance_bars",
           "liquidity_bars",
+          "run_bars",
           "trade_bars",
           "volume_bars"
         ],
@@ -1870,6 +1872,24 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
+      },
+      "limen.data.bars.adaptive_bars": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/bars/adaptive_bars.py",
+        "entry_point": "limen.data.bars.adaptive_bars",
+        "names": [
+          "imbalance_bars",
+          "run_bars"
+        ],
+        "reference": "limen/data/bars/README.md"
       }
     },
     "registries": {

@@ -1,7 +1,7 @@
 from typing import Any
 import polars as pl
 
-from limen.data.bars import volume_bars, trade_bars, liquidity_bars
+from limen.data.bars import volume_bars, trade_bars, liquidity_bars, imbalance_bars, run_bars
 
 
 def compute_data_bars(data: pl.DataFrame, **params: Any) -> pl.DataFrame:
@@ -22,21 +22,18 @@ def compute_data_bars(data: pl.DataFrame, **params: Any) -> pl.DataFrame:
     if bar_type == 'base':
         return data
 
-    if bar_type == 'trade':
-        if 'trade_threshold' not in params:
-            raise ValueError('compute_data_bars trade_threshold parameter is required for trade bars')
-        return trade_bars(data, params['trade_threshold'])
+    if bar_type in ('imbalance', 'run'):
+        function = imbalance_bars if bar_type == 'imbalance' else run_bars
+        return function(data, expected_num_ticks=params.get('expected_num_ticks', 100), ema_span=params.get('ema_span', 20))
 
-    if bar_type == 'volume':
-        if 'volume_threshold' not in params:
-            raise ValueError('compute_data_bars volume_threshold parameter is required for volume bars')
-        return volume_bars(data, params['volume_threshold'])
-
-    if bar_type == 'liquidity':
-        if 'liquidity_threshold' not in params:
-            raise ValueError('compute_data_bars liquidity_threshold parameter is required for liquidity bars')
-        return liquidity_bars(data, params['liquidity_threshold'])
+    standard = {'trade': (trade_bars, 'trade_threshold'), 'volume': (volume_bars, 'volume_threshold'),
+                'liquidity': (liquidity_bars, 'liquidity_threshold')}
+    if bar_type in standard:
+        standard_function, threshold = standard[bar_type]
+        if threshold not in params:
+            raise ValueError(f'compute_data_bars {threshold} parameter is required for {bar_type} bars')
+        return standard_function(data, params[threshold])
 
     raise ValueError(
-        "compute_data_bars bar_type must be one of: base, trade, volume, liquidity"
+        "compute_data_bars bar_type must be one of: base, trade, volume, liquidity, imbalance, run"
     )

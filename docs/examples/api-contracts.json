@@ -969,9 +969,19 @@
     "symbol": "compute_data_bars",
     "role": "signature"
   },
+  "limen.data.bars.imbalance_bars": {
+    "source": "limen/data/bars/adaptive_bars.py",
+    "symbol": "imbalance_bars",
+    "role": "signature"
+  },
   "limen.data.bars.liquidity_bars": {
     "source": "limen/data/bars/standard_bars.py",
     "symbol": "liquidity_bars",
+    "role": "signature"
+  },
+  "limen.data.bars.run_bars": {
+    "source": "limen/data/bars/adaptive_bars.py",
+    "symbol": "run_bars",
     "role": "signature"
   },
   "limen.data.bars.trade_bars": {
@@ -982,6 +992,16 @@
   "limen.data.bars.volume_bars": {
     "source": "limen/data/bars/standard_bars.py",
     "symbol": "volume_bars",
+    "role": "signature"
+  },
+  "limen.data.bars.adaptive_bars.imbalance_bars": {
+    "source": "limen/data/bars/adaptive_bars.py",
+    "symbol": "imbalance_bars",
+    "role": "signature"
+  },
+  "limen.data.bars.adaptive_bars.run_bars": {
+    "source": "limen/data/bars/adaptive_bars.py",
+    "symbol": "run_bars",
     "role": "signature"
   },
   "limen.data.utils.compute_data_bars": {

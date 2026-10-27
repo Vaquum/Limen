@@ -1,4 +1,6 @@
 from typing import cast
+from numbers import Integral
+from ruamel.yaml.scalarbool import ScalarBoolean
 
 import numpy as np
 import polars as pl
@@ -14,9 +16,9 @@ def sample_regime_blocks(data: pl.DataFrame, target_regime: str, min_block_size:
     from limen.features.classify_market_regime import RegimeConfig, classify_market_regime
     from limen.features._regime_contract import Regime
 
-    if type(min_block_size) is not int or min_block_size < 1:
+    if not isinstance(cast(object, min_block_size), Integral) or isinstance(min_block_size, (bool, ScalarBoolean)) or min_block_size < 1:
         raise ValueError('min_block_size must be a positive integer')
-    if type(seed) is not int or seed < 0:
+    if not isinstance(cast(object, seed), Integral) or isinstance(seed, (bool, ScalarBoolean)) or seed < 0:
         raise ValueError('seed must be a nonnegative integer')
     regimes = {value.name for value in Regime} - {'INITIALIZING'}
     if target_regime not in regimes:
@@ -40,5 +42,5 @@ def sample_regime_blocks(data: pl.DataFrame, target_regime: str, min_block_size:
         start = end
     if not blocks:
         raise ValueError('No contiguous target-regime block meets min_block_size')
-    first, length = blocks[cast(int, np.random.default_rng(seed).integers(len(blocks)))]
+    first, length = blocks[int(np.random.default_rng(int(seed)).integers(len(blocks)))]
     return data.slice(first, length)

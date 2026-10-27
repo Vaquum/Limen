@@ -96,8 +96,9 @@ def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = Non
 
 
 def admit_formation(function: Callable[..., object]) -> None:
-    from limen.data.bars import liquidity_bars, trade_bars, volume_bars
-    if function not in (liquidity_bars, trade_bars, volume_bars):
+    from limen.data.bars import liquidity_bars, trade_bars, volume_bars, imbalance_bars, run_bars
+    from limen.data.utils import compute_data_bars
+    if function not in (liquidity_bars, trade_bars, volume_bars, imbalance_bars, run_bars, compute_data_bars):
         raise ValueError('Event execution requires recoverable contiguous native support and constituent counts from a standard formation')
 
 

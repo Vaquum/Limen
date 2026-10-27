@@ -1,7 +1,9 @@
 from datetime import datetime
 from decimal import Decimal
 import math
+from numbers import Real
 from typing import cast
+from ruamel.yaml.scalarbool import ScalarBoolean
 
 import polars as pl
 
@@ -10,7 +12,7 @@ _NANOSECONDS_PER_DAY = 86_400_000_000_000
 
 
 def window_width(days: float) -> int:
-    if isinstance(days, bool) or not isinstance(cast(object, days), (int, float)) or not math.isfinite(days) or days <= 0:
+    if isinstance(days, (bool, ScalarBoolean)) or not isinstance(cast(object, days), Real) or not math.isfinite(days) or days <= 0:
         raise ValueError('lookback_days must be a positive finite number')
     width = int(Decimal(str(days)) * _NANOSECONDS_PER_DAY)
     if width > 2**63 - 1:

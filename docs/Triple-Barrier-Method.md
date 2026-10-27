@@ -121,7 +121,7 @@ The source-bound transformation reference is:
 
 <!-- reference: triple-target-transform source=limen/targets/triple_barrier.py region=signature:TripleBarrierTarget.transform role=signature -->
 ```python
-def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+def transform(self, data: pl.DataFrame, *, horizon_jitter: int=0, barrier_noise_std: float=0.0, noise_seed: int=0, permutation_id: str | None=None, training: bool=False) -> pl.DataFrame:
     ...
 ```
 

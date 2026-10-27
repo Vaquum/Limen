@@ -1,6 +1,6 @@
 # Data bars
 
-Limen currently supports threshold-based bar formation over existing kline data. This optional manifest preprocessing step starts from regular time-based klines, then aggregates consecutive rows until a volume, trade-count, or liquidity threshold is reached.
+Limen supports fixed activity thresholds over kline data and adaptive volume-imbalance or directional-run bars over individual trade points. Bar formation is an optional manifest preprocessing step.
 
 Use bars when time-based candles do not match the studied behavior. Skip bars when fixed-interval klines already match the research rhythm.
 
@@ -17,8 +17,18 @@ The implemented bar surface today is:
 - `volume_bars`
 - `trade_bars`
 - `liquidity_bars`
+- `imbalance_bars`
+- `run_bars`
 
-Limen does not currently expose imbalance bars, run bars, or tick bars as a supported public surface.
+`imbalance_bars` and `run_bars` additionally support individual native trade points. They reject aggregated candles: their direction and stopping rules require the original ordered trade observations. Fixed trade-count bars can also aggregate individual points.
+
+## Adaptive trade-point bars
+
+The input uses the shared native OHLCV schema, with one actual trade per row: `open = high = low = close`, `no_of_trades = 1`, positive price/volume, and the observed quote turnover, maker quantities and timestamp. The recorded Binance-trade proof in `tests/test_adaptive_bars.py` shows the conversion from the retained archive. Event execution additionally requires unique source clocks and retains the full constituent availability support.
+
+Both functions use the carried price tick rule: upward/downward price changes set the sign, unchanged prices retain it, and the first direction is unknown (zero). An online EWMA with `alpha = 2 / (ema_span + 1)` tracks signed, positive and negative volume, initialized at zero. Before the first bar, estimates update through the warmup of `expected_num_ticks`. Thereafter the stopping threshold is frozen from the previous completed bar. Imbalance bars compare absolute cumulative signed volume with expected length times absolute expected signed volume; run bars compare the larger directional cumulative volume with expected length times the larger expected directional volume. Expected length updates by the same EWMA at each completed bar. Accumulators reset on completion and the trailing partial bar is omitted.
+
+This is an explicit recursive-EWMA variant of the [information-driven bar construction](https://mlfinpy.readthedocs.io/en/latest/FinancialDataStructure.html), with no claim of identical initialization to other packages. Trade points have `base_interval = 0`; their event clocks govern availability. Parameters can be swept through `compute_data_bars(bar_type="imbalance" | "run", expected_num_ticks=..., ema_span=...)` using existing manifest references.
 
 ## When bars help
 
@@ -119,6 +129,8 @@ It currently supports these `bar_type` values:
 - `trade`
 - `volume`
 - `liquidity`
+- `imbalance`
+- `run`
 
 `base` returns the input data unchanged. The other values dispatch to the corresponding threshold-bar function and require the matching threshold parameter. Unknown `bar_type` values raise `ValueError`; they are not silently treated as `base`.
 
@@ -145,3 +157,19 @@ The Python diagnostic reports each threshold and the number of source rows admit
 ## Read next
 
 Continue to [define the experiment](Compiled-Research.md); helper details remain in the [bar reference](../limen/data/bars/README.md).
+
+### `imbalance_bars` callable contract
+
+<!-- reference: data-bars-imbalance_bars source=limen/data/bars/adaptive_bars.py region=signature:imbalance_bars role=signature -->
+```python
+def imbalance_bars(data: pl.DataFrame, expected_num_ticks: int=100, ema_span: int=20) -> pl.DataFrame:
+    ...
+```
+
+### `run_bars` callable contract
+
+<!-- reference: data-bars-run_bars source=limen/data/bars/adaptive_bars.py region=signature:run_bars role=signature -->
+```python
+def run_bars(data: pl.DataFrame, expected_num_ticks: int=100, ema_span: int=20) -> pl.DataFrame:
+    ...
+```

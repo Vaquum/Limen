@@ -3,6 +3,7 @@ import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
 from limen.experiment._required_columns import admit_columns
+from limen.targets._perturbation import apply as _apply_target_perturbation
 from limen.experiment._boolean_controls import boolean, manifest_controls
 from limen.backtest.trade_contract import TradeInputs, TradePolicy
 from limen.experiment._holdout_history import HoldoutEvidenceError
@@ -1682,7 +1683,7 @@ def _apply_class_based_target(
     resolved_transform = _resolve_params(config.transform_params, round_params)
     if needs_context:
         resolved_transform['trade_context'] = trade_context
-    data = instance.transform(data, **resolved_transform)
+    data = _apply_target_perturbation(instance, data, resolved_transform, round_params, is_training)
     data = _drop_target_source_columns(data, instance, target_name)
     if needs_context:
         outcomes = instance.outcomes

@@ -13,7 +13,7 @@ __all__: list[str] = []
 
 _BOOKKEEPING = frozenset({
     'id', 'execution_time', 'strict_mode_error', '_warnings',
-    '_convergence_warning', '_dropped_features', '_param_hash', '_id',
+    '_convergence_warning', '_dropped_features', '_param_hash', '_id', '_permutation_id',
     '_round_index', '_injected', '_generation_index', '_search_strategy',
 })
 _ARTIFACTS = frozenset({'extras', 'models', '_model', '_preds'})

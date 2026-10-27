@@ -22,6 +22,7 @@ Does **not** own raw data retrieval (owned by `limen.data.HistoricalData`) or th
 | `volume_bars` | Emit a bar every fixed traded volume | Threshold on cumulative base volume |
 | `trade_bars` | Emit a bar every fixed trade count | Threshold on cumulative trade count |
 | `liquidity_bars` | Emit a bar every fixed quote-value turnover | Threshold on cumulative quote volume |
+| `imbalance_bars`, `run_bars` | Adaptive directional-volume sampling | Individual native trade points; see [algorithm](../../../docs/Data-Bars.md#adaptive-trade-point-bars) |
 
 ## Adjacent modules
 
@@ -39,6 +40,8 @@ Does **not** own raw data retrieval (owned by `limen.data.HistoricalData`) or th
 bars/
 ├── README.md
 ├── __init__.py
+├── _bar_aggregation.py
+├── adaptive_bars.py
 └── standard_bars.py
 ```
 

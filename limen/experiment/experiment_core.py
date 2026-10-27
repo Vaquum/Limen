@@ -4,6 +4,7 @@ import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import limen.experiment._result_fields as _fields
 import limen.experiment._uel_snapshot as _snapshot
+import limen.experiment._target_identity as _target_id
 import csv
 import importlib.metadata
 import json
@@ -619,7 +620,7 @@ class UniversalExperimentLoop:
             replayed_warnings: list[str] = []
             replayed_convergence = False
             try:
-                with warnings.catch_warnings(record=True) as caught:
+                with warnings.catch_warnings(record=True) as caught, _target_id.bind(self.manifest, sfd_params, current_hash if factorized is None else None):
                     warnings.simplefilter('always')
                     if factorized is not None:
                         data_dict, round_results, replayed_warnings, replayed_convergence = factorized.evaluate(sfd_params)

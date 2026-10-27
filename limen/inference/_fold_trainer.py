@@ -1,4 +1,5 @@
 from __future__ import annotations
+from limen.experiment._target_identity import bind as bind_target_identity
 
 from collections.abc import Mapping
 import copy
@@ -102,19 +103,20 @@ def _one(host: Source, pid: str, fold: int) -> Sensor:
         capture['expected'] = witness
         raw = cast(pl.DataFrame, prepared_trial['_walk_forward_raw'])
         with protection.trainer(manifest, expected, fold):
-            data = manifest.prepare_data(raw, params)
-            partitions = evidence.checked(data.get('_fold_partitions'))
-            if any(partitions[key] != witness[key] for key in ('raw', 'retained')):
-                raise ValueError('fold partitions changed before model fit')
-            raw_parts = cast(Mapping[str, Mapping[str, object]], partitions['raw'])
-            support = [end - 1 for name in ('fit', 'validation') for _, end in cast(list[list[int]], raw_parts[name]['segments'])]
-            times = cast(list[int], data['_fold_selected_times'])
-            cutoff = max(times[index] for index in support) + cast(int, original['interval_ns'])
-            if cutoff != witness['fitting_cutoff_ns']:
-                raise ValueError('fitting cutoff disagrees with raw fit/validation support')
-            data['_record_execution'] = True
-            data['_record_model_outputs'] = bool(host.metadata.get('record_model_outputs'))
-            result = manifest.run_model(data, params)
+            with bind_target_identity(manifest, params, pid):
+                data = manifest.prepare_data(raw, params)
+                partitions = evidence.checked(data.get('_fold_partitions'))
+                if any(partitions[key] != witness[key] for key in ('raw', 'retained')):
+                    raise ValueError('fold partitions changed before model fit')
+                raw_parts = cast(Mapping[str, Mapping[str, object]], partitions['raw'])
+                support = [end - 1 for name in ('fit', 'validation') for _, end in cast(list[list[int]], raw_parts[name]['segments'])]
+                times = cast(list[int], data['_fold_selected_times'])
+                cutoff = max(times[index] for index in support) + cast(int, original['interval_ns'])
+                if cutoff != witness['fitting_cutoff_ns']:
+                    raise ValueError('fitting cutoff disagrees with raw fit/validation support')
+                data['_record_execution'] = True
+                data['_record_model_outputs'] = bool(host.metadata.get('record_model_outputs'))
+                result = manifest.run_model(data, params)
             model = result.get('_model')
             if model is None:
                 raise ValueError('selected fold did not return a fitted native inference model')

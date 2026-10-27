@@ -1,11 +1,14 @@
 import numpy as np
 import numpy.typing as npt
 import polars as pl
+from limen.targets._barrier_paths import first_touch
+import limen.targets._perturbation as _noise
 
 
 class TripleBarrierTarget:
 
     '''Ternary label from Lopez de Prado's triple-barrier method.'''
+    requires_permutation_id = True
 
     def __init__(self,
                  train_data: pl.DataFrame,
@@ -45,6 +48,7 @@ class TripleBarrierTarget:
             raise ValueError('TripleBarrierTarget min_periods must be positive')
 
         self.target_name = target_name
+        self.perturbation_parameters: dict[str, object] = {}
         self.upper_multiple = upper_multiple
         self.lower_multiple = lower_multiple
         self.max_horizon = max_horizon
@@ -52,7 +56,8 @@ class TripleBarrierTarget:
         self.min_periods = min_periods
         self.close_col = close_col
 
-    def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    def transform(self, data: pl.DataFrame, *, horizon_jitter: int = 0, barrier_noise_std: float = 0.,
+                  noise_seed: int = 0, permutation_id: str | None = None, training: bool = False) -> pl.DataFrame:
 
         '''
         Label each bar by the first barrier its forward close path touches.
@@ -68,7 +73,10 @@ class TripleBarrierTarget:
 
         self._validate_columns(data)
         close = data[self.close_col].to_numpy().astype(float, copy=False)
-        label, valid = self._first_touch(close, self._volatility(data))
+        horizon, (upper, lower) = _noise.parameters(self.max_horizon, (self.upper_multiple, self.lower_multiple),
+            horizon_jitter=horizon_jitter, noise_std=barrier_noise_std, noise_seed=noise_seed, permutation_id=permutation_id)
+        self.perturbation_parameters = {'permutation_id': permutation_id, 'max_horizon': horizon, 'upper_multiple': upper, 'lower_multiple': lower}
+        label, valid = first_touch(close, self._volatility(data), upper, lower, horizon)
 
         return (
             data
@@ -106,24 +114,4 @@ class TripleBarrierTarget:
     def _first_touch(self,
                      close: npt.NDArray[np.float64],
                      volatility: npt.NDArray[np.float64]) -> tuple[npt.NDArray[np.int8], npt.NDArray[np.bool_]]:
-        n = close.shape[0]
-        upper = self.upper_multiple * volatility
-        lower = self.lower_multiple * volatility
-        label = np.zeros(n, dtype=np.int8)
-        touched = np.zeros(n, dtype=bool)
-
-        for k in range(1, self.max_horizon + 1):
-            if k >= n:
-                break
-            prefix = n - k
-            forward_return = close[k:] / close[:prefix] - 1.0
-            open_bars = ~touched[:prefix]
-            hit_upper = open_bars & (forward_return >= upper[:prefix])
-            hit_lower = open_bars & (forward_return <= -lower[:prefix])
-            label[:prefix][hit_upper] = 1
-            label[:prefix][hit_lower] = -1
-            touched[:prefix] |= hit_upper | hit_lower
-
-        horizon_available = np.arange(n) <= (n - 1 - self.max_horizon)
-        valid = (volatility > 0.0) & (touched | horizon_available)
-        return label, valid
+        return first_touch(close, volatility, self.upper_multiple, self.lower_multiple, self.max_horizon)
