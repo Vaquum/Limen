@@ -8,6 +8,27 @@ Keep the saved definition and completed candidate identities from the [Python pr
 
 Keep the acquired project and its matching wheel. A persisted recovery run needs its original source, result directory and checkpoint together; the small Python selection CSV alone does not contain them.
 
+## Save the captured experiment object
+
+After `run` returns, `uel.save(filepath=None)` writes the full captured object to
+`<experiment_name>.uel`, or to an explicit path. Restore it with
+`UniversalExperimentLoop.load(filepath)`. Loading restores the retained models,
+scalers, observations, parameters and analysis outputs without running the
+experiment again. Local Python functions are retained too. State not retained
+by the original run is not created by saving; use `post_processing=True` when
+the captured models and post-processing outputs are needed later.
+
+Snapshots contain executable Python serialization: load only files you trust.
+Keep the same Python version, Limen source and dependency versions. The reader
+checks compatibility and payload integrity before deserialization. A snapshot
+does not copy external files or change a run's checkpoint/identity protocol.
+Use the original experiment directory and checkpoint to continue unfinished
+work; loading a snapshot does not continue it automatically.
+
+Saving replaces its destination atomically. Unsupported state, such as an open
+external resource, raises rather than silently omitting the object. A failed
+save preserves the previous destination.
+
 ## Python Research
 
 The small selection run writes a CSV and a summary. Its evaluated models remain in memory, returned by `run_research`; the CSV does not restore them. Read the completed frame when choosing candidates:
