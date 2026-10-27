@@ -3,6 +3,7 @@ import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import limen.experiment._result_fields as _fields
+import limen.experiment._uel_snapshot as _snapshot
 import csv
 import importlib.metadata
 import json
@@ -51,9 +52,7 @@ logger = logging.getLogger(__name__)
 
 def _validate_prep_each_round_arg(value: object) -> None:
     if not isinstance(value, bool):
-        raise TypeError(
-            'UniversalExperimentLoop prep_each_round must be a bool.'
-        )
+        raise TypeError('UniversalExperimentLoop prep_each_round must be a bool.')
 
 STANDARD_RUN_LOG_BATCH_SIZE = 1000
 
@@ -126,13 +125,14 @@ class UniversalExperimentLoop:
     def fold_results(self) -> pl.DataFrame:
         return self._walk_forward.results if self._walk_forward is not None else pl.DataFrame()
 
-    check_parallel_admission = _parallel.admit_parallel
+    check_parallel_admission, save, load = _parallel.admit_parallel, _snapshot.save, classmethod(_snapshot.load)
 
     @property
     def interrupted(self) -> bool:
         return self._shutdown_requested
 
     @_holdout.run_guard
+    @_snapshot.captured
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
             context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,

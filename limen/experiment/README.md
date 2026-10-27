@@ -40,6 +40,7 @@ Does **not** own inference reconstruction (`limen.inference`), model architectur
 | Module or family | Responsibility |
 |---|---|
 | `experiment_core.py` | UniversalExperimentLoop |
+| `_uel_snapshot.py` | Full captured-object save and restore |
 | `manifest_core.py` | Manifest and builder components |
 | `checkpoint_manager.py` | Persist and restore advanced-run state |
 | `feedback_controller.py` | Mid-run adaptive callbacks |
@@ -109,6 +110,7 @@ experiment/
 ├── _serial_resume.py
 ├── _shim_fractional_diff.py
 ├── _source_contract.py
+├── _uel_snapshot.py
 ├── _validation_calibration.py
 ├── _validation_decisions.py
 ├── _walk_forward_run.py

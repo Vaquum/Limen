@@ -268,6 +268,12 @@ click==8.4.2 \
     #   check-wheel-contents
     #   huggingface-hub
     #   vaquum-limen
+cloudpickle==3.1.2 \
+    --hash=sha256:7fda9eb655c9c230dab534f1983763de5835249750e85fbcef43aaa30a9a2414 \
+    --hash=sha256:9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a
+    # via
+    #   -c requirements/constraints.txt
+    #   vaquum-limen
 coverage==7.15.1 \
     --hash=sha256:00b6703c6640075cdce5124e9335dfdf9167272475301828acfdd09c0e5ee731 \
     --hash=sha256:05d87c2a43373ad6b976d0a99ad58c48633633bcdeb896dc645a006472cc4a71 \
