@@ -60,8 +60,6 @@ STANDARD_RUN_LOG_BATCH_SIZE = 1000
 
 class UniversalExperimentLoop:
 
-    save, load = _snapshot.save, classmethod(_snapshot.load)
-
     def __init__(self,
                  *,
                  data: pl.DataFrame | None = None,
@@ -128,7 +126,7 @@ class UniversalExperimentLoop:
     def fold_results(self) -> pl.DataFrame:
         return self._walk_forward.results if self._walk_forward is not None else pl.DataFrame()
 
-    check_parallel_admission = _parallel.admit_parallel
+    check_parallel_admission, save, load = _parallel.admit_parallel, _snapshot.save, classmethod(_snapshot.load)
 
     @property
     def interrupted(self) -> bool:
