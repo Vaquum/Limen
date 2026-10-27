@@ -97,3 +97,42 @@ def test_invalid_regime_sampling_refuses(market, options):
     settings.update(options)
     with pytest.raises(ValueError):
         sample_regime_blocks(market, **settings)
+
+
+@pytest.mark.parametrize('selector', ['lookback_window', 'sample_regime_blocks'])
+def test_native_yaml_selectors_complete_logged_sweeps(market, tmp_path, selector):
+    from limen.experiment import UniversalExperimentLoop
+    from limen.yaml import CompiledSFD, build_search_strategy, validate
+    from tests.test_factorized_preparation import _config
+    reference = _config()
+    manifest = reference['sfd']['manifest']
+    manifest.pop('split_dates')
+    manifest['split_walk_forward'] = {'n_folds': 2, 'test_bars': 10, 'purge_bars': 1,
+                                      'embargo_bars': 1, 'anchored': True}
+    manifest['reference_architecture'] = 'limen.sfd.reference_architecture.dlinear_regressor'
+    manifest['target'] = {'name': 'up_next', 'class': 'limen.targets.NextReturnTarget'}
+    params = {'lookback_days': '{lookback_days}'} if selector == 'lookback_window' else {
+        'target_regime': 'RANGE_LOW_VOL', 'min_block_size': 80, 'seed': '{seed}', 'regime_version': 'label3-test'}
+    manifest['pre_split_data_selector'] = {'func': 'limen.data.utils.' + selector, 'params': params}
+    controls = {'lookback_days': [2, 3]} if selector == 'lookback_window' else {'seed': [42, 43]}
+    reference['sfd']['params'] = {'lookback': [1], 'fee': [4.], **controls}
+    reference['uel']['n_permutations'] = 2
+    assert validate(reference).valid
+    experiment = UniversalExperimentLoop(sfd=CompiledSFD(reference), data=market,
+        yaml_reference=reference, search_strategy=build_search_strategy(reference), experiment_dir=tmp_path)
+    experiment.run('selector', n_permutations=2, prep_each_round=True, progress_bar=False)
+    log = pl.read_csv(tmp_path / 'results.csv')
+    key = next(iter(controls))
+    assert log[key].to_list() == controls[key]
+    assert log['strict_mode_error'].null_count() == 2
+
+
+def test_yaml_anchored_lookback_and_sampler_controls(market):
+    from ruamel.yaml import YAML
+    days = YAML().load('value: &days 2')['value']
+    assert_frame_equal(lookback_window(market, days), lookback_window(market, 2))
+    false = YAML().load('value: &flag false')['value']
+    with pytest.raises(ValueError, match='lookback_days'):
+        lookback_window(market, false)
+    with pytest.raises(ValueError, match='min_block_size'):
+        sample_regime_blocks(market, 'RANGE_LOW_VOL', false, seed=42, regime_version='label3-test')

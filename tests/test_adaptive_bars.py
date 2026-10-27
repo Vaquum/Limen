@@ -109,3 +109,12 @@ def test_native_yaml_sweep_runs_both_adaptive_bar_types(trades, tmp_path):
     log = pl.read_csv(tmp_path / 'experiment/results.csv')
     assert log['bar_type'].to_list() == ['imbalance', 'run']
     assert log['strict_mode_error'].null_count() == 2
+
+
+def test_yaml_anchored_bar_controls(trades):
+    from ruamel.yaml import YAML
+    controls = YAML().load('expected_num_ticks: &ticks 20\nema_span: &span 10')
+    assert_frame_equal(imbalance_bars(trades, **controls), imbalance_bars(trades, 20, 10))
+    controls['ema_span'] = YAML().load('value: &flag true')['value']
+    with pytest.raises(ValueError, match='ema_span'):
+        imbalance_bars(trades, **controls)

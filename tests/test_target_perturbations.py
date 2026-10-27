@@ -133,3 +133,14 @@ def test_factorized_noise_is_refused_before_artifacts(tmp_path):
 def test_invalid_target_noise_controls_refuse(market, controls):
     with pytest.raises(ValueError):
         ForwardBreakoutTarget(market, 'target').transform(market, permutation_id='recorded-control', **controls)
+
+
+def test_yaml_anchored_noise_controls(market):
+    from ruamel.yaml import YAML
+    settings = YAML().load('horizon_jitter: &jitter 1\nnoise_seed: &seed 7')
+    target = ForwardBreakoutTarget(market, 'target')
+    assert_frame_equal(target.transform(market, permutation_id='recorded-control', **settings),
+                       target.transform(market, permutation_id='recorded-control', horizon_jitter=1, noise_seed=7))
+    settings['noise_seed'] = YAML().load('value: &flag true')['value']
+    with pytest.raises(ValueError, match='noise_seed'):
+        target.transform(market, permutation_id='recorded-control', **settings)
