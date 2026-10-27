@@ -113,6 +113,7 @@
     "docs/Developer/Writing-Docstrings.md",
     "docs/Developer/Contributing-Foundational-SFDs.md",
     "docs/Developer/Pruning-Strategies.md",
+    "docs/Developer/Search-Identity-Compatibility.md",
     "docs/Developer/Documentation-System.md",
     "docs/Developer/Indicator-Performance.md",
     "docs/Backtest-Benchmarks.md",
@@ -2872,6 +2873,10 @@
     "docs/Developer/Pruning-Strategies.md": [
       "python/search",
       "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Developer/Search-Identity-Compatibility.md": [
       "python/recovery",
       "compiled/recovery"
     ],

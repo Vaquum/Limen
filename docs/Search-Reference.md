@@ -149,6 +149,10 @@ Python Research owns its arbitrary SFD functions and fitted models. Recovery res
 
 ## Optional custom `SearchStrategy`
 
+The [identity compatibility design](Developer/Search-Identity-Compatibility.md)
+records the boundary for a future protocol change. It does not change the
+current search or recovery format.
+
 Implement a strategy only when the built-ins do not meet the experiment's search requirements. A strategy must:
 
 - hold a reference to a shared `ParamDomain`
