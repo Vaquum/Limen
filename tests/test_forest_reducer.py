@@ -71,6 +71,8 @@ def test_forest_admission_and_failed_rows(recorded_importance):
     assert reducer().analyze_and_intervene(clean.head(19), msq) == []
     with pytest.raises(ValueError, match='columns'):
         reducer(metrics={'missing_metric': True}).analyze_and_intervene(clean, msq)
+    with pytest.raises(ValueError, match='columns'):
+        reducer().analyze_and_intervene(clean.drop(METRIC), msq)
 
 
 @pytest.mark.parametrize('settings', [

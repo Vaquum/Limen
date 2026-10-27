@@ -37,7 +37,7 @@ class CorrelationReducer(PruningStrategy):
     - Low-impact: parameters with negligible |correlation| and high
       sign stability get a keep_is suggestion for the best value
 
-    NOTE: Only acts on numeric parameters. Categorical/string parameters
+    NOTE: Correlation analysis only acts on numeric parameters. Categorical/string parameters
     are coerced to numeric internally and silently skipped when coercion
     produces all-NaN or constant columns.
 
@@ -138,7 +138,7 @@ class CorrelationReducer(PruningStrategy):
 
         df = log
 
-        if not self._active or df.is_empty() or self._metric not in df.columns or len(df) < self._min_observations:
+        if not self._active or df.is_empty() or (self._forest is None and self._metric not in df.columns) or len(df) < self._min_observations:
             return []
 
         if self._forest is not None:
