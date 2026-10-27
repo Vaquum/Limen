@@ -150,7 +150,7 @@ Table 1. Backtest is exposed through three paths.
 <!-- reference: backtest-log-performance source=limen/log/log.py region=signature:Log.permutation_prediction_performance role=signature -->
 ```python
 @_holdout.replay_guard
-def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame:
     ...
 ```
 

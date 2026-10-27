@@ -6,6 +6,8 @@ For YAML CLI runs, start from the generated result directory and `results.csv`. 
 
 In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.csv` contains trial aggregates. Use the recorded fold results and per-trial net-return track to inspect the individual test windows behind those means.
 
+All table-valued `Log` methods return `polars.DataFrame`. Correlation results contain explicit `cohort_pct` and `feature` columns instead of a pandas MultiIndex. Use Polars filtering and grouping on these columns. Pandas is not required by the package runtime.
+
 ## Follow the two projects
 
 Python Research reads the completed loop's Polars frame and sorts its caller-defined validation return. Compiled Research retains the configured native results on disk; `limen assess` ranks their declared validation objective. The Python helper below is not a Compiled prerequisite and does not manufacture native metric groups for arbitrary results.
@@ -109,7 +111,7 @@ This method reconstructs a single round's test-period table and joins:
 <!-- reference: log-round-performance source=limen/log/log.py region=signature:Log.permutation_prediction_performance role=signature -->
 ```python
 @_holdout.replay_guard
-def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame:
     ...
 ```
 
@@ -142,7 +144,7 @@ With no `x`, this method reads the captured `confusion_*` columns and removes th
 
 <!-- reference: log-confusion source=limen/log/_experiment_confusion_metrics.py region=signature:experiment_confusion_metrics role=signature -->
 ```python
-def experiment_confusion_metrics(self: Any, x: str | None=None) -> pd.DataFrame:
+def experiment_confusion_metrics(self: Any, x: str | None=None) -> pl.DataFrame:
     ...
 ```
 
@@ -176,7 +178,7 @@ Produces the same style of summary for one specific round.
 
 <!-- reference: log-round-confusion source=limen/log/_permutation_confusion_metrics.py region=signature:permutation_confusion_metrics role=signature -->
 ```python
-def permutation_confusion_metrics(self: Any, x: str, round_id: int, *, pred_col: str='predictions', actual_col: str='actuals', proba_col: str | None=None, threshold: float=0.5, outlier_quantiles: Sequence[float]=(0.01, 0.99), outlier_mode: str='filter', id_cols: dict[str, Any] | None=None) -> pd.DataFrame:
+def permutation_confusion_metrics(self: Any, x: str, round_id: int, *, pred_col: str='predictions', actual_col: str='actuals', proba_col: str | None=None, threshold: float=0.5, outlier_quantiles: Sequence[float]=(0.01, 0.99), outlier_mode: str='filter', id_cols: dict[str, Any] | None=None) -> pl.DataFrame:
     ...
 ```
 
@@ -205,7 +207,7 @@ Read one captured backtest row per successful single-split round, removing the `
 
 <!-- reference: log-backtest source=limen/log/_experiment_backtest_results.py region=signature:experiment_backtest_results role=signature -->
 ```python
-def experiment_backtest_results(self: Any) -> pd.DataFrame:
+def experiment_backtest_results(self: Any) -> pl.DataFrame:
     ...
 ```
 
@@ -236,7 +238,7 @@ This method looks for robust relationships between experiment parameters and a c
 
 <!-- reference: log-parameter-correlation source=limen/log/_experiment_parameter_correlation.py region=signature:experiment_parameter_correlation role=signature -->
 ```python
-def experiment_parameter_correlation(self: Any, metric: str, *, cols_to_drop: list[str] | None=None, sort_key: str | None=None, sort_ascending: bool=False, heads: Sequence[float | int] | None=None, method: Literal['pearson', 'kendall', 'spearman']='spearman', n_boot: int=300, min_n: int=10, random_state: int=0) -> pd.DataFrame:
+def experiment_parameter_correlation(self: Any, metric: str, *, cols_to_drop: list[str] | None=None, sort_key: str | None=None, sort_ascending: bool=False, heads: Sequence[float | int] | None=None, method: Literal['pearson', 'kendall', 'spearman']='spearman', n_boot: int=300, min_n: int=10, random_state: int=0) -> pl.DataFrame:
     ...
 ```
 
@@ -268,7 +270,7 @@ This method requires at least 20 distinct selected configurations. The two-candi
 
 <!-- reference: log-parameter-importance source=limen/log/_experiment_parameter_importance.py region=signature:experiment_parameter_importance role=signature -->
 ```python
-def experiment_parameter_importance(self: object, metric: str, *, parameters: Sequence[str], random_state: int=0, n_repeats: int=10) -> pd.DataFrame:
+def experiment_parameter_importance(self: object, metric: str, *, parameters: Sequence[str], random_state: int=0, n_repeats: int=10) -> pl.DataFrame:
     ...
 ```
 
@@ -296,7 +298,7 @@ Round parameter values become columns in `experiment_log` alongside the metrics.
 
 Use the captured parameter columns to compare perturbations:
 
-Filter the pandas `Log.experiment_log` by its `scaler_type` column to compare one scaler. Group its `feature_groups` column and aggregate a captured metric to compare declared groups. The loop itself stores a Polars frame; `Log` copies those rows into pandas.
+Filter the Polars `Log.experiment_log` by its `scaler_type` column to compare one scaler. Group its `feature_groups` column and aggregate a captured metric to compare declared groups. Both the loop and `Log` store Polars frames; `Log` clones the captured rows.
 
 `experiment_parameter_correlation` coerces every column to numeric, so string and list columns — `scaler_type`, `feature_groups`, and the JSON-encoded `_dropped_features` — become NaN and drop out. Only numeric perturbation columns survive; boolean `use_*` flags survive because they coerce to `0`/`1` and group naturally.
 
@@ -341,12 +343,12 @@ For reliable explicit row analysis:
 It:
 
 - removes duplicated header rows that may appear in streamed CSV logs
-- trims whitespace in object columns
-- returns a cleaned pandas dataframe
+- trims whitespace in string columns
+- returns a cleaned Polars dataframe
 
 <!-- reference: log-read-file source=limen/log/_read_from_file.py region=signature:read_from_file role=signature -->
 ```python
-def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
+def read_from_file(_self: Any, file_path: str) -> pl.DataFrame:
     ...
 ```
 
@@ -369,10 +371,10 @@ Python Research fits ten momentum windows against three Ridge penalties on the s
 def analyze_log(loop, directory, space):
     analysis = Log(uel_object=loop)
     correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in project.completed_log(loop).columns if column not in {*space, 'validation_rmse'}],
-        heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
+        heads=(1.,), n_boot=50, min_n=10, random_state=42)
     importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
-    correlation.to_csv(directory / 'correlation.csv', index=False)
-    importance.to_csv(directory / 'importance.csv', index=False)
+    correlation.write_csv(directory / 'correlation.csv')
+    importance.write_csv(directory / 'importance.csv')
     return correlation, importance
 ```
 

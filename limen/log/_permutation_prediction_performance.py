@@ -1,9 +1,9 @@
 from typing import Any
-import pandas as pd
+import polars as pl
 
 
 def permutation_prediction_performance(self: Any,
-                                       round_id: int) -> pd.DataFrame:
+                                       round_id: int) -> pl.DataFrame:
 
     '''
     Create prediction performance table based on round id.
@@ -14,26 +14,26 @@ def permutation_prediction_performance(self: Any,
         round_id (int): Round ID (i.e. nth permutation in an experiment)
 
     Returns:
-        pd.DataFrame: Table with predictions, actuals, hit/miss, datetime, open, close, and price_change
+        pl.DataFrame: Table with predictions, actuals, hit/miss, datetime, open, close, and price_change
     '''
 
     round_data = self.prep(self.data, round_params=self.round_params[round_id])
 
     if self.inverse_scaler is not None:
-        perf_df = self.inverse_scaler(round_data['x_test'], self.scalers[round_id]).to_pandas()
+        perf_df = self.inverse_scaler(round_data['x_test'], self.scalers[round_id])
     else:
-        perf_df = pd.DataFrame()
+        perf_df = pl.DataFrame()
 
-    perf_df['predictions'] = self.preds[round_id]
-    perf_df['actuals'] = round_data['y_test']
-    perf_df['hit'] = perf_df['predictions'] == perf_df['actuals']
-    perf_df['miss'] = perf_df['predictions'] != perf_df['actuals']
+    perf_df = perf_df.with_columns(
+        pl.Series('predictions', self.preds[round_id]),
+        pl.Series('actuals', round_data['y_test']),
+    ).with_columns(
+        (pl.col('predictions') == pl.col('actuals')).alias('hit'),
+        (pl.col('predictions') != pl.col('actuals')).alias('miss'),
+    )
 
     price_df = self._get_test_data_with_all_cols(round_id)
-    if 'datetime' in price_df.columns:
-        perf_df['datetime'] = price_df['datetime']
-    perf_df['open'] = price_df['open']
-    perf_df['close'] = price_df['close']
-    perf_df['price_change'] = price_df['close'] - price_df['open']
-
-    return perf_df
+    columns = ['datetime', 'open', 'close'] if 'datetime' in price_df.columns else ['open', 'close']
+    return perf_df.with_columns(price_df.select(columns)).with_columns(
+        (pl.col('close') - pl.col('open')).alias('price_change')
+    )

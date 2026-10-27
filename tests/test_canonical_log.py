@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
-from pandas.testing import assert_frame_equal
+from tests.utils.assert_table_equal import assert_table_equal as assert_frame_equal
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS, backtest_snapshot
 from limen.backtest.execution_events import with_predictions
@@ -171,7 +171,7 @@ def test_row_analysis_contract(captured_runs):
                 np.testing.assert_array_equal(performance['predictions'], loop.preds[ordinal])
                 rows.append(log.permutation_confusion_metrics('price_change', ordinal, id_cols=parameters))
                 assert_frame_equal(performance, loop._log.permutation_prediction_performance(ordinal))
-            expected = pd.concat(rows, ignore_index=True)
+            expected = pl.concat(rows)
             assert_frame_equal(log.experiment_confusion_metrics('price_change'), expected)
             assert_frame_equal(loop.experiment_confusion_metrics, expected)
             assert_frame_equal(log.permutation_prediction_performance(-1),
@@ -186,7 +186,7 @@ def test_row_analysis_contract(captured_runs):
             with pytest.raises(ValueError, match='fitted scaler'):
                 incomplete_scalers.permutation_prediction_performance(0)
             assert {'n_kept', 'tp_x_median', 'fp_x_median', 'precision_pct', 'recall_pct', 'tp_fp_cohen_d', 'tp_fp_ks'}.issubset(expected.columns)
-            assert list(log.experiment_confusion_metrics()) == CONFUSION
+            assert log.experiment_confusion_metrics().columns == CONFUSION
             assert_frame_equal(log.experiment_confusion_metrics(), _projection(captured, CONFUSION, 'confusion_'), check_dtype=False)
         else:
             for view in (log, Log(file_path=str(csv_path))):
@@ -253,8 +253,8 @@ def test_capture_errors_and_occurrences(tmp_path):
         assert_frame_equal(confusion, _projection(successful, CONFUSION, 'confusion_'), check_dtype=False)
         assert backtest['inventory_per_bar'].to_list() == [0.0, 0.0]
         assert backtest['cost_per_bar_bps'].to_list() == [0.0, 0.0]
-        assert backtest['avg_win_bps'].isna().all() and backtest['avg_loss_bps'].isna().all()
-        assert confusion['tp_mean_return_pct'].isna().all() and confusion['fp_mean_return_pct'].isna().all()
+        assert backtest['avg_win_bps'].is_nan().all() and backtest['avg_loss_bps'].is_nan().all()
+        assert confusion['tp_mean_return_pct'].is_nan().all() and confusion['fp_mean_return_pct'].is_nan().all()
     np.testing.assert_array_equal(log.permutation_prediction_performance(1)['predictions'], loop.preds[1])
     for prefix, names, method in (('backtest_', BACKTEST_SNAPSHOT_COLUMNS, 'experiment_backtest_results'),
                                    ('confusion_', CONFUSION, 'experiment_confusion_metrics')):
@@ -263,7 +263,7 @@ def test_capture_errors_and_occurrences(tmp_path):
             with pytest.raises(ValueError, match=r'[Cc]aptured.*missing|[Cc]aptured.*incomplete'):
                 getattr(incomplete, method)()
     empty = Log(uel_object=SimpleNamespace(experiment_log=loop.experiment_log.head(0)))
-    assert empty.experiment_backtest_results().empty
+    assert empty.experiment_backtest_results().is_empty()
     with pytest.raises(ValueError, match='No objects to concatenate'):
         empty.experiment_confusion_metrics()
 

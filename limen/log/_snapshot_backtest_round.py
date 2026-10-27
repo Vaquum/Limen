@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Protocol, cast
 
-import pandas as pd
 import polars as pl
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
@@ -26,11 +25,11 @@ class _ReplayLog(Protocol):
     preds: list[object]
     _alignment: list[dict[str, object]]
 
-    def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame: ...
+    def permutation_prediction_performance(self, round_id: int) -> pl.DataFrame: ...
 
 
 def snapshot_backtest_round(
-    log: _ReplayLog, round_id: int, normalize: Callable[[pd.DataFrame], pd.DataFrame],
+    log: _ReplayLog, round_id: int, normalize: Callable[[pl.DataFrame], pl.DataFrame],
 ) -> dict[str, float]:
     from limen.experiment._backtest_provenance import replay_prices as _replay_prices, validate_witness as _validate_witness
     from limen.experiment._resolve_backtest_config import configured_barriers as _configured_barriers
@@ -72,14 +71,13 @@ def snapshot_backtest_round(
         fresh = _validate_witness(prepared.get('_backtest_provenance'))
         if fresh != witness:
             raise ValueError('backtest source identity changed during replay preparation')
-        perf = pd.DataFrame({'predictions': predictions, 'actuals': prepared['y_test']})
-        for col in ('open', 'high', 'low', 'close'):
-            perf[col] = prices[col].to_numpy()
-        perf['price_change'] = perf['close'] - perf['open']
+        perf = pl.DataFrame({'predictions': predictions, 'actuals': prepared['y_test']}).with_columns(
+            prices.select('open', 'high', 'low', 'close'),
+        ).with_columns((pl.col('close') - pl.col('open')).alias('price_change'))
     else:
         perf = log.permutation_prediction_performance(round_id)
     perf = normalize(perf)
-    columns = {col: perf[col].to_numpy() for col in ('predictions', 'open', 'high', 'low', 'close', 'price_change') if col in perf}
+    columns = {col: perf[col].to_numpy() for col in ('predictions', 'open', 'high', 'low', 'close', 'price_change') if col in perf.columns}
     return backtest_snapshot(columns, execution_lag_bars=1, **_execution_options(resolved))
 
 

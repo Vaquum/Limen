@@ -1,4 +1,4 @@
-import pandas as pd
+import polars as pl
 import numpy as np
 import numpy.typing as npt
 from typing import Any, cast
@@ -20,20 +20,20 @@ def _declared_output_modes(manifest: object, alignment: object, round_id: int) -
     return modes | {node} if isinstance(node, str) else modes
 
 
-def confusion_mean_return_pct(pred: pd.Series | npt.NDArray[Any],
-                               actual: pd.Series | npt.NDArray[Any],
-                               open_px: pd.Series,
-                               price_change: pd.Series,
+def confusion_mean_return_pct(pred: pl.Series | npt.ArrayLike,
+                               actual: pl.Series | npt.ArrayLike,
+                               open_px: pl.Series,
+                               price_change: pl.Series,
                                *,
                                execution_lag_bars: int = 1) -> dict[str, float]:
     '''
     Compute execution-aligned mean return percentage for each confusion quadrant.
 
     Args:
-        pred (pd.Series | np.ndarray): Binary predictions
-        actual (pd.Series | np.ndarray): Binary actuals
-        open_px (pd.Series): Open prices for the feature-bar rows
-        price_change (pd.Series): Close - open for the feature-bar rows
+        pred (pl.Series | np.ndarray): Binary predictions
+        actual (pl.Series | np.ndarray): Binary actuals
+        open_px (pl.Series): Open prices for the feature-bar rows
+        price_change (pl.Series): Close - open for the feature-bar rows
         execution_lag_bars (int): Number of rows forward to evaluate on
 
     Returns:
@@ -43,10 +43,10 @@ def confusion_mean_return_pct(pred: pd.Series | npt.NDArray[Any],
     if execution_lag_bars < 0:
         raise ValueError('permutation_confusion_metrics execution_lag_bars must be >= 0')
 
-    pred = pd.to_numeric(pd.Series(np.asarray(pred)), errors='coerce')
-    actual = pd.to_numeric(pd.Series(np.asarray(actual)), errors='coerce')
-    open_px = pd.to_numeric(pd.Series(np.asarray(open_px)), errors='coerce')
-    price_change = pd.to_numeric(pd.Series(np.asarray(price_change)), errors='coerce')
+    pred = pl.Series(np.asarray(pred)).cast(pl.Float64, strict=False)
+    actual = pl.Series(np.asarray(actual)).cast(pl.Float64, strict=False)
+    open_px = pl.Series(np.asarray(open_px)).cast(pl.Float64, strict=False)
+    price_change = pl.Series(np.asarray(price_change)).cast(pl.Float64, strict=False)
 
     if execution_lag_bars:
         open_px = open_px.shift(-execution_lag_bars)
@@ -57,7 +57,7 @@ def confusion_mean_return_pct(pred: pd.Series | npt.NDArray[Any],
     open_arr = open_px.to_numpy()
     change_arr = price_change.to_numpy()
 
-    return_pct = (change_arr / open_arr) * 100.0
+    return_pct = np.divide(change_arr, open_arr, out=cast(npt.NDArray[np.float64], np.full(open_arr.shape, np.nan, dtype=np.float64)), where=open_arr != 0) * 100.0
     valid = (
         ~np.isnan(pred_arr) &
         ~np.isnan(actual_arr) &
@@ -96,7 +96,7 @@ def permutation_confusion_metrics(self: Any,
                                   threshold: float = 0.5,
                                   outlier_quantiles: Sequence[float] = (0.01, 0.99),
                                   outlier_mode: str = 'filter',
-                                  id_cols: dict[str, Any] | None = None) -> pd.DataFrame:
+                                  id_cols: dict[str, Any] | None = None) -> pl.DataFrame:
     '''
     Compute a single-row trimmed report for long-only evaluation: precision,
     recall, signal rates, counts and payoffs, and TP–FP separation.
@@ -112,7 +112,7 @@ def permutation_confusion_metrics(self: Any,
         id_cols (dict[str, Any] | None): Optional identifiers to prepend (e.g., params)
 
     Returns:
-        pd.DataFrame: One-row table with columns 'x_name', 'n_kept', 'pred_pos_rate_pct',
+        pl.DataFrame: One-row table with columns 'x_name', 'n_kept', 'pred_pos_rate_pct',
                       'actual_pos_rate_pct', 'precision_pct', 'recall_pct', 'pred_pos_count',
                       'tp_count', 'fp_count', 'tp_x_mean', 'tp_x_median', 'fp_x_mean', 'fp_x_median',
                       'pred_pos_x_mean', 'pred_pos_x_median', 'tp_fp_cohen_d', 'tp_fp_ks',
@@ -124,25 +124,25 @@ def permutation_confusion_metrics(self: Any,
 
     # Optional: binarize from probabilities
     if proba_col is not None:
-        if proba_col not in df:
+        if proba_col not in df.columns:
             raise ValueError(f'permutation_confusion_metrics proba_col "{proba_col}" not found')
 
-        df[pred_col] = (df[proba_col].astype(float) >= float(threshold)).astype(int)
+        df = df.with_columns((pl.col(proba_col).cast(pl.Float64).fill_nan(None) >= float(threshold)).fill_null(False).cast(pl.Int64).alias(pred_col))
 
     # Validate required columns
     for col in (pred_col, actual_col, x, 'open', 'price_change'):
-        if col not in df:
+        if col not in df.columns:
             raise ValueError(f'permutation_confusion_metrics column "{col}" not found')
 
     foreign = _declared_output_modes(getattr(self, 'manifest', None), getattr(self, '_alignment', None), round_id) - {'binary'}
     if foreign:
         raise ConfusionNotApplicableError(f'permutation_confusion_metrics inapplicable to {sorted(foreign)} outputs')
 
-    pred_num = cast(pd.Series, pd.to_numeric(df[pred_col], errors='coerce'))
-    actual_num = cast(pd.Series, pd.to_numeric(df[actual_col], errors='coerce'))
-    eligible = pred_num.notna() & actual_num.notna()
-    paired = pd.concat([pred_num[eligible], actual_num[eligible]])
-    if paired.empty or ((paired != 0) & (paired != 1)).any():
+    pred_num = df[pred_col].cast(pl.Float64, strict=False)
+    actual_num = df[actual_col].cast(pl.Float64, strict=False)
+    eligible = pred_num.is_not_null() & pred_num.is_not_nan() & actual_num.is_not_null() & actual_num.is_not_nan()
+    paired = pl.concat([pred_num.filter(eligible), actual_num.filter(eligible)])
+    if paired.is_empty() or ((paired != 0) & (paired != 1)).any():
         raise ConfusionNotApplicableError('permutation_confusion_metrics requires binary predictions and actuals')
 
     mean_return_pct = confusion_mean_return_pct(
@@ -151,16 +151,16 @@ def permutation_confusion_metrics(self: Any,
         df['open'],
         df['price_change'],
     )
-    df = df.loc[eligible].copy()
-    df[pred_col] = df[pred_col].astype(int)
-    df[actual_col] = df[actual_col].astype(int)
+    df = df.filter(eligible).with_columns(
+        pl.col(pred_col).cast(pl.Int64), pl.col(actual_col).cast(pl.Int64), pl.col(x).fill_nan(None),
+    )
 
-    q_lo, q_hi = df[x].quantile(outlier_quantiles)
+    q_lo, q_hi = (df[x].quantile(q, interpolation='linear') for q in outlier_quantiles)
     if outlier_mode == 'filter':
-        df = df[(df[x] >= q_lo) & (df[x] <= q_hi)]
+        df = df.filter(pl.col(x).is_not_null() & pl.col(x).is_between(q_lo, q_hi))
 
     elif outlier_mode == 'winsor':
-        df[x] = df[x].clip(q_lo, q_hi)
+        df = df.with_columns(pl.col(x).clip(q_lo, q_hi))
 
     else:
         raise ValueError('permutation_confusion_metrics outlier_mode must be "filter" or "winsor"')
@@ -176,13 +176,13 @@ def permutation_confusion_metrics(self: Any,
     m_tn = (pred == 0) & (act == 0)
     m_fn = (pred == 0) & (act == 1)
 
-    def _stats(mask: pd.Series) -> dict[str, float]:
-        s = df.loc[mask, x]
+    def _stats(mask: pl.Series) -> dict[str, float]:
+        s = df.filter(mask)[x]
         k = int(mask.sum())
         return {
             'count': k,
-            'mean': float(s.mean()) if k else np.nan,
-            'median': float(s.median()) if k else np.nan,
+            'mean': float(value) if (value := s.mean()) is not None else np.nan,
+            'median': float(value) if (value := s.median()) is not None else np.nan,
         }
 
     tp = _stats(m_tp)
@@ -200,9 +200,9 @@ def permutation_confusion_metrics(self: Any,
     actual_pos_rate  = actual_pos_count / n
 
     pred_pos_mean_x   = ((tp['mean'] * TP + fp['mean'] * FP) / pred_pos_count) if pred_pos_count else np.nan
-    pred_pos_median_x = df.loc[pred == 1, x].median() if pred_pos_count else np.nan
+    pred_pos_median_x = float(value) if (value := df.filter(pred == 1)[x].median()) is not None else np.nan
 
-    def _cohen_d(a: npt.NDArray[Any], b: npt.NDArray[Any]) -> float:
+    def _cohen_d(a: npt.NDArray[np.float64], b: npt.NDArray[np.float64]) -> float:
 
         MIN_SAMPLES_FOR_COHEN_D = 2
         if len(a) < MIN_SAMPLES_FOR_COHEN_D or len(b) < MIN_SAMPLES_FOR_COHEN_D:
@@ -220,7 +220,7 @@ def permutation_confusion_metrics(self: Any,
 
         return float((ma - mb) / sp) if sp and not np.isnan(sp) else np.nan
 
-    def _ks(a: npt.NDArray[Any], b: npt.NDArray[Any]) -> float:
+    def _ks(a: npt.NDArray[np.float64], b: npt.NDArray[np.float64]) -> float:
 
         if len(a) == 0 or len(b) == 0:
             return np.nan
@@ -233,12 +233,12 @@ def permutation_confusion_metrics(self: Any,
 
         return float(np.max(np.abs(cdf_a - cdf_b)))
 
-    tp_x = df.loc[m_tp, x].to_numpy()
-    fp_x = df.loc[m_fp, x].to_numpy()
+    tp_x = df.filter(m_tp)[x].to_numpy()
+    fp_x = df.filter(m_fp)[x].to_numpy()
     tp_fp_cohen_d = _cohen_d(tp_x, fp_x)
     tp_fp_ks = _ks(tp_x, fp_x)
 
-    return pd.DataFrame.from_records([{
+    return pl.DataFrame([{
         **(id_cols or {}),
         'pred_pos_rate_pct': float(float(pred_pos_rate) * 100.0),
         'actual_pos_rate_pct': float(float(actual_pos_rate) * 100.0),
