@@ -233,3 +233,12 @@ The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template 
 - Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run loop.
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.
+
+## RBF SVM
+
+`rbf_svm_binary` pairs the [RBF architecture](Reference-Architecture.md#rbf-svm-binary-classifier)
+with the existing LogReg target, features and validation calibration pipeline.
+Its classifier controls replace LogReg's; native requests are bounded to 2048
+training-source and 512 independent test-source bars. The matching YAML template
+is `limen/yaml/templates/rbf_svm_binary.yaml`. Probability fitting is always enabled;
+large sweeps should account for the recorded kernel cost.
