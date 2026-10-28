@@ -92,6 +92,19 @@ def test_bayesian_priors_and_cutoff(recorded):
     assert partial.predict(bars).reason is None
 
 
+@pytest.mark.parametrize('alpha,beta', [(1e-300, 1e300), (1e300, 1e-300), (5e-324, 1e300)])
+def test_bayesian_extreme_priors_preserve_unanimous_recorded_votes(recorded, alpha, beta):
+    bars, sensors, evidence = recorded
+    empty = evidence.clear()
+    expected = bayesian_cohort(sensors, empty)(bars)
+    actual = bayesian_cohort(sensors, empty, alpha=alpha, beta=beta)(bars)
+    assert actual == expected
+    sensor = sensors[1]
+    single = bayesian_cohort([sensor], empty, alpha=alpha, beta=beta)(bars)
+    assert any(row.prediction == 1 for row in sensor(bars))
+    assert [row.prediction for row in single] == [row.prediction for row in sensor(bars)]
+
+
 @pytest.mark.parametrize('alpha,beta', [(0, 1), (-1, 1), (1, 0), (1, float('nan')),
                                         (float('inf'), 1), (True, 1), (1e308, 1e308)])
 def test_bayesian_invalid_priors(recorded, alpha, beta):

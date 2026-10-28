@@ -60,7 +60,7 @@ def inventory(root: Path):
         if not names:
             continue
         module = '.'.join((source.parent if source.name == '__init__.py' else source.with_suffix('')).relative_to(root).parts)
-        interfaces = (['python'] if module in ('limen.backtest.observed_costs', 'limen.backtest.short_flat_strategy') else ['compiled']
+        interfaces = (['python'] if module in ('limen.backtest.observed_costs', 'limen.backtest.short_flat_strategy', 'limen.cohort.bayesian') else ['compiled']
                       if module.startswith(('limen.cli', 'limen.yaml', 'limen.sfd.foundational_sfd', 'limen.sfd.reference_architecture.meta_allocation', 'limen.sfd.reference_architecture.direction_sizing', 'limen.targets.trade_outcome')) or module in ('limen.sfd', 'limen.experiment.holdout') else ['python', 'compiled'])
         reference = next(directory / 'README.md' for directory in source.parents if (directory / 'README.md').is_file())
         if module == 'limen':
@@ -76,6 +76,8 @@ def inventory(root: Path):
                      'limen.targets': ['TradeOutcomeTarget']}
         if module in overrides:
             exports[module]['interface_overrides'] = dict.fromkeys(overrides[module], ['compiled'])
+        if module == 'limen.cohort':
+            exports[module]['interface_overrides'] = {'bayesian_cohort': ['python']}
     registries = {}
     for name, (source, symbol, reference, interfaces, scenario) in REGISTRIES.items():
         value = assignment(ast.parse((root / source).read_text()), symbol)

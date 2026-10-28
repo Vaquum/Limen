@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import datetime
-from math import fsum, isfinite
+from fractions import Fraction
+from math import isfinite
 from typing import cast
 
 import polars as pl
@@ -55,24 +56,26 @@ def bayesian_cohort(sensors: Sequence[Sensor], evidence: pl.DataFrame, *,
     identities = [cast(PythonSensorBase[object, object, object], member).state_id for member in members]
     if set(admitted['sensor_id'].to_list()) - set(identities):
         raise ValueError('Bayesian evidence names an unknown Sensor')
-    weights: list[float] = []
+    weights: list[Fraction] = []
+    prior_correct, prior_incorrect = Fraction(alpha), Fraction(beta)
     cutoffs = [baseline.selection_cutoff]
     for identity, member in zip(identities, members, strict=True):
         rows = admitted.filter(pl.col('sensor_id') == identity)
         cutoff = cast(PythonSensorBase[object, object, object], member).selection_cutoff
         if rows.filter(pl.col('datetime') < cutoff).height:
             raise ValueError(f'Bayesian evidence for {identity} is inside its Sensor selection history')
-        correct = rows.select((pl.col('prediction') == pl.col('outcome')).sum()).item()
-        weights.append((alpha + correct) / (alpha + beta + rows.height))
+        correct = cast(int, rows.select((pl.col('prediction') == pl.col('outcome')).sum()).item())
+        weights.append((prior_correct + correct) / (prior_correct + prior_incorrect + rows.height))
         if rows.height:
             cutoffs.append(cast(datetime, rows['available_at'].max()))
     frozen_weights = tuple(weights)
+    total = sum(frozen_weights, Fraction())
 
     def aggregate(bars: Sequence[BarPrediction]) -> tuple[int, None]:
         if any(bar.prediction not in (0, 1) for bar in bars):
             raise ValueError('Bayesian Cohort predictions must be binary')
-        positive = fsum(weight for weight, bar in zip(frozen_weights, bars, strict=True) if bar.prediction == 1)
-        return int(positive > fsum(frozen_weights) / 2), None
+        positive = sum((weight for weight, bar in zip(frozen_weights, bars, strict=True) if bar.prediction == 1), Fraction())
+        return int(2 * positive > total), None
 
     return Cohort.from_python(members, aggregate=aggregate, prepare=prepare,
                               state_id=baseline.state_id, selection_cutoff=max(cutoffs))

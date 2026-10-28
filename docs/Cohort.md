@@ -91,6 +91,12 @@ required history context when trimming completed prefixes.
 
 ## Bayesian reliability voting
 
+<!-- reference: cohort-bayesian-api source=limen/cohort/bayesian.py region=signature:bayesian_cohort role=signature -->
+```python
+def bayesian_cohort(sensors: Sequence[Sensor], evidence: pl.DataFrame, *, alpha: float=1.0, beta: float=1.0, prepare: CohortPrepare[HistoryT] | None=None, state_id: str | None=None, selection_cutoff: datetime | None=None) -> PythonCohortBase[HistoryT]:
+    ...
+```
+
 `limen.cohort.bayesian_cohort(sensors, evidence, alpha=1.0, beta=1.0)` constructs
 the existing live Python Cohort with a fixed reliability-weighted binary vote.
 Supply compatible Python Sensors with explicit matching output IDs. The evidence
