@@ -1,9 +1,9 @@
 from limen.sfd.reference_architecture.tabpfn_binary import TABPFN_MODEL_PATH
 
-__all__: list[str] = []
+__all__ = ['model_params']
 
 
-def _tabpfn_params() -> dict[str, list[object]]:
+def model_params() -> dict[str, list[object]]:
     return {
         'n_ensemble_configurations': [4, 8],
         'device': ['cpu'],

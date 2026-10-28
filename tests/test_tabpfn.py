@@ -56,3 +56,48 @@ def test_tabpfn(tmp_path):
     differences = probabilities[truth == 1, None] - probabilities[truth == 0]
     auc = np.mean((differences > 0) + 0.5 * (differences == 0))
     np.testing.assert_allclose(loop.experiment_log['auc'][0], auc, atol=1e-12)
+
+
+def test_tabpfn_compiled_parameters(tmp_path):
+    if os.getenv('LIMEN_RUN_TABPFN_MODEL_TEST') != '1':
+        pytest.skip('Set LIMEN_RUN_TABPFN_MODEL_TEST=1 for the real TabPFN CPU test')
+
+    import json
+    from ruamel.yaml import YAML
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.yaml.compiler import CompiledSFD
+
+    root = Path(__file__).resolve().parents[1]
+    source = root / 'tests/fixtures/spot_15m_20250101_20250531.parquet'
+    config = YAML(typ='safe').load(root / 'docs/examples/compiled-research/tabpfn.yaml')
+    config['sfd']['manifest']['data_source']['params']['file_path_or_url'] = str(source)
+    selected = {'softmax_temperature': 1.1, 'balance_probabilities': True,
+                'average_before_softmax': True, 'random_state': 7}
+    config['sfd']['params'].update({name: [value] for name, value in selected.items()})
+    sfd = CompiledSFD(config)
+    loop = UniversalExperimentLoop(sfd=sfd,
+             search_strategy=GridStrategy(ParamDomain(sfd.params())),
+             experiment_dir=tmp_path, yaml_reference=config)
+    loop.run('compiled-tabpfn', n_permutations=1, prep_each_round=True,
+             post_processing=True, progress_bar=False)
+
+    assert loop.experiment_log.height == len(loop.models) == 1
+    assert loop.experiment_log['strict_mode_error'].null_count() == 1
+    assert isinstance(loop.models[0], TabPFNBinary)
+    for name, value in selected.items():
+        assert loop.models[0].model.get_params()[name] == value
+        assert loop.round_params[0][name] == value
+        assert loop.experiment_log[name][0] == value
+    saved = json.loads((tmp_path / 'metadata.json').read_text())
+    for name, value in selected.items():
+        assert saved['yaml_reference']['sfd']['params'][name] == [value]
+    prepared = loop.manifest.prepare_data(loop.data, loop.round_params[0])
+    predicted = loop.models[0].predict(prepared)
+    truth = np.asarray(prepared['y_test'])
+    assert set(truth) == {0, 1}
+    assert np.isfinite(predicted['_probs']).all()
+    assert ((predicted['_probs'] >= 0) & (predicted['_probs'] <= 1)).all()
+    assert loop.experiment_log['accuracy'][0] == float(np.mean(truth == predicted['_preds']))
+    differences = predicted['_probs'][truth == 1, None] - predicted['_probs'][truth == 0]
+    np.testing.assert_allclose(loop.experiment_log['auc'][0], np.mean((differences > 0) + 0.5 * (differences == 0)), atol=1e-12)
