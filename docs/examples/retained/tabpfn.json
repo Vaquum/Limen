@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T15:45:18.232860+00:00",
-  "execution_checkout_head": "1f3ccde8e5e256e62b59fbfeda605a7f47013aeb",
+  "observed_at": "2026-10-28T15:49:44.510982+00:00",
+  "execution_checkout_head": "db2ee12e63b13ae4fbf7a91fe9f0b1d0722818d2",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -462,7 +462,7 @@
     "scalers/registry.py": "a45ba915c2b092d5e9765865cd566e635047a761939c223a5736154385684da7",
     "scalers/robust_scaler.py": "80e0c94e1973982b37fe783d96997ee26cc2d30bdf9a0778d56831065fcca1ab",
     "sfd/__init__.py": "589b805b16a2104e7409654b9d00d5775fa3d56bf78b4cb058a29e991a3a342a",
-    "sfd/foundational_sfd/__init__.py": "0e7d6b3974e22779bafe442e14289cd4327343d0ab1dfe94cb6841bd1d4516e3",
+    "sfd/foundational_sfd/__init__.py": "4883b7c9e70c097a0a5b1f109963c88ce3460c5e9343b75771abe3a7a9d89e68",
     "sfd/foundational_sfd/_tabpfn_params.py": "0a1cca0990f83c209b6978ab6b97eaea210783ec888fd13c8f43d0cdd1152320",
     "sfd/foundational_sfd/_xgboost_features.py": "5aa38b64fc43c072b1e6103f56afe25bd35b34f57fe0e62c47504af5cb8649cc",
     "sfd/foundational_sfd/common_strategies.py": "8e8daf8e2c66538860e08d8785ab29b727e07fe9a1002704a8693e407591f2ff",
