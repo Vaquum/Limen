@@ -13,6 +13,7 @@ from typing_extensions import override
 from limen.sfd.reference_architecture._pseudo_pool import load_pool
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
+from limen.targets.next_bar_up import NextBarUpTarget
 
 __all__ = ['PseudoLabelBinary', 'pseudo_label_binary', 'recorded_rows']
 _FloatArray = npt.NDArray[np.float64]
@@ -68,6 +69,9 @@ class PseudoLabelBinary(ReferenceModel):
         fitted = cast(dict[str, object], data.get('_fitted_params', {}))
         if params or 'holdout' in data or any(not key.startswith('_target_cls_') for key in fitted) or any(data.get(key) is not None for key in ('_scaler', '_pca')):
             raise ValueError('PseudoLabelBinary requires unscaled raw windows outside protected holdout research')
+        targets = [value for key, value in fitted.items() if key.startswith('_target_cls_')]
+        if len(targets) != 1 or type(targets[0]) is not NextBarUpTarget:
+            raise ValueError('PseudoLabelBinary requires fitted NextBarUpTarget labels with one-bar availability')
         if type(observation_interval_seconds) is not int or observation_interval_seconds <= 0:
             raise ValueError('PseudoLabelBinary requires a positive integer observation interval')
         if not _THRESHOLD < confidence_threshold <= 1:

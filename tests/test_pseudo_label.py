@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 from importlib import import_module
 import inspect
@@ -177,3 +177,19 @@ def test_pool_fit_consumes_the_exact_bytes_whose_identity_was_verified(recorded,
     model = PseudoLabelBinary().train(data, **(_controls(params) | {'pool_path': str(pool)}))
     assert model._provenance['linkage_pseudo_rows'] == 6
     assert model._provenance['linkage_pool_sha256'] == params['pool_sha256']
+
+
+def test_pseudo_rejects_labels_available_after_the_declared_training_cutoff(recorded):
+    from limen.targets import ThresholdBinaryTarget
+    bars, params, original = recorded
+    manifest = foundational.manifest().with_target_label('next_close_up', ThresholdBinaryTarget,
+        fit_params={'source_column': 'ret_1', 'threshold': 0.}, transform_params={'shift': -5})
+    data = manifest.prepare_data(bars, params)
+    cutoff = datetime(2024, 1, 9, 23, tzinfo=timezone.utc)
+    assert data['_linkage_rows']['train']['datetime'].max() + timedelta(hours=6) > cutoff
+    unsafe = _controls(params) | {'pool_start': '2024-01-09T20:00:00+00:00',
+        'pool_end': cutoff.isoformat(), 'training_cutoff': cutoff.isoformat(), 'confidence_threshold': .500001}
+    with pytest.raises(ValueError, match='NextBarUpTarget'):
+        PseudoLabelBinary().train(data, **unsafe)
+    with pytest.raises(ValueError, match='NextBarUpTarget'):
+        PseudoLabelBinary().train(original | {'_fitted_params': {}}, **_controls(params))

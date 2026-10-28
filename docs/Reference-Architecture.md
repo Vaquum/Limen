@@ -713,6 +713,9 @@ boundaries and reconstruction; they do not establish predictive or trading benef
 
 ## `PseudoLabelBinary`
 
+This bounded link requires fitted `NextBarUpTarget` labels. Other targets and
+unverified label horizons are rejected; prepare data through the matching manifest.
+
 `pseudo_label_binary` fits an upstream logistic classifier only on observed
 training labels. It predicts a supplied pool of real recorded observations,
 selects confidence `max(p, 1-p) >= confidence_threshold`, and fits the downstream
