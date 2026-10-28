@@ -104,7 +104,7 @@ def test_weight_link_native_source_provenance_and_reconstruction(tmp_path, recor
 
 
 def test_weight_link_controls_reject_unavailable_rows_and_global_scaling(recorded):
-    _, _, data = recorded
+    bars, params, data = recorded
     config = YAML(typ='safe').load(ROOT / 'limen/yaml/templates/weight_link_binary.yaml')
     controls = set(inspect.signature(weight_link_binary).parameters) - {'data'}
     assert validate(config).valid and controls <= config['sfd']['params'].keys() and controls <= foundational.params().keys()
@@ -115,6 +115,10 @@ def test_weight_link_controls_reject_unavailable_rows_and_global_scaling(recorde
         WeightLinkedBinary().train({key:value for key,value in data.items() if key != '_linkage_rows'})
     with pytest.raises(ValueError, match='observation interval'):
         WeightLinkedBinary().train(data | {'_linkage_rows': data['_linkage_rows'] | {'train':data['_linkage_rows']['train'].reverse()}})
+    from limen.scalers import RobustScaler
+    custom = foundational.manifest().set_scaler(RobustScaler, param_name='custom_scaler').prepare_data(bars, params)
+    with pytest.raises(ValueError, match='unscaled'):
+        WeightLinkedBinary().train(custom)
     with pytest.raises(ValueError, match='unscaled'):
         WeightLinkedBinary().train(data | {'_scaler': object()})
     with pytest.raises(ValueError, match='calibration'):

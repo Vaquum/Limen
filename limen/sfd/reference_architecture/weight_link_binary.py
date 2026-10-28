@@ -66,7 +66,8 @@ class WeightLinkedBinary(ReferenceModel):
               downstream_params: dict[str, object] | None = None, n_splits: int = 3,
               weight_floor: float = .1, weight_power: float = 1.,
               observation_interval_seconds: int = 3600, **params: object) -> 'WeightLinkedBinary':
-        if params or any(data.get(key) is not None for key in ('_scaler', '_pca')):
+        fitted = cast(dict[str, object], data.get('_fitted_params', {}))
+        if params or any(data.get(key) is not None for key in ('_scaler', '_pca')) or any(not key.startswith('_target_cls_') for key in fitted):
             raise ValueError('WeightLinkedBinary requires its declared controls and unscaled raw return windows')
         if not 0 < weight_floor <= 1 or not np.isfinite(weight_power) or weight_power <= 0:
             raise ValueError('WeightLinkedBinary requires 0 < weight_floor <= 1 and finite positive weight_power')
