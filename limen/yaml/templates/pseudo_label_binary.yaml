@@ -1,0 +1,69 @@
+schema_version: '1.0'
+metadata:
+  name: pseudo_label_binary_experiment
+  limen_version: 5.46.2
+  mode: development
+  description: Explicit pseudo-label training with recoverable provenance
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-10'
+      val_start: '2024-01-18'
+      val_end: '2024-01-20'
+      test_start: '2024-01-20'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: '{lookback_end}'
+    target:
+      name: next_close_up
+      class: limen.targets.NextBarUpTarget
+    strict_mode: true
+    reference_architecture: limen.sfd.reference_architecture.pseudo_label_binary
+    data_dict_extension:
+      func: limen.sfd.reference_architecture.pseudo_label_binary.recorded_rows
+  params:
+    lookback_end:
+    - 23
+    pool_path:
+    - inputs/spot_1h_20240101_20241231.parquet
+    pool_sha256:
+    - a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72
+    pool_start:
+    - '2024-01-10T00:00:00+00:00'
+    pool_end:
+    - '2024-01-15T00:00:00+00:00'
+    training_cutoff:
+    - '2024-01-15T00:00:00+00:00'
+    observation_interval_seconds:
+    - 3600
+    confidence_threshold:
+    - 0.7
+    - 0.8
+    upstream_params:
+    - C: 1000.0
+      max_iter: 500
+    - C: 2000.0
+      max_iter: 500
+    downstream_params:
+    - C: 0.5
+    - C: 1.0
+uel:
+  n_permutations: 8
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv

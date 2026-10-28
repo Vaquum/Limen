@@ -5078,5 +5078,85 @@
     "source": "limen/sfd/reference_architecture/feature_link_binary.py",
     "symbol": "recorded_rows",
     "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.pseudo_label_binary": {
+    "source": "limen/sfd/foundational_sfd/pseudo_label_binary.py",
+    "symbol": "pseudo_label_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.pseudo_label_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/pseudo_label_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.pseudo_label_binary.params": {
+    "source": "limen/sfd/foundational_sfd/pseudo_label_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.PseudoLabelBinary": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.PseudoLabelBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.PseudoLabelBinary.train": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.PseudoLabelBinary.predict": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.PseudoLabelBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "pseudo_label_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.train": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.predict": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "PseudoLabelBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary.pseudo_label_binary": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "pseudo_label_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.pseudo_label_binary.recorded_rows": {
+    "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+    "symbol": "recorded_rows",
+    "role": "signature"
   }
 }
