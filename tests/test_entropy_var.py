@@ -42,7 +42,8 @@ def test_recorded_entropy_quantile_and_independent_losses(recorded, quantile, fi
     np.testing.assert_allclose(model._entropy(data['x_train']), _entropy(data['x_train']), atol=1e-15)
     expected = _entropy(data['x_test'])[:, 0] * native.coef_[0] + native.intercept_
     np.testing.assert_allclose(result['_preds'], expected, atol=1e-12)
-    truth = np.asarray(data['y_test']); residual = truth - expected
+    truth = np.asarray(data['y_test'])
+    residual = truth - expected
     np.testing.assert_allclose(result['pinball_loss'], np.mean([quantile * r if r >= 0 else (quantile - 1) * r for r in residual]))
     assert result['violation_rate'] == float(np.mean(truth < expected))
     assert not any(key.startswith(('confusion_', 'backtest_')) for key in result)
@@ -68,10 +69,10 @@ def test_entropy_compiled_recording_and_continuous_reconstruction(tmp_path, reco
              record_model_outputs=True, recording={'predictions': True, 'alignment': True})
     assert loop.experiment_log.height == 1 and loop.experiment_log['strict_mode_error'].null_count() == 1
     record = json.loads(_round_storage.text(_round_storage.round_path(tmp_path)).splitlines()[0])
-    assert 'pinball_loss' in record and 'violation_rate' in record
+    assert {'pinball_loss', 'violation_rate'} <= set(loop.experiment_log.columns)
     sensor = Trainer(tmp_path, data=bars).train([record['round_id']])[0]
     rows = sensor.predict_all(bars)
-    assert sensor.model.inference_output == ('continuous', False)
+    assert sensor._model.inference_output == ('continuous', False)
     actionable = [row for row in rows if row.reason is None]
     assert actionable and all(row.probability is None for row in actionable)
     assert all(np.isfinite(row.prediction) for row in actionable)

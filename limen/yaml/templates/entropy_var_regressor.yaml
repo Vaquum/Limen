@@ -11,7 +11,6 @@ sfd:
       method: limen.data.HistoricalData.get_spot_klines
       params:
         kline_size: 3600
-        start_date_limit: '2024-01-01'
         row_count_limit: 2048
     split_dates:
       train_start: '2024-01-01'
