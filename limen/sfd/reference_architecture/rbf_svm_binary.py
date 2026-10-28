@@ -40,8 +40,8 @@ class RBFSVMBinary(ReferenceModel):
         super().__init__()
         self.model = _svc({})
         self.prediction_calibration_config = prediction_calibration_config
-        self._calibrator: _ProbabilityModel | None = None
-        self._threshold = _DEFAULT_THRESHOLD
+        self._fitted_calibrator: _ProbabilityModel | None = None
+        self._calibration_threshold = _DEFAULT_THRESHOLD
         self._val_score: float | None = None
 
     @override
@@ -54,22 +54,22 @@ class RBFSVMBinary(ReferenceModel):
         calibrated = self.prediction_calibration_config is not None and self.prediction_calibration_config.calibration_func is not None
         self.model = _svc(params)
         _ = self.model.fit(data['x_train'] if calibrated else np.asarray(data['x_train']), y)
-        self._calibrator, self._threshold, self._val_score = None, _DEFAULT_THRESHOLD, None
+        self._fitted_calibrator, self._calibration_threshold, self._val_score = None, _DEFAULT_THRESHOLD, None
         return self
 
     @override
     def predict(self, data: dict[str, object]) -> dict[str, object]:
         config = self.prediction_calibration_config
         if config is not None:
-            if self._calibrator is None:
-                fitted, self._threshold, self._val_score = fit_calibrator(
+            if self._fitted_calibrator is None:
+                fitted, self._calibration_threshold, self._val_score = fit_calibrator(
                     self.model, config, cast(_FloatArray | pl.DataFrame, data['x_val']),
                     cast(_BinaryArray | pl.Series, data['y_val']))
-                self._calibrator = cast(_ProbabilityModel, fitted)
+                self._fitted_calibrator = cast(_ProbabilityModel, fitted)
             frame = np.asarray(data['x_test']) if config.calibration_func is None else data['x_test']
-            probability = self._calibrator.predict_proba(frame)[:, 1]
-            return {'_preds': (probability >= self._threshold).astype(np.int8), '_probs': probability,
-                    'optimal_threshold': self._threshold, 'val_score': self._val_score}
+            probability = self._fitted_calibrator.predict_proba(frame)[:, 1]
+            return {'_preds': (probability >= self._calibration_threshold).astype(np.int8), '_probs': probability,
+                    'optimal_threshold': self._calibration_threshold, 'val_score': self._val_score}
         frame = np.asarray(data['x_test'])
         probability = self.model.predict_proba(frame)[:, 1]
         return {'_preds': (probability > _DEFAULT_THRESHOLD).astype(np.int8), '_probs': probability}

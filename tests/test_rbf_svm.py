@@ -105,3 +105,49 @@ def test_svc_template_covers_its_architecture():
     controls = set(inspect.signature(rbf_svm_binary).parameters) - {'data', 'prediction_calibration_config'}
     assert controls <= config['sfd']['params'].keys()
     assert build_search_strategy(config).domain.total_combinations <= 10000
+
+
+def test_svc_objective_restores_target_free_calibrator():
+    from sklearn.calibration import CalibratedClassifierCV
+
+    from limen.backtest.execution_events import with_predictions
+    from limen.backtest.trade_execution import trade_execution
+    from tests.test_experiment_objective import COLUMN, _prepared, objective_config
+
+    config = objective_config()
+    config['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.rbf_svm_binary'
+    config['sfd']['params']['random_state'] = [42]
+    manifest, params, data = _prepared(config)
+    result = manifest.run_model(data, params)
+    model = result['_model']
+    assert isinstance(model._fitted_calibrator, CalibratedClassifierCV)
+    validation = model.predict({'x_test': data['x_val']})
+    context = data['_trade_context']
+    expected = trade_execution(with_predictions(context.partitions[1], validation['_preds']), context.policy)
+    assert result[COLUMN] == expected.metrics['total_return']
+    np.testing.assert_array_equal(model.predict({'x_test': data['x_test']})['_preds'], result['_preds'])
+
+
+def test_svc_fold_records_and_verifies_fitted_threshold(tmp_path):
+    from limen.experiment import _round_storage
+    from limen.inference.errors import ReconstructionError
+    from tests.fold_components import FULL, config as fold_config
+
+    source = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'
+    bars = pl.read_parquet(source, n_rows=432)
+    config = fold_config('anchored', source)
+    config['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.rbf_svm_binary'
+    config['sfd']['manifest']['split_walk_forward']['n_folds'] = 2
+    config['sfd']['params'] = {'C': [1.0], 'random_state': [42]}
+    loop = UniversalExperimentLoop(sfd=CompiledSFD(config), data=bars, experiment_dir=tmp_path,
+                                   search_strategy=build_search_strategy(config), yaml_reference=config)
+    loop.run('svc_fold', n_permutations=1, prep_each_round=True, progress_bar=False, recording=FULL)
+    record = json.loads(_round_storage.text(_round_storage.round_path(tmp_path)).splitlines()[0])
+    witness = record['folds'][0]['fold_promotion']
+    assert witness['fitted_threshold'] == 0.5
+    trainer = Trainer(tmp_path, data=bars)
+    sensor = trainer.train([record['round_id']], fold=0)[0]
+    assert sensor.fold_provenance['fold_witness']['fitted_threshold'] == witness['fitted_threshold']
+    trainer._round_data[record['round_id']]['folds'][0]['fold_promotion']['fitted_threshold'] += 0.01
+    with pytest.raises(ReconstructionError, match='fitted threshold changed'):
+        trainer.train([record['round_id']], fold=0)
