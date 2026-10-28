@@ -598,7 +598,28 @@
         "entry_point": "limen.cohort",
         "names": [
           "BUILTIN_SELECTORS",
-          "Cohort"
+          "Cohort",
+          "bayesian_cohort"
+        ],
+        "reference": "limen/cohort/README.md",
+        "interface_overrides": {
+          "bayesian_cohort": [
+            "python"
+          ]
+        }
+      },
+      "limen.cohort.bayesian": {
+        "interfaces": [
+          "python"
+        ],
+        "project_context": [
+          "python/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/cohort/bayesian.py",
+        "entry_point": "limen.cohort.bayesian",
+        "names": [
+          "bayesian_cohort"
         ],
         "reference": "limen/cohort/README.md"
       },

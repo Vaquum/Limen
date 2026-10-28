@@ -4613,5 +4613,15 @@
     "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
     "symbol": "rbf_svm_binary",
     "role": "signature"
+  },
+  "limen.cohort.bayesian_cohort": {
+    "source": "limen/cohort/bayesian.py",
+    "symbol": "bayesian_cohort",
+    "role": "signature"
+  },
+  "limen.cohort.bayesian.bayesian_cohort": {
+    "source": "limen/cohort/bayesian.py",
+    "symbol": "bayesian_cohort",
+    "role": "signature"
   }
 }

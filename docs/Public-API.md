@@ -911,6 +911,8 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.predict`](Public-API.md#limensfdreference_architecturerbfsvmbinarypredict) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
 | [`limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.evaluate`](Public-API.md#limensfdreference_architecturerbfsvmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
 | [`limen.sfd.reference_architecture.rbf_svm_binary.rbf_svm_binary`](Public-API.md#limensfdreference_architecturerbf_svm_binary) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.cohort.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
+| [`limen.cohort.bayesian.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
 
 ## Additional component contracts
 
