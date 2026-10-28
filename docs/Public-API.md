@@ -4714,7 +4714,6 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 
 Collect YAML errors and warnings; validity requires no errors.
 
-
 ### `limen.sfd.foundational_sfd.rbf_svm_binary.manifest`
 
 <!-- reference: public-limen-sfd-foundational-sfd-rbf-svm-binary-manifest source=limen/sfd/foundational_sfd/rbf_svm_binary.py region=signature:manifest role=signature -->
