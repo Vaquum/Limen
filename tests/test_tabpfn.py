@@ -73,7 +73,9 @@ def test_tabpfn_compiled_parameters(tmp_path):
     config = YAML(typ='safe').load(root / 'docs/examples/compiled-research/tabpfn.yaml')
     config['sfd']['manifest']['data_source']['params']['file_path_or_url'] = str(source)
     selected = {'softmax_temperature': 1.1, 'balance_probabilities': True,
-                'average_before_softmax': True, 'random_state': 7}
+                'average_before_softmax': True, 'random_state': 7,
+                'categorical_features_indices': [0],
+                'inference_config': {'OUTLIER_REMOVAL_STD': 2.5}}
     config['sfd']['params'].update({name: [value] for name, value in selected.items()})
     sfd = CompiledSFD(config)
     loop = UniversalExperimentLoop(sfd=sfd,
@@ -88,7 +90,8 @@ def test_tabpfn_compiled_parameters(tmp_path):
     for name, value in selected.items():
         assert loop.models[0].model.get_params()[name] == value
         assert loop.round_params[0][name] == value
-        assert loop.experiment_log[name][0] == value
+        if not isinstance(value, (list, dict)):
+            assert loop.experiment_log[name][0] == value
     saved = json.loads((tmp_path / 'metadata.json').read_text())
     for name, value in selected.items():
         assert saved['yaml_reference']['sfd']['params'][name] == [value]
