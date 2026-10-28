@@ -31,6 +31,7 @@ These terms apply to the [Python project](examples/python-research/README.md), t
 | `Log` | Analysis wrapper over an experiment log and retained round artifacts. |
 | benchmark | Outcome analysis of retained research results. Confusion metrics and advisory walk-forward selection reports have different evidence requirements; neither creates statistical acceptance or an independent leaderboard. |
 | backtest | Evaluation under an explicit trading policy. Limen offers a snapshot ledger and an event execution engine; Python callers can supply their own backtester. State the execution assumptions and measured units. |
+| short/flat snapshot | Explicit binary short-return approximation through `short_flat_strategy`; [Backtest](Backtest.md#explicit-shortflat-snapshots) defines fills, costs and exclusions. |
 
 ## Observation and decision boundaries
 
