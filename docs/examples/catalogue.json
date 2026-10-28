@@ -194,6 +194,11 @@
       "interface": "compiled",
       "scenario": "search",
       "configuration": "docs/examples/compiled-research/family_lstm_binary.yaml"
+    },
+    "residual_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_residual_regressor.yaml"
     }
   },
   "recorded_inputs": {
@@ -1581,6 +1586,7 @@
           "lstm_binary",
           "random_binary",
           "rbf_svm_binary",
+          "residual_regressor",
           "ridge_regressor",
           "rule_based",
           "tabpfn_binary",
@@ -1706,6 +1712,7 @@
           "RBFSVMBinary",
           "RandomBinary",
           "ReferenceModel",
+          "ResidualRegressor",
           "RidgeRegressor",
           "RuleBasedStrategy",
           "TabPFNBinary",
@@ -1718,6 +1725,7 @@
           "lstm_binary",
           "random_binary",
           "rbf_svm_binary",
+          "residual_regressor",
           "ridge_regressor",
           "rule_based",
           "tabpfn_binary",
@@ -2053,6 +2061,40 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
+      },
+      "limen.sfd.foundational_sfd.residual_regressor": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/residual_regressor.py",
+        "entry_point": "limen.sfd.foundational_sfd.residual_regressor",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture.residual_regressor": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/residual_regressor.py",
+        "entry_point": "limen.sfd.reference_architecture.residual_regressor",
+        "names": [
+          "ResidualRegressor",
+          "residual_regressor"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
       }
     },
     "registries": {
