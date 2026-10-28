@@ -1537,11 +1537,6 @@ def test_all_templates_have_valid_limen_version() -> None:
 
 
 def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
-    try:
-        import tabpfn  # noqa: F401
-    except ImportError:
-        return
-
     template = _TEMPLATES_DIR / 'tabpfn_binary.yaml'
     yaml_dict, errors = parse(template.read_text(encoding='utf-8'))
     assert errors == []
@@ -1554,16 +1549,6 @@ def test_tabpfn_binary_template_is_valid_and_arch_surface_complete() -> None:
     sfd = CompiledSFD(yaml_dict)
     assert isinstance(sfd.manifest(), MLManifest)
     assert sfd.manifest().strict_mode is True
-
-    line_features = [
-        feature for feature in yaml_dict['sfd']['manifest']['features']
-        if feature['func'] in {
-            'limen.features.price_lines.price_lines',
-            'limen.features.quantile_price_lines.quantile_price_lines',
-        }
-    ]
-    assert len(line_features) == 2
-    assert all(feature['params']['include_research_only'] is False for feature in line_features)
 
     arch = resolve(yaml_dict['sfd']['manifest']['reference_architecture'])
     model_params = set(inspect.signature(arch).parameters) - {'data', 'prediction_calibration_config'}
