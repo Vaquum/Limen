@@ -821,7 +821,7 @@
     "limen/experiment/_factorized_contract.py": "c816d2f1a02f29f3fb9c392877192925754879d7a1796fe51cc47a126b952fff",
     "limen/experiment/_holdout_freeze.py": "d5497fba94e2c1133c3551b8387418ee276ddda1c27fb6b9b764101037c4aca3",
     "limen/experiment/_holdout_history.py": "9ca37e2a7d5806b5998934e6e2b29f85c8c50a8ba4c6ce900fa4c1e62ac6fc72",
-    "limen/experiment/_objective.py": "02c8168118274f2703c55654223af8b6c81e27b1481fe72b5aa46b136bfd6ac6",
+    "limen/experiment/_objective.py": "2fd627560398f21e04e0a9d3d12007f81d375b30bce2bcacf72f68030336da40",
     "limen/experiment/_recording.py": "5a151647c025736a71386d37070af8f606d9eb9e6be74befc5eb68a9526373bd",
     "limen/experiment/_required_columns.py": "2cd675b12f7cba92d43866fec12d17d167fb6e91a6efae1f28019f5f5a751945",
     "limen/experiment/_resolve_backtest_config.py": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f",
