@@ -66,7 +66,8 @@ class FeatureLinkedBinary(ReferenceModel):
     def train(self, data: dict[str, object], *, upstream_params: dict[str, object] | None = None,
               downstream_params: dict[str, object] | None = None, n_splits: int = 3,
               observation_interval_seconds: int = 3600, **params: object) -> 'FeatureLinkedBinary':
-        if params or any(data.get(key) is not None for key in ('_scaler', '_pca')):
+        fitted = cast(dict[str, object], data.get('_fitted_params', {}))
+        if params or any(data.get(key) is not None for key in ('_scaler', '_pca')) or any(not key.startswith('_target_cls_') for key in fitted):
             raise ValueError('FeatureLinkedBinary requires its declared controls and unscaled raw return windows')
         if type(observation_interval_seconds) is not int or observation_interval_seconds <= 0:
             raise ValueError('FeatureLinkedBinary requires a positive integer observation interval')

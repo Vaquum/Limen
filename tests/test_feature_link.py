@@ -115,6 +115,9 @@ def test_feature_controls_and_fit_boundary_guards(recorded):
         FeatureLinkedBinary().train({key:value for key,value in data.items() if key != '_linkage_rows'})
     with pytest.raises(ValueError,match='observation interval'):
         FeatureLinkedBinary().train(data | {'_linkage_rows':data['_linkage_rows'] | {'train':data['_linkage_rows']['train'].reverse()}})
+    custom = foundational.manifest().set_scaler(RobustScaler, param_name='custom_scaler').prepare_data(bars, params)
+    with pytest.raises(ValueError,match='unscaled'):
+        FeatureLinkedBinary().train(custom)
     scaled = foundational.manifest().set_scaler(RobustScaler).prepare_data(bars,params)
     with pytest.raises(ValueError,match='unscaled'):
         FeatureLinkedBinary().train(scaled)
