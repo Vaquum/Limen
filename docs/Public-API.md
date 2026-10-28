@@ -958,6 +958,21 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.predict`](Public-API.md#limensfdreference_architectureresidualregressorpredict) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
 | [`limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.evaluate`](Public-API.md#limensfdreference_architectureresidualregressorevaluate) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
 | [`limen.sfd.reference_architecture.residual_regressor.residual_regressor`](Public-API.md#limensfdreference_architectureresidual_regressor) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| `limen.sfd.foundational_sfd.cnn1d_binary` | `module` | `limen/sfd/foundational_sfd/cnn1d_binary.py` |
+| [`limen.sfd.foundational_sfd.cnn1d_binary.manifest`](Public-API.md#limensfdfoundational_sfdcnn1d_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/cnn1d_binary.py` |
+| [`limen.sfd.foundational_sfd.cnn1d_binary.params`](Public-API.md#limensfdfoundational_sfdcnn1d_binaryparams) | `signature` | `limen/sfd/foundational_sfd/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.CNN1DBinary`](Public-API.md#limensfdreference_architecturecnn1dbinary) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.CNN1DBinary.__init__`](Public-API.md#limensfdreference_architecturecnn1dbinary__init__) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.CNN1DBinary.train`](Public-API.md#limensfdreference_architecturecnn1dbinarytrain) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.CNN1DBinary.predict`](Public-API.md#limensfdreference_architecturecnn1dbinarypredict) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.CNN1DBinary.evaluate`](Public-API.md#limensfdreference_architecturecnn1dbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.cnn1d_binary`](Public-API.md#limensfdreference_architecturecnn1d_binary) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary`](Public-API.md#limensfdreference_architecturecnn1dbinary) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.__init__`](Public-API.md#limensfdreference_architecturecnn1dbinary__init__) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.train`](Public-API.md#limensfdreference_architecturecnn1dbinarytrain) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.predict`](Public-API.md#limensfdreference_architecturecnn1dbinarypredict) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.evaluate`](Public-API.md#limensfdreference_architecturecnn1dbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
+| [`limen.sfd.reference_architecture.cnn1d_binary.cnn1d_binary`](Public-API.md#limensfdreference_architecturecnn1d_binary) | `signature` | `limen/sfd/reference_architecture/cnn1d_binary.py` |
 
 ## Additional component contracts
 
@@ -4913,7 +4928,7 @@ def params() -> dict[str, list[object]]:
 
 <!-- reference: public-limen-sfd-reference-architecture-lstmbinary source=limen/sfd/reference_architecture/lstm_binary.py region=signature:LSTMBinary role=signature -->
 ```python
-class LSTMBinary(ReferenceModel):
+class LSTMBinary(WindowBinary):
     ...
 ```
 
@@ -5024,5 +5039,72 @@ def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[s
 <!-- reference: public-limen-sfd-reference-architecture-residual-regressor source=limen/sfd/reference_architecture/residual_regressor.py region=signature:residual_regressor role=signature -->
 ```python
 def residual_regressor(data: dict[str, object], ridge_params: dict[str, object] | None=None, xgboost_params: dict[str, object] | None=None, correction_scale: float=1.0) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.cnn1d_binary.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-cnn1d-binary-manifest source=limen/sfd/foundational_sfd/cnn1d_binary.py region=signature:manifest role=signature -->
+```python
+def manifest() -> Manifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.cnn1d_binary.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-cnn1d-binary-params source=limen/sfd/foundational_sfd/cnn1d_binary.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.CNN1DBinary`
+
+<!-- reference: public-limen-sfd-reference-architecture-cnn1dbinary source=limen/sfd/reference_architecture/cnn1d_binary.py region=signature:CNN1DBinary role=signature -->
+```python
+class CNN1DBinary(WindowBinary):
+    ...
+```
+
+### `limen.sfd.reference_architecture.CNN1DBinary.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-cnn1dbinary---init-- source=limen/sfd/reference_architecture/cnn1d_binary.py region=signature:CNN1DBinary.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.CNN1DBinary.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-cnn1dbinary-train source=limen/sfd/reference_architecture/cnn1d_binary.py region=signature:CNN1DBinary.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], *, epochs: int=10, batch_size: int=64, learning_rate: float=0.01, weight_decay: float=0.0, betas: tuple[float, float]=(0.9, 0.999), eps: float=1e-08, random_state: int=42, **params: object) -> 'CNN1DBinary':
+    ...
+```
+
+### `limen.sfd.reference_architecture.CNN1DBinary.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-cnn1dbinary-predict source=limen/sfd/reference_architecture/cnn1d_binary.py region=signature:CNN1DBinary.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.CNN1DBinary.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-cnn1dbinary-evaluate source=limen/sfd/reference_architecture/cnn1d_binary.py region=signature:CNN1DBinary.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.cnn1d_binary`
+
+<!-- reference: public-limen-sfd-reference-architecture-cnn1d-binary source=limen/sfd/reference_architecture/cnn1d_binary.py region=signature:cnn1d_binary role=signature -->
+```python
+def cnn1d_binary(data: dict[str, object], out_channels: int=8, conv_layers: int=1, kernel_size: int=3, stride: int=1, dilation: int=1, bias: bool=True, activation: str='relu', pooling: str='mean', dropout: float=0.0, epochs: int=10, batch_size: int=64, learning_rate: float=0.01, weight_decay: float=0.0, betas: tuple[float, float]=(0.9, 0.999), eps: float=1e-08, random_state: int=42) -> dict[str, object]:
     ...
 ```
