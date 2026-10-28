@@ -35,15 +35,13 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    'common_strategies', 'dlinear_regressor', 'feature_link_binary',
-    'dollar_bar_crash_reversal',
-    'gaussian_hmm_binary',
-    'lightgbm_binary',
+    'common_strategies', 'dlinear_regressor', 'dollar_bar_crash_reversal', 'feature_link_binary', 'gaussian_hmm_binary', 'lightgbm_binary',
     'logreg_binary',
     'lstm_binary',
     'random_binary',
     'rbf_svm_binary',
-    'residual_regressor', 'ridge_regressor',
+    'residual_regressor',
+    'ridge_regressor',
     'rule_based',
     'tabpfn_binary',
     'xgboost_regressor',

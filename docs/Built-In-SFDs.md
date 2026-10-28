@@ -24,6 +24,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `lstm_binary` | binary next-return sign | bounded CPU temporal classifier; requires `neural` |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `residual_regressor` | regression | Ridge plus an XGBoost correction trained on observed errors; requires `boosting` |
+| `feature_link_binary` | binary next-return sign | chronological upstream probabilities appended to downstream inputs |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
@@ -160,7 +161,8 @@ limen run --no-progress-bar \
   compiled-research/family_rbf_svm_binary.yaml \
   compiled-research/family_gaussian_hmm_binary.yaml \
   compiled-research/family_lstm_binary.yaml \
-  compiled-research/family_residual_regressor.yaml
+  compiled-research/family_residual_regressor.yaml \
+  compiled-research/family_feature_link_binary.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
@@ -265,3 +267,11 @@ train-fitted robust scaling. The dated YAML template exposes nested component
 controls and correction scale over eight combinations. See
 [Reference Architecture](Reference-Architecture.md#residualregressor) for
 residual targets, optional observed validation, addition and log provenance.
+
+## `feature_link_binary`
+
+The native SFD supplies bounded hourly observations, 12/24-bar raw return
+windows and recorded row times. The dated YAML template exposes eight
+combinations of lookback and upstream/downstream regularization. See
+[Reference Architecture](Reference-Architecture.md#featurelinkedbinary) for
+out-of-sample features, availability and retained inference.

@@ -13,7 +13,7 @@ from typing_extensions import override
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 
-__all__ = ['FeatureLinkedBinary', 'recorded_rows', 'feature_link_binary']
+__all__ = ['FeatureLinkedBinary', 'feature_link_binary', 'recorded_rows']
 _FloatArray = npt.NDArray[np.float64]
 _IndexArray = npt.NDArray[np.int64]
 _MATRIX_DIMENSIONS = 2
@@ -110,7 +110,7 @@ class FeatureLinkedBinary(ReferenceModel):
         self.downstream = LogRegBinary().train({'x_train': augmented, 'y_train': truth[covered]}, **configurations[1])
         self._provenance = {'linkage_kind': 'feature', 'linkage_components': 'LogRegBinary -> LogRegBinary',
             'linkage_training_rows': len(truth), 'linkage_downstream_rows': len(covered),
-            'linkage_columns': json.dumps(self._columns + ['upstream_probability']), 'linkage_features_sha256': _digest(features),
+            'linkage_columns': json.dumps([*self._columns, 'upstream_probability']), 'linkage_features_sha256': _digest(features),
             'linkage_observed_sha256': _digest(truth), 'linkage_row_times_sha256': _digest(times, '<i8'),
             'linkage_downstream_indices_sha256': _digest(covered, '<i8'),
             'linkage_oof_sha256': _digest(out_of_sample[covered]), 'linkage_augmented_sha256': _digest(augmented),
