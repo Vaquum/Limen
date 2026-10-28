@@ -6,6 +6,7 @@ from typing import Any
 
 
 _LAZY_EXPORTS = {
+    'entropy_var_regressor': ('limen.sfd.foundational_sfd.entropy_var_regressor', None),
     'common_strategies': ('limen.sfd.foundational_sfd.common_strategies', None),
     'dlinear_regressor': ('limen.sfd.foundational_sfd.dlinear_regressor', None),
     'dollar_bar_crash_reversal': (
@@ -24,6 +25,7 @@ _LAZY_EXPORTS = {
 
 
 if TYPE_CHECKING:
+    from limen.sfd.foundational_sfd import entropy_var_regressor
     from limen.sfd.foundational_sfd import common_strategies, dlinear_regressor, dollar_bar_crash_reversal
     from limen.sfd.foundational_sfd import lightgbm_binary, logreg_binary
     from limen.sfd.foundational_sfd import random_binary
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    'entropy_var_regressor',
     'common_strategies',
     'dlinear_regressor',
     'dollar_bar_crash_reversal',
