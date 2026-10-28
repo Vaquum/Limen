@@ -896,6 +896,21 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.yaml.resolve`](Public-API.md#limenyamlresolve) | `signature` | `limen/yaml/resolver.py` |
 | [`limen.yaml.resolve_manifest_uri`](Public-API.md#limenyamlresolve_manifest_uri) | `signature` | `limen/yaml/store.py` |
 | [`limen.yaml.validate`](Public-API.md#limenyamlvalidate) | `signature` | `limen/yaml/validator.py` |
+| `limen.sfd.foundational_sfd.rbf_svm_binary` | `module` | `limen/sfd/foundational_sfd/rbf_svm_binary.py` |
+| [`limen.sfd.foundational_sfd.rbf_svm_binary.manifest`](Public-API.md#limensfdfoundational_sfdrbf_svm_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/rbf_svm_binary.py` |
+| [`limen.sfd.foundational_sfd.rbf_svm_binary.params`](Public-API.md#limensfdfoundational_sfdrbf_svm_binaryparams) | `signature` | `limen/sfd/foundational_sfd/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.RBFSVMBinary`](Public-API.md#limensfdreference_architecturerbfsvmbinary) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.RBFSVMBinary.__init__`](Public-API.md#limensfdreference_architecturerbfsvmbinary__init__) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.RBFSVMBinary.train`](Public-API.md#limensfdreference_architecturerbfsvmbinarytrain) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.RBFSVMBinary.predict`](Public-API.md#limensfdreference_architecturerbfsvmbinarypredict) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.RBFSVMBinary.evaluate`](Public-API.md#limensfdreference_architecturerbfsvmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.rbf_svm_binary`](Public-API.md#limensfdreference_architecturerbf_svm_binary) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary`](Public-API.md#limensfdreference_architecturerbfsvmbinary) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.__init__`](Public-API.md#limensfdreference_architecturerbfsvmbinary__init__) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.train`](Public-API.md#limensfdreference_architecturerbfsvmbinarytrain) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.predict`](Public-API.md#limensfdreference_architecturerbfsvmbinarypredict) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.evaluate`](Public-API.md#limensfdreference_architecturerbfsvmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
+| [`limen.sfd.reference_architecture.rbf_svm_binary.rbf_svm_binary`](Public-API.md#limensfdreference_architecturerbf_svm_binary) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
 | [`limen.cohort.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
 | [`limen.cohort.bayesian.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
 
@@ -4698,3 +4713,70 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 ```
 
 Collect YAML errors and warnings; validity requires no errors.
+
+### `limen.sfd.foundational_sfd.rbf_svm_binary.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-rbf-svm-binary-manifest source=limen/sfd/foundational_sfd/rbf_svm_binary.py region=signature:manifest role=signature -->
+```python
+def manifest() -> Manifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.rbf_svm_binary.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-rbf-svm-binary-params source=limen/sfd/foundational_sfd/rbf_svm_binary.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.RBFSVMBinary`
+
+<!-- reference: public-limen-sfd-reference-architecture-rbfsvmbinary source=limen/sfd/reference_architecture/rbf_svm_binary.py region=signature:RBFSVMBinary role=signature -->
+```python
+class RBFSVMBinary(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.RBFSVMBinary.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-rbfsvmbinary---init-- source=limen/sfd/reference_architecture/rbf_svm_binary.py region=signature:RBFSVMBinary.__init__ role=signature -->
+```python
+def __init__(self, prediction_calibration_config: 'CalibrationConfig | None'=None) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.RBFSVMBinary.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-rbfsvmbinary-train source=limen/sfd/reference_architecture/rbf_svm_binary.py region=signature:RBFSVMBinary.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], **params: object) -> 'RBFSVMBinary':
+    ...
+```
+
+### `limen.sfd.reference_architecture.RBFSVMBinary.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-rbfsvmbinary-predict source=limen/sfd/reference_architecture/rbf_svm_binary.py region=signature:RBFSVMBinary.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.RBFSVMBinary.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-rbfsvmbinary-evaluate source=limen/sfd/reference_architecture/rbf_svm_binary.py region=signature:RBFSVMBinary.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.rbf_svm_binary`
+
+<!-- reference: public-limen-sfd-reference-architecture-rbf-svm-binary source=limen/sfd/reference_architecture/rbf_svm_binary.py region=signature:rbf_svm_binary role=signature -->
+```python
+def rbf_svm_binary(data: dict[str, object], C: float=1.0, gamma: str | float='scale', shrinking: bool=True, tol: float=0.001, cache_size: float=200, class_weight: str | dict[int, float] | None=None, verbose: bool=False, max_iter: int=-1, random_state: int | None=42, prediction_calibration_config: 'CalibrationConfig | None'=None) -> dict[str, object]:
+    ...
+```

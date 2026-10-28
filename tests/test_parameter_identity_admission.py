@@ -176,7 +176,11 @@ def test_parsed_float_spellings_collide_at_the_second_choice():
 
 def test_all_shipped_seeded_sequences_match_recorded_observations():
     observation = json.loads((ROOT / 'tests/fixtures/search_identity_sequences.json').read_text())
-    assert len(observation['records']) == 27
+    expected = {(str(path.relative_to(ROOT)), strategy)
+                for path in (ROOT / 'limen/yaml/templates').glob('*.yaml')
+                for strategy in ('grid', 'random', 'sobol')}
+    assert len(observation['records']) == len(expected)
+    assert {(record['template'], record['strategy']) for record in observation['records']} == expected
     for record in observation['records']:
         config, errors = parse(ROOT / record['template'])
         assert not errors

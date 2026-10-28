@@ -510,3 +510,33 @@ For signed sizing, elapsed exits, recorded execution clocks and funding configur
 The compiled manifest's `with_allocation(method, params)` adds a research allocator around its original primary. The native method is `limen.sfd.reference_architecture.meta_allocation.meta_allocation`; a second allocation declaration rejects. Factory callables follow `direction_sizing`'s source-bound estimator pattern. See [Backtest](Backtest.md#learned-allocation-around-a-primary) for fitting, cost and exposure semantics.
 
 Prepared data exposes `_allocation_batches['val']` and `['test']`. The fitted model accepts `model.predict({'allocation_batch': batch})` without targets or outcomes. `AllocationBatch` binds full partition bounds, original ordered source IDs and availability, target-free primary inputs, named numeric meta features and decision-time stop/readiness values. Reordered, changed or truncated batches reject. This is not an incremental future-window inference protocol.
+
+## RBF SVM binary classifier
+
+`RBFSVMBinary` / `rbf_svm_binary` fits sklearn SVC with `kernel='rbf'` and
+`probability=True`. It requires both numeric training classes 0 and 1, returns
+binary predictions and class-1 probabilities, and supports the standard optional
+validation calibration and threshold selection. Calibration is fitted once on
+validation data and retained for later target-free inference; refitting clears it.
+
+The public controls keep sklearn meanings: `C=1.0`, `gamma='scale'`,
+`shrinking=True`, `tol=0.001`, `cache_size=200` MiB, `class_weight=None`,
+`verbose=False`, `max_iter=-1` and `random_state=42`. Gamma also accepts `'auto'`
+or a nonnegative float. C is positive; max_iter=-1 removes the iteration limit.
+Backend validation and convergence warnings remain visible. Limen predicts 1
+above a class-1 probability of 0.5 unless validation calibration/thresholding is
+configured. SVC's native margin-based class prediction can differ; this adapter
+uses the probability decision rule so recorded probabilities reconstruct its decisions.
+
+The [official SVC contract](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html)
+describes at-least-quadratic fit scaling and extra probability-fit cost. A local
+one-thread recorded hourly Bitcoin probe with 23 features measured median cycle
+time 5.995s versus LogReg 0.219s at 5931 training rows (three repetitions; includes
+preparation, fit and prediction). This configuration-specific cost is not a
+performance or trading-benefit claim. [The research record](https://github.com/Vaquum/Limen/issues/297#issuecomment-6470247394)
+contains the smaller windows and configuration.
+
+The matching foundational SFD reuses LogReg preparation with SVM control domains
+and bounded native data requests. The shipped `rbf_svm_binary` template supplies
+every public control and a small dated experiment. The canonical compiled example
+is `docs/examples/compiled-research/family_rbf_svm_binary.yaml`.

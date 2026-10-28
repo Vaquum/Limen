@@ -205,7 +205,7 @@ def verify(interface, name, result, output, inputs):
                 assert row['id'] == original['id'] and row['accuracy'] == pytest.approx(original['accuracy'])
         verify_feedback(interface, result['feedback'], inputs)
         if interface == 'compiled':
-            assert set(result['families']) == {'ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'}
+            assert set(result['families']) == {'ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary'}
             raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')
             labels = raw.with_columns(((pl.col('close').shift(-1)/pl.col('close')-1)*100).alias('next_return'))
             for family, observed in result['families'].items():
@@ -227,6 +227,11 @@ def verify(interface, name, result, output, inputs):
                         assert metric['rmse'] == pytest.approx(expected_rmse, rel=1e-10, abs=1e-10)
                     elif family == 'random_binary':
                         assert set(predictions) == {0, 1} and 0 <= metric['accuracy'] <= 1
+                    elif family == 'rbf_svm_binary':
+                        alignment = record['alignment']
+                        rows = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))
+                        assert rows.height == predictions.size and set(predictions) <= {0, 1}
+                        assert metric['accuracy'] == pytest.approx(np.mean(predictions == (rows['next_return'].to_numpy() > 0)))
                     else:
                         assert np.abs(predictions).max() <= 1 and 0 <= metric['direction_accuracy'] <= 1
                         assert len(record['trade_contract_digest']) == 64 and record['learning_binding']
