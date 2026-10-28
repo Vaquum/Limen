@@ -579,5 +579,7 @@
   "limen/sfd/reference_architecture/gaussian_hmm_binary.py": 140,
   "limen/sfd/foundational_sfd/gaussian_hmm_binary.py": 40,
   "limen/sfd/reference_architecture/lstm_binary.py": 180,
-  "limen/sfd/foundational_sfd/lstm_binary.py": 40
+  "limen/sfd/foundational_sfd/lstm_binary.py": 40,
+  "limen/sfd/reference_architecture/weight_link_binary.py": 165,
+  "limen/sfd/foundational_sfd/weight_link_binary.py": 50
 }

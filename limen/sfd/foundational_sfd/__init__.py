@@ -6,6 +6,7 @@ from typing import Any
 
 
 _LAZY_EXPORTS = {
+    'weight_link_binary': ('limen.sfd.foundational_sfd.weight_link_binary', None),
     'common_strategies': ('limen.sfd.foundational_sfd.common_strategies', None),
     'dlinear_regressor': ('limen.sfd.foundational_sfd.dlinear_regressor', None),
     'dollar_bar_crash_reversal': ('limen.sfd.foundational_sfd.dollar_bar_crash_reversal', None),
@@ -23,6 +24,7 @@ _LAZY_EXPORTS = {
 
 
 if TYPE_CHECKING:
+    from limen.sfd.foundational_sfd import weight_link_binary
     from limen.sfd.foundational_sfd import common_strategies, dlinear_regressor, dollar_bar_crash_reversal
     from limen.sfd.foundational_sfd import gaussian_hmm_binary, lightgbm_binary, logreg_binary
     from limen.sfd.foundational_sfd import lstm_binary, random_binary, rbf_svm_binary
@@ -31,8 +33,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    'common_strategies',
-    'dlinear_regressor',
+    'common_strategies', 'dlinear_regressor',
     'dollar_bar_crash_reversal',
     'gaussian_hmm_binary',
     'lightgbm_binary',
@@ -43,7 +44,7 @@ __all__ = [
     'ridge_regressor',
     'rule_based',
     'tabpfn_binary',
-    'xgboost_regressor',
+    'weight_link_binary', 'xgboost_regressor',
 ]
 
 
