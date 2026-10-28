@@ -313,11 +313,17 @@ A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execu
 
 <!-- reference: backtest-snapshot source=limen/backtest/backtest_snapshot.py region=signature:backtest_snapshot role=signature -->
 ```python
-def backtest_snapshot(columns: Mapping[str, Any], *, pred_col: str='predictions', open_col: str='open', close_col: str='close', price_change_col: str='price_change', strategy: Callable[..., ExecutionResult]=long_flat_strategy, execution_lag_bars: int=1, fee_bps: float=5.0, slip_bps: float=5.0, notional_rate: float=1.0, take_profit_bps: float | None=None, stop_loss_bps: float | None=None, high_col: str='high', low_col: str='low') -> dict[str, float]:
+def backtest_snapshot(columns: Mapping[str, Any], *, pred_col: str='predictions', open_col: str='open', close_col: str='close', price_change_col: str='price_change', strategy: Callable[..., ExecutionResult]=long_flat_strategy, execution_lag_bars: int=1, fee_bps: float=5.0, slip_bps: float=5.0, notional_rate: float=1.0, take_profit_bps: float | None=None, stop_loss_bps: float | None=None, high_col: str='high', low_col: str='low', exit_col: str | None=None) -> dict[str, float]:
     ...
 ```
 
 The strategy owns its signal contract and fill mechanics. `backtest_snapshot()` applies `notional_rate` after the strategy returns, so position sizing remains a ledger-level scale rather than a strategy argument.
+
+### Independent binary exits
+
+Pass `exit_col` naming an aligned, nonmissing boolean column to opt into entry/hold/exit snapshots. Entry predictions remain binary. A false entry after opening leaves inventory held; a true exit closes it. After a closure or pending-entry cancellation, a strictly later false entry rearms, and a subsequent true entry can open again. An exit while flat vetoes that decision without consuming initial arming. Observations during a pending closure cannot queue re-entry or earn rearm credit.
+
+Explicit exits require the default long-flat strategy, complete finite positive prices and a positive integer lag. Exit decision row `e` with lag `L` closes at `close[e + L - 1]`, on the final held return row; barriers in that interval take priority at the existing snapshot fill price. Missing or ambiguous evidence raises. Omitted `exit_col` preserves the existing snapshot contract and its 20 ledger fields.
 
 ### Explicit short/flat snapshots
 
