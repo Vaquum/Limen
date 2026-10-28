@@ -377,13 +377,13 @@
         "scipy": "1.15.3"
       },
       "domain_cardinality": 16,
-      "observation_checkout": "58dd0030d007b9703bfce3fd30cf5c6e0642e14d",
+      "observation_checkout": "2ee46d4c8d5b24d26c193b5d4a5493f2b6255595",
       "seed": 42,
       "sequence_sha256": "e621fa01929013bd9365efc7d3e5c8bed8a90b24c6f2ee2f7d3a0edb34a1b219",
       "shuffle": true,
       "strategy": "grid",
       "template": "limen/yaml/templates/lstm_binary.yaml",
-      "template_sha256": "1a3f337e3e2df97d065a92bc5b4099b51d882e1fce1e076e5f7060bd6cb158e9"
+      "template_sha256": "42fc327a084c03d4c87c3cc14b6b1cb67db83bbec820a1de402e5f0af851b004"
     },
     {
       "count": 8,
@@ -392,13 +392,13 @@
         "scipy": "1.15.3"
       },
       "domain_cardinality": 16,
-      "observation_checkout": "58dd0030d007b9703bfce3fd30cf5c6e0642e14d",
+      "observation_checkout": "2ee46d4c8d5b24d26c193b5d4a5493f2b6255595",
       "seed": 42,
       "sequence_sha256": "d5c0da341c09bdcea69aeb284c91c228f8935bcff08f7485b24ce5e59439940e",
       "shuffle": false,
       "strategy": "random",
       "template": "limen/yaml/templates/lstm_binary.yaml",
-      "template_sha256": "1a3f337e3e2df97d065a92bc5b4099b51d882e1fce1e076e5f7060bd6cb158e9"
+      "template_sha256": "42fc327a084c03d4c87c3cc14b6b1cb67db83bbec820a1de402e5f0af851b004"
     },
     {
       "count": 8,
@@ -407,13 +407,13 @@
         "scipy": "1.15.3"
       },
       "domain_cardinality": 16,
-      "observation_checkout": "58dd0030d007b9703bfce3fd30cf5c6e0642e14d",
+      "observation_checkout": "2ee46d4c8d5b24d26c193b5d4a5493f2b6255595",
       "seed": 42,
       "sequence_sha256": "2bbf11793268fb3ca7898a985b67f3fc495c077d70f1843418de36554f8380df",
       "shuffle": false,
       "strategy": "sobol",
       "template": "limen/yaml/templates/lstm_binary.yaml",
-      "template_sha256": "1a3f337e3e2df97d065a92bc5b4099b51d882e1fce1e076e5f7060bd6cb158e9"
+      "template_sha256": "42fc327a084c03d4c87c3cc14b6b1cb67db83bbec820a1de402e5f0af851b004"
     }
   ]
 }
