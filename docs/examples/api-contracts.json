@@ -4924,6 +4924,81 @@
     "symbol": "cnn1d_binary",
     "role": "signature"
   },
+  "limen.sfd.foundational_sfd.entropy_var_regressor": {
+    "source": "limen/sfd/foundational_sfd/entropy_var_regressor.py",
+    "symbol": "entropy_var_regressor",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.entropy_var_regressor.manifest": {
+    "source": "limen/sfd/foundational_sfd/entropy_var_regressor.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.entropy_var_regressor.params": {
+    "source": "limen/sfd/foundational_sfd/entropy_var_regressor.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.EntropyVaRRegressor": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.EntropyVaRRegressor.__init__": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.EntropyVaRRegressor.train": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.EntropyVaRRegressor.predict": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.EntropyVaRRegressor.evaluate": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.entropy_var_regressor": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "entropy_var_regressor",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.__init__": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.train": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.predict": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.evaluate": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "EntropyVaRRegressor.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.entropy_var_regressor.entropy_var_regressor": {
+    "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+    "symbol": "entropy_var_regressor",
+    "role": "signature"
+  },
   "limen.sfd.foundational_sfd.weight_link_binary": {
     "source": "limen/sfd/foundational_sfd/weight_link_binary.py",
     "symbol": "weight_link_binary",

@@ -205,7 +205,7 @@ def verify(interface, name, result, output, inputs):
                 assert row['id'] == original['id'] and row['accuracy'] == pytest.approx(original['accuracy'])
         verify_feedback(interface, result['feedback'], inputs)
         if interface == 'compiled':
-            assert set(result['families']) == {'direction_sizing', 'dlinear_regressor', 'gaussian_hmm_binary', 'lstm_binary', 'random_binary', 'rbf_svm_binary', 'residual_regressor', 'ridge_regressor', 'xgboost_regressor', 'cnn1d_binary', 'weight_link_binary'}
+            assert set(result['families']) == {'direction_sizing', 'dlinear_regressor', 'gaussian_hmm_binary', 'lstm_binary', 'random_binary', 'rbf_svm_binary', 'residual_regressor', 'ridge_regressor', 'xgboost_regressor', 'cnn1d_binary', 'entropy_var_regressor', 'weight_link_binary'}
             raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')
             labels = raw.with_columns(((pl.col('close').shift(-1)/pl.col('close')-1)*100).alias('next_return'))
             for family, observed in result['families'].items():
@@ -221,10 +221,15 @@ def verify(interface, name, result, output, inputs):
                     assert metric['id'] == record['round_id'] and predictions.size > 300 and np.isfinite(predictions).all()
                     if family.endswith('_regressor'):
                         alignment = record['alignment']
-                        rows = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))
+                        horizon_labels = raw.with_columns(((pl.col('close').shift(-96) / pl.col('close') - 1) * 100).alias('next_return')) if family == 'entropy_var_regressor' else labels
+                        rows = horizon_labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))
                         assert rows.height == predictions.size
                         expected_rmse = float(np.sqrt(np.mean((predictions-rows['next_return'].to_numpy())**2)))
                         assert metric['rmse'] == pytest.approx(expected_rmse, rel=1e-10, abs=1e-10)
+                        if family == 'entropy_var_regressor':
+                            residual = rows['next_return'].to_numpy() - predictions
+                            assert metric['pinball_loss'] == pytest.approx(np.mean(np.maximum(.05 * residual, -.95 * residual)))
+                            assert metric['violation_rate'] == pytest.approx(np.mean(residual < 0))
                     elif family == 'random_binary':
                         assert set(predictions) == {0, 1} and 0 <= metric['accuracy'] <= 1
                     elif family in ('rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary', 'weight_link_binary'):
