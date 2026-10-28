@@ -118,6 +118,18 @@ def test_event_exit_cache_binds_each_ruleset_and_evidence():
     assert second.contract_digest == contract_digest(export_trade_contract(changed_policy, changed))
     assert first.episodes['closed_at_ns'][0] != second.episodes['closed_at_ns'][0]
     assert first.intents['intent_id'][0].split(':')[0] != second.intents['intent_id'][0].split(':')[0]
+    dynamic = replace(inputs, signals=inputs.signals.with_columns(pl.lit(1000.0).alias('entry_tp'), pl.lit(True).alias('__barrier_ready__')))
+    dynamic_policy = replace(policy, take_profit_bps_column='entry_tp', barrier_spec={'period': 6})
+    changed_dynamic_policy = replace(dynamic_policy, barrier_spec={'period': 12})
+    plan = event_plan(dynamic, dynamic_policy)
+    assert plan is event_plan(dynamic, changed_dynamic_policy)
+    base = replace(policy, exit_rules=None)
+    assert plan.binding == event_plan(replace(inputs, signals=inputs.signals.drop('exit')), base).binding
+    first_dynamic, second_dynamic = trade_execution(dynamic, dynamic_policy), trade_execution(dynamic, changed_dynamic_policy)
+    assert first_dynamic.contract_digest == contract_digest(export_trade_contract(dynamic_policy, dynamic))
+    assert second_dynamic.contract_digest == contract_digest(export_trade_contract(changed_dynamic_policy, dynamic))
+    assert first_dynamic.contract_digest != second_dynamic.contract_digest
+
 
 
 def test_event_exit_declaration_evidence_refusals():

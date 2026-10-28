@@ -77,7 +77,7 @@ def event_plan(inputs: TradeInputs, policy: TradePolicy, *, cache: bool = True) 
 
 def _binding(policy: TradePolicy, inputs: TradeInputs) -> str:
     if policy.exit_rules is not None:
-        policy, inputs = replace(policy, exit_rules=None), replace(inputs, signals=inputs.signals.drop('exit'))
+        policy, inputs = replace(policy, exit_rules=None, barrier_spec=None, take_profit_bps_column=None, stop_loss_bps_column=None), replace(inputs, signals=inputs.signals.drop('exit'))
     return contract_digest(export_trade_contract(policy, inputs))
 
 
