@@ -115,6 +115,9 @@ class RuleBasedStrategy(ReferenceModel):
 
         cost_kwargs = self._cost_kwargs(data)
         for split in ('train', 'val', 'test'):
+            if '_exit_rules' in data:
+                from limen.experiment._exit_rules import snapshot_exits
+                cost_kwargs['_exit_values'] = snapshot_exits(data, split)
             pos = self._resolve(cond_index[strategy['entry']], cond_index, data[split]).fill_null(False).to_numpy().astype(int)
             positions[split] = pos
             if split == 'test' and data.get('_record_execution'):
@@ -138,22 +141,8 @@ class RuleBasedStrategy(ReferenceModel):
                  condition: dict[str, Any],
                  cond_index: dict[str, dict[str, Any]],
                  df: pl.DataFrame) -> pl.Series:
-        if 'type' in condition:
-            return df[condition['id']]
-        operator = condition['operator']
-        if operator not in ('and', 'or', 'not'):
-            raise ValueError(f'Unknown logical operator: {operator!r}')
-        operands = [self._resolve(cond_index[op_id], cond_index, df) for op_id in condition.get('operands', [])]
-        if not operands:
-            raise ValueError(f'Compound condition {condition.get("id")!r} has no operands')
-        if operator == 'not':
-            if len(operands) != 1:
-                raise ValueError(f'NOT operator requires exactly 1 operand, got {len(operands)}')
-            return ~operands[0]
-        result = operands[0]
-        for s in operands[1:]:
-            result = result & s if operator == 'and' else result | s
-        return result
+        from limen.sfd.rule_based._conditions import resolve_condition
+        return resolve_condition(condition, cond_index, df)
 
     def _backtest_split(self,
                         df: pl.DataFrame,

@@ -1,3 +1,4 @@
+from limen.yaml._exit_rules_spec import apply_exit_rules
 from limen.experiment._source_contract import source_parameters
 from limen.yaml._backtest_spec import apply_backtest
 from limen.yaml._boolean_spec import admit_controls
@@ -125,6 +126,7 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
         _ = manifest.set_required_bar_columns(m['required_columns'])
 
     apply_backtest(manifest, m)
+    apply_exit_rules(manifest, m)
 
 
 def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:

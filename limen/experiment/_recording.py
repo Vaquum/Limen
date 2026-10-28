@@ -95,7 +95,7 @@ def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | No
     if policy is None or all(policy.values()):
         return dict(record)
     excluded = {field for setting, field in (
-        ('predictions', 'preds'), ('trade_ledger', 'trade_ledger'), ('fold_details', 'folds'), ('fold_details', 'fold_promotion'),
+        ('predictions', 'preds'), ('alignment', 'exit_evidence'), ('trade_ledger', 'trade_ledger'), ('fold_details', 'folds'), ('fold_details', 'fold_promotion'),
     ) if not policy[setting]}
     projected = {key: value for key, value in record.items() if key not in excluded}
     for name, fields in (('alignment', ('missing_datetimes', 'test_datetimes')), ('trade_contract', ('signal_rows',))):

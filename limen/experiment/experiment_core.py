@@ -1032,7 +1032,7 @@ class UniversalExperimentLoop:
             'sfd_module': self._sfd_module_name, **self._round_error_policy.metadata,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(), 'round_storage': _storage.FORMAT,
-        }, context_parameter_keys=context_parameter_keys)
+        }, context_parameter_keys=context_parameter_keys, manifest=self.manifest)
         if self._record_execution:
             metadata['record_execution'] = True
         if self._record_model_outputs:
@@ -1108,7 +1108,7 @@ class UniversalExperimentLoop:
             '_round_index': round_index,
             'round_params': round_params,
             'preds': preds.tolist() if hasattr(preds, 'tolist') else list(preds),
-            **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout') if key in alignment},
+            **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout', 'exit_rules', 'exit_evidence_digest', 'exit_evidence') if key in alignment},
             'alignment': {
                 'missing_datetimes': [
                     dt.isoformat()
@@ -1163,7 +1163,7 @@ class UniversalExperimentLoop:
                     self.round_params.append(entry['round_params'])
                     self.preds.append(entry['preds'])
                     self._alignment.append({
-                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout') if key in entry},
+                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout', 'exit_rules', 'exit_evidence_digest', 'exit_evidence') if key in entry},
                         'missing_datetimes': [
                             datetime.fromisoformat(dt)
                             for dt in entry['alignment']['missing_datetimes']

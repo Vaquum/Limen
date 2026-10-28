@@ -3,7 +3,7 @@ import numbers
 import numpy as np
 import numpy.typing as npt
 
-from limen.backtest._long_flat_tp_sl import _level
+from limen.backtest._long_flat_tp_sl import barrier_level
 from limen.backtest.long_flat_strategy import ExecutionResult, long_flat_strategy
 
 __all__ = ['explicit_exit_strategy']
@@ -35,8 +35,8 @@ def explicit_exit_strategy(
     for row in range(pred.size):
         if entry_ready == row:
             active, entry_ready = True, None
-            take = _level(float(close_px[row - 1]), take_profit_bps, 'take_profit_bps')
-            stop = _level(float(close_px[row - 1]), stop_loss_bps, 'stop_loss_bps')
+            take = barrier_level(float(close_px[row - 1]), take_profit_bps, 'take_profit_bps')
+            stop = barrier_level(float(close_px[row - 1]), stop_loss_bps, 'stop_loss_bps')
         if active:
             held[row] = 1
             price = _barrier_price(float(open_px[row]), high_px, low_px, row, take, stop)

@@ -329,6 +329,8 @@ The strategy owns its signal contract and fill mechanics. `backtest_snapshot()` 
 
 ### Independent binary exits
 
+[Manifest and YAML exits](Experiment-Manifest.md#independent-exit-rules) use this execution path. Event execution prioritizes barriers (SL before TP), timeout, rule exit, then entry. Higher-priority triggers replace a pending lower-priority close and its readiness; a lagged rule exit cannot delay a barrier or timeout. Entry cancellation occurs immediately at decision availability. Held positions keep normal funding and actual-fill costs. Tier-1 rule counts and `_preds` continue to describe entries.
+
 Pass `exit_col` naming an aligned, nonmissing boolean column to opt into entry/hold/exit snapshots. Entry predictions remain binary. A false entry after opening leaves inventory held; a true exit closes it. After a closure or pending-entry cancellation, a strictly later false entry rearms, and a subsequent true entry can open again. An exit while flat vetoes that decision without consuming initial arming. Observations during a pending closure cannot queue re-entry or earn rearm credit.
 
 Explicit exits require the default long-flat strategy, complete finite positive prices and a positive integer lag. Exit decision row `e` with lag `L` closes at `close[e + L - 1]`, on the final held return row; barriers in that interval take priority at the existing snapshot fill price. Missing or ambiguous evidence raises. Omitted `exit_col` preserves the existing snapshot contract and its 20 ledger fields.
@@ -446,6 +448,7 @@ class TradePolicy:
     barrier_spec: Mapping[str, JsonValue] | None = None
     source_interval_seconds: float | None = None
     source_timestamp_role: Literal['start', 'end'] | None = None
+    exit_rules: Mapping[str, JsonValue] | None = None
 ```
 
 <!-- reference: backtest-fundingpolicy source=limen/backtest/trade_contract.py region=signature:FundingPolicy role=signature -->

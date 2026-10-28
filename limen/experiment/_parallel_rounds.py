@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from limen.experiment._exit_rules import admit_run, declaration
+
 import copy
 import json
 import logging
@@ -76,6 +78,7 @@ def begin_run(host: object, workers: int | None, prep_each_round: bool, resume: 
     directory = cast(Path | None, attributes['_experiment_dir'])
     path = directory / 'metadata.json' if directory is not None else None
     metadata: dict[str, object] = json.loads(path.read_text()) if resume and path is not None and path.exists() else {}
+    admit_run(attributes['manifest'], metadata, resume=resume, factorize=factorize)
     effective = cast(int, metadata.get('workers', 1)) if workers is None else workers
     if resume and (effective != metadata.get('workers', 1) or metadata.get('worker_native_threads', 1) != 1):
         raise ValueError('Cannot resume with a different worker or native-thread policy')
@@ -88,7 +91,8 @@ def begin_run(host: object, workers: int | None, prep_each_round: bool, resume: 
     return cast(_RoundFunction | None, attributes['prep']), cast(_RoundFunction | None, attributes['model'])
 
 
-def worker_metadata(workers: int, metadata: dict[str, object], *, context_parameter_keys: list[str] | None = None) -> dict[str, object]:
+def worker_metadata(workers: int, metadata: dict[str, object], *, context_parameter_keys: list[str] | None = None, manifest: object = None) -> dict[str, object]:
+    metadata['exit_rules_declaration'] = declaration(manifest)
     if workers > 1:
         metadata.update(workers=workers, worker_native_threads=1, context_parameter_keys=context_parameter_keys or [])
     return metadata

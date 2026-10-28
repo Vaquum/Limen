@@ -35,6 +35,8 @@ def snapshot_backtest_round(
     from limen.experiment._resolve_backtest_config import configured_barriers as _configured_barriers
     from limen.sfd.reference_architecture._backtest_evaluation import execution_options as _execution_options
 
+    from limen.experiment._exit_rules import snapshot_exits, verify_replay
+
     manifest = cast(_ReplayManifest | None, getattr(log, 'manifest', None))
     alignment_rows = cast(list[dict[str, object]], getattr(log, '_alignment', []))
     if round_id < len(alignment_rows) and 'trade_contract' in alignment_rows[round_id]:
@@ -47,6 +49,7 @@ def snapshot_backtest_round(
         if manifest is None or not isinstance(inputs, TradeInputs) or not isinstance(policy, TradePolicy):
             raise ValueError('File-only/resumed configured Log replay requires original bound source context')
         fresh = manifest.prepare_data(log.data, dict(log.round_params[round_id]))
+        verify_replay(alignment, fresh)
         digest = contract_digest(export_trade_contract(policy, inputs))
         if digest != alignment.get('trade_contract_digest') or digest != fresh.get('trade_contract_digest'):
             raise ValueError('Trade rules or source identity changed during replay')
@@ -55,7 +58,11 @@ def snapshot_backtest_round(
     if manifest is not None and dynamic_barriers(manifest.backtest_config):
         raise ValueError('Dynamic Log replay requires original bound distance context')
     resolved = manifest.resolve_backtest_config(log.round_params[round_id]) if manifest is not None else {}
-    if manifest is not None and _configured_barriers(manifest.backtest_config):
+    prepared: dict[str, object] = {}
+    exits_enabled = getattr(manifest, 'exit_rules_config', None) is not None or (round_id < len(alignment_rows) and 'exit_rules' in alignment_rows[round_id])
+    if manifest is None and exits_enabled:
+        raise ValueError('Configured exit replay requires original bound source context')
+    if manifest is not None and (_configured_barriers(manifest.backtest_config) or exits_enabled):
         alignment = getattr(log, '_alignment', None)
         if not isinstance(alignment, list):
             raise ValueError('backtest provenance is required for configured replay')
@@ -68,17 +75,21 @@ def snapshot_backtest_round(
         predictions = log.preds[round_id]
         prices = _replay_prices(source, witness, len(cast(list[object], predictions)))
         prepared = manifest.prepare_data(log.data, dict(params))
+        if exits_enabled:
+            verify_replay(alignment_rows[round_id], prepared)
         fresh = _validate_witness(prepared.get('_backtest_provenance'))
         if fresh != witness:
             raise ValueError('backtest source identity changed during replay preparation')
-        perf = pl.DataFrame({'predictions': predictions, 'actuals': prepared['y_test']}).with_columns(
+        perf = pl.DataFrame({'predictions': predictions, 'actuals': prepared.get('y_test', [None] * len(cast(list[object], predictions)))}).with_columns(
             prices.select('open', 'high', 'low', 'close'),
         ).with_columns((pl.col('close') - pl.col('open')).alias('price_change'))
     else:
         perf = log.permutation_prediction_performance(round_id)
     perf = normalize(perf)
     columns = {col: perf[col].to_numpy() for col in ('predictions', 'open', 'high', 'low', 'close', 'price_change') if col in perf.columns}
-    return backtest_snapshot(columns, execution_lag_bars=1, **_execution_options(resolved))
+    if exits_enabled:
+        columns['exit'] = pl.Series(snapshot_exits(prepared)).to_numpy()
+    return backtest_snapshot(columns, execution_lag_bars=1, exit_col='exit' if exits_enabled else None, **_execution_options(resolved))
 
 
 __all__ = ['snapshot_backtest_round']

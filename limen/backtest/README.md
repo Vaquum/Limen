@@ -57,8 +57,10 @@ backtest/
 ├── _cost_statistics.py
 ├── _event_clock.py
 ├── _event_plan.py
+├── _exit_evidence.py
 ├── _explicit_exit_strategy.py
 ├── _long_flat_tp_sl.py
+├── _rule_exit_state.py
 ├── _snapshot_execution.py
 ├── _snapshot_ledger.py
 ├── _snapshot_signals.py

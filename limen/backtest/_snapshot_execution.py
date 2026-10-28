@@ -48,7 +48,7 @@ def snapshot_execution(
     stop_loss_bps = _validate_barrier('stop_loss_bps', stop_loss_bps)
     required_cols = (pred_col, open_col, close_col, price_change_col)
     if exit_col is not None:
-        if not isinstance(exit_col, str) or not exit_col:
+        if type(exit_col) is not str or not exit_col:
             raise ValueError('backtest_snapshot exit_col must be a nonempty column name')
         if strategy is not long_flat_strategy:
             raise ValueError('backtest_snapshot explicit exits require the default long-flat strategy')

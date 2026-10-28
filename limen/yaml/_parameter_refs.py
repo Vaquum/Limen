@@ -57,6 +57,13 @@ def native_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, objec
                     value = _mapping(condition).get(name)
                     if isinstance(value, str):
                         yield f'sfd.manifest.strategy.conditions[{index}].{name}', value, False
+    conditions = _mapping(manifest.get('exit_rules')).get('conditions')
+    if isinstance(conditions, list):
+        for index, condition in enumerate(cast(list[object], conditions)):
+            for name in ('column', 'other_column', 'value', 'lookback', 'persistence_n', 'recency_n', 'direction'):
+                value = _mapping(condition).get(name)
+                if isinstance(value, str):
+                    yield f'sfd.manifest.exit_rules.conditions[{index}].{name}', value, False
 
 
 def json_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, object]]:

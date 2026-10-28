@@ -10,7 +10,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.backtest.execution_events import validate_observations, with_predictions
+from limen.backtest.execution_events import SIGNAL_COLUMNS, validate_observations, with_predictions
 from limen.backtest.trade_contract import TradeInputs, TradePolicy, finite_number, source_binding
 from limen.backtest.trade_execution import trade_execution
 from limen.calibration.pipeline import CalibrationConfigProtocol
@@ -103,7 +103,7 @@ def prepare_objective(data: Mapping[str, object], architecture: object,
         (pl.col('start_ns') < end) & ((pl.col('available_at_ns') <= end) | causal_open)
     )
     sources = [source_binding(observations, 'objective:validation:execution', start, end, inputs.sources[0].precision_ns, 'causal_recorded_prices'),
-               source_binding(inputs.signals, 'objective:validation:model', start, end, inputs.sources[1].precision_ns, 'retained_model_rows')]
+               source_binding(inputs.signals.select(SIGNAL_COLUMNS), 'objective:validation:model', start, end, inputs.sources[1].precision_ns, 'retained_model_rows')]
     funding = inputs.funding_events
     if funding is not None:
         funding = funding.filter(

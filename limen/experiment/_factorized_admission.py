@@ -70,6 +70,8 @@ def _scaler(manifest: MLManifest, params: dict[str, object], axes: frozenset[str
 
 
 def validate_candidate(manifest: Manifest, params: dict[str, object], axes: frozenset[str]) -> ReuseContract:
+    if manifest.exit_rules_config is not None:
+        raise ValueError('factorize does not support explicit exits')
     use_calibration, use_threshold = manifest_controls(manifest, params)
     if type(manifest) not in (MLManifest, RuleBasedManifest) or any(name in vars(manifest) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
         raise ValueError('factorize requires the original manifest preparation and model methods')

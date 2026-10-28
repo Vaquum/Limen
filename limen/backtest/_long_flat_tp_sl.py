@@ -17,7 +17,7 @@ def validate_barrier(name: str, value: object) -> float | None:
     return float(value)
 
 
-def _level(entry: float, bps: float | None, name: str) -> float | None:
+def barrier_level(entry: float, bps: float | None, name: str) -> float | None:
     if bps is None:
         return None
     level = entry * (1 + bps / BPS_PER_UNIT) if name == 'take_profit_bps' else entry * (1 - bps / BPS_PER_UNIT)
@@ -49,8 +49,8 @@ def long_flat_tp_sl(
         elif armed:
             if not active:
                 entry = float(close_px[row - 1])
-                tp = _level(entry, take_profit_bps, 'take_profit_bps')
-                sl = _level(entry, stop_loss_bps, 'stop_loss_bps')
+                tp = barrier_level(entry, take_profit_bps, 'take_profit_bps')
+                sl = barrier_level(entry, stop_loss_bps, 'stop_loss_bps')
                 active = True
             held[row] = 1
             exit_price = None

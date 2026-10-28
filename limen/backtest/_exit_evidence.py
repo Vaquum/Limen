@@ -1,9 +1,12 @@
-from typing import cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, cast
 from collections.abc import Mapping
 
 import polars as pl
 
-from limen.backtest.trade_contract import JsonValue, TradeInputs, TradePolicy, json_value
+if TYPE_CHECKING:
+    from limen.backtest.trade_contract import JsonValue, TradeInputs, TradePolicy
 
 RULE_EXIT_VERSION = 'limen-rule-exit-v1'
 EXIT_SEMANTICS = 'entry_until_exit'
@@ -35,7 +38,7 @@ def evidence(signals: pl.DataFrame) -> dict[str, JsonValue]:
     selected = signals.select('row_id', 'available_at_ns', 'exit')
     if selected['row_id'].null_count() or selected['row_id'].is_duplicated().any():
         raise ValueError('Exit evidence requires unique nonmissing source identities')
-    return {'version': 'limen-rule-exit-evidence-v1', 'rows': cast(list[JsonValue], json_value(selected.to_dicts()))}
+    return {'version': 'limen-rule-exit-evidence-v1', 'rows': cast('list[JsonValue]', selected.to_dicts())}
 
 
 __all__: list[str] = []

@@ -18,6 +18,7 @@ import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
 from limen.experiment._objective_run import finalize_objective_result, restored_log, run_objective, validate_objective_resume
+from limen.experiment._exit_rules import verify_record
 from limen.experiment._parallel_commit import context_parameter_keys, failed_parameters
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
@@ -27,6 +28,8 @@ from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
+
+
 
 __all__ = ['restore_parallel']
 
@@ -65,6 +68,7 @@ def _values(value: object, name: str, length: int | None = None, *, nullable: bo
 
 
 def _evidence(record: Mapping[str, object], *, event: bool, snapshot: bool, execution: bool, outputs: bool) -> None:
+    verify_record(record)
     predictions = _values(record.get('preds'), 'predictions')
     if not predictions:
         raise ValueError('Cannot resume parallel run without predictions')
@@ -157,8 +161,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
-    _checkpoint_proof.validate_checkpoint(directory, checkpoint, metadata, _holdout.binding_of(manifest),
-                                            getattr(manifest, '_holdout_source', None), manifest, cast(pl.DataFrame, vars(host)['data']))
+    _checkpoint_proof.validate_checkpoint(directory, checkpoint, metadata, _holdout.binding_of(manifest), getattr(manifest, '_holdout_source', None), manifest, cast(pl.DataFrame, vars(host)['data']))
     frontier = _mapping(checkpoint['metadata'], 'checkpoint metadata')['experiment_round']
     if type(frontier) is not int or frontier < -1:
         raise ValueError('Cannot resume parallel run with invalid terminal frontier')

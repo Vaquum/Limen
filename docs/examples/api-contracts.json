@@ -4528,5 +4528,15 @@
     "source": "limen/yaml/validator.py",
     "symbol": "validate",
     "role": "signature"
+  },
+  "limen.Manifest.with_exit_rules": {
+    "source": "limen/experiment/_exit_rules.py",
+    "symbol": "with_exit_rules",
+    "role": "signature"
+  },
+  "limen.experiment.Manifest.with_exit_rules": {
+    "source": "limen/experiment/_exit_rules.py",
+    "symbol": "with_exit_rules",
+    "role": "signature"
   }
 }

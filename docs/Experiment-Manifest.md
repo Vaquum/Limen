@@ -1093,6 +1093,24 @@ selected columns upstream; their training evidence does not guarantee stationari
 
 Use `with_strategy()` when the strategy is expressed as boolean predicate logic over indicator columns — no Python model code required. This path is for rule-based SFDs only and produces a different `data_dict` shape than the ML path.
 
+### Independent exit rules
+
+`with_exit_rules(conditions, exit_root)` is inherited by `MLManifest` and `RuleBasedManifest`. It accepts the same threshold, relative, crossover, slope, temporal and boolean conditions as entry rules. Exit IDs form an independent namespace. Native conditions require `id`; YAML also requires `name`. Predicate arguments stay at the top level; `params` metadata is preserved. Exit SQL is refused.
+
+<!-- reference: manifest-independent-exits source=limen/experiment/_exit_rules.py region=signature:with_exit_rules role=signature -->
+```python
+def with_exit_rules(self: _TManifest, conditions: Sequence[Mapping[str, object]], exit_root: str) -> _TManifest:
+    ...
+```
+
+YAML places `conditions` and the `exit` root under `sfd.manifest.exit_rules` for either manifest type. [The runnable recorded-data example](examples/rule_exit.yaml) uses this shape. Run it from the repository root so its committed fixture path resolves.
+
+Exits evaluate privately immediately after declared features, before targets, shims, scaling and row trimming. They use existing split order and CCO history; retained decisions follow source identity after row selection. They add no features or context. Leaf nulls become false, so a NOT root can be true during warmup. Missing columns, targets used as exit inputs and ambiguous evidence fail.
+
+Configured binary entry=false holds inventory. The independent exit closes or cancels an entry; a strictly later false entry must rearm before another true entry can open. See [execution timing and priorities](Backtest.md#independent-binary-exits). Signed outputs, trade-outcome targets and factorization reject this combination. Custom manifest architectures must provide causal binary `_preds`; shared finalization applies the exits to their backtest results.
+
+Trainer/Sensor retain their entry-prediction role. Research exit execution does not establish deployed exit parity.
+
 ### `with_strategy(conditions, entry)`
 
 Configure a rule-based strategy from a list of condition config dicts and an entry signal id.
