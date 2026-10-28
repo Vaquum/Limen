@@ -184,11 +184,6 @@
     "symbol": "Manifest",
     "role": "signature"
   },
-  "limen.Manifest.with_exit_rules": {
-    "source": "limen/experiment/_exit_rules.py",
-    "symbol": "with_exit_rules",
-    "role": "signature"
-  },
   "limen.Manifest.set_data_source": {
     "source": "limen/experiment/manifest_core.py",
     "symbol": "Manifest.set_data_source",
@@ -624,6 +619,11 @@
     "symbol": "ExecutionResult",
     "role": "signature"
   },
+  "limen.backtest.short_flat_strategy.short_flat_strategy": {
+    "source": "limen/backtest/short_flat_strategy.py",
+    "symbol": "short_flat_strategy",
+    "role": "signature"
+  },
   "limen.backtest.long_flat_strategy.long_flat_strategy": {
     "source": "limen/backtest/long_flat_strategy.py",
     "symbol": "long_flat_strategy",
@@ -718,11 +718,6 @@
     "source": "limen/backtest/observed_costs.py",
     "symbol": "CostDisposition",
     "role": "definition"
-  },
-  "limen.backtest.short_flat_strategy.short_flat_strategy": {
-    "source": "limen/backtest/short_flat_strategy.py",
-    "symbol": "short_flat_strategy",
-    "role": "signature"
   },
   "limen.backtest.trade_contract.BPS": {
     "source": "limen/backtest/trade_contract.py",
@@ -902,16 +897,6 @@
   "limen.cohort.Cohort.predict_all": {
     "source": "limen/cohort/cohort.py",
     "symbol": "Cohort.predict_all",
-    "role": "signature"
-  },
-  "limen.cohort.bayesian_cohort": {
-    "source": "limen/cohort/bayesian.py",
-    "symbol": "bayesian_cohort",
-    "role": "signature"
-  },
-  "limen.cohort.bayesian.bayesian_cohort": {
-    "source": "limen/cohort/bayesian.py",
-    "symbol": "bayesian_cohort",
     "role": "signature"
   },
   "limen.cohort.sfc.BUILTIN_SELECTORS": {
@@ -1202,11 +1187,6 @@
   "limen.experiment.Manifest": {
     "source": "limen/experiment/manifest_core.py",
     "symbol": "Manifest",
-    "role": "signature"
-  },
-  "limen.experiment.Manifest.with_exit_rules": {
-    "source": "limen/experiment/_exit_rules.py",
-    "symbol": "with_exit_rules",
     "role": "signature"
   },
   "limen.experiment.Manifest.set_data_source": {
@@ -3494,11 +3474,6 @@
     "symbol": "xgboost_regressor",
     "role": "module"
   },
-  "limen.sfd.foundational_sfd.cnn1d_binary": {
-    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
-    "symbol": "cnn1d_binary",
-    "role": "module"
-  },
   "limen.sfd.foundational_sfd.common_strategies": {
     "source": "limen/sfd/foundational_sfd/common_strategies.py",
     "symbol": "common_strategies",
@@ -3514,11 +3489,6 @@
     "symbol": "dollar_bar_crash_reversal",
     "role": "module"
   },
-  "limen.sfd.foundational_sfd.gaussian_hmm_binary": {
-    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
-    "symbol": "gaussian_hmm_binary",
-    "role": "module"
-  },
   "limen.sfd.foundational_sfd.lightgbm_binary": {
     "source": "limen/sfd/foundational_sfd/lightgbm_binary.py",
     "symbol": "lightgbm_binary",
@@ -3529,24 +3499,9 @@
     "symbol": "logreg_binary",
     "role": "module"
   },
-  "limen.sfd.foundational_sfd.lstm_binary": {
-    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
-    "symbol": "lstm_binary",
-    "role": "module"
-  },
   "limen.sfd.foundational_sfd.random_binary": {
     "source": "limen/sfd/foundational_sfd/random_binary.py",
     "symbol": "random_binary",
-    "role": "module"
-  },
-  "limen.sfd.foundational_sfd.rbf_svm_binary": {
-    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
-    "symbol": "rbf_svm_binary",
-    "role": "module"
-  },
-  "limen.sfd.foundational_sfd.residual_regressor": {
-    "source": "limen/sfd/foundational_sfd/residual_regressor.py",
-    "symbol": "residual_regressor",
     "role": "module"
   },
   "limen.sfd.foundational_sfd.ridge_regressor": {
@@ -3569,16 +3524,6 @@
     "symbol": "xgboost_regressor",
     "role": "module"
   },
-  "limen.sfd.foundational_sfd.cnn1d_binary.manifest": {
-    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
-    "symbol": "manifest",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.cnn1d_binary.params": {
-    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
-    "symbol": "params",
-    "role": "signature"
-  },
   "limen.sfd.foundational_sfd.common_strategies.manifest": {
     "source": "limen/sfd/foundational_sfd/common_strategies.py",
     "symbol": "manifest",
@@ -3586,46 +3531,6 @@
   },
   "limen.sfd.foundational_sfd.common_strategies.params": {
     "source": "limen/sfd/foundational_sfd/common_strategies.py",
-    "symbol": "params",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.gaussian_hmm_binary.manifest": {
-    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
-    "symbol": "manifest",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.gaussian_hmm_binary.params": {
-    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
-    "symbol": "params",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.lstm_binary.manifest": {
-    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
-    "symbol": "manifest",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.lstm_binary.params": {
-    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
-    "symbol": "params",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.rbf_svm_binary.manifest": {
-    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
-    "symbol": "manifest",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.rbf_svm_binary.params": {
-    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
-    "symbol": "params",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.residual_regressor.manifest": {
-    "source": "limen/sfd/foundational_sfd/residual_regressor.py",
-    "symbol": "manifest",
-    "role": "signature"
-  },
-  "limen.sfd.foundational_sfd.residual_regressor.params": {
-    "source": "limen/sfd/foundational_sfd/residual_regressor.py",
     "symbol": "params",
     "role": "signature"
   },
@@ -3647,31 +3552,6 @@
   "limen.sfd.foundational_sfd.xgboost_regressor.params": {
     "source": "limen/sfd/foundational_sfd/xgboost_regressor.py",
     "symbol": "params",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.CNN1DBinary": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.CNN1DBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.CNN1DBinary.train": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.CNN1DBinary.predict": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.CNN1DBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.evaluate",
     "role": "signature"
   },
   "limen.sfd.reference_architecture.DLinearRegressor": {
@@ -3712,56 +3592,6 @@
   "limen.sfd.reference_architecture.DirectionSizingModel.evaluate": {
     "source": "limen/sfd/reference_architecture/direction_sizing.py",
     "symbol": "DirectionSizingModel.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.GaussianHMMBinary": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.GaussianHMMBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.GaussianHMMBinary.train": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.GaussianHMMBinary.predict": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.GaussianHMMBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.LSTMBinary": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.LSTMBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.LSTMBinary.train": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.LSTMBinary.predict": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.LSTMBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.evaluate",
     "role": "signature"
   },
   "limen.sfd.reference_architecture.LightGBMBinary": {
@@ -3814,31 +3644,6 @@
     "symbol": "LogRegBinary.evaluate",
     "role": "signature"
   },
-  "limen.sfd.reference_architecture.RBFSVMBinary": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.RBFSVMBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.RBFSVMBinary.train": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.RBFSVMBinary.predict": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.RBFSVMBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.evaluate",
-    "role": "signature"
-  },
   "limen.sfd.reference_architecture.RandomBinary": {
     "source": "limen/sfd/reference_architecture/random_binary.py",
     "symbol": "RandomBinary",
@@ -3887,31 +3692,6 @@
   "limen.sfd.reference_architecture.ReferenceModel.evaluate": {
     "source": "limen/sfd/reference_architecture/base.py",
     "symbol": "ReferenceModel.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.ResidualRegressor": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.ResidualRegressor.__init__": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.ResidualRegressor.train": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.ResidualRegressor.predict": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.ResidualRegressor.evaluate": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.evaluate",
     "role": "signature"
   },
   "limen.sfd.reference_architecture.RidgeRegressor": {
@@ -4009,11 +3789,6 @@
     "symbol": "XGBoostRegressor.evaluate",
     "role": "signature"
   },
-  "limen.sfd.reference_architecture.cnn1d_binary": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "cnn1d_binary",
-    "role": "signature"
-  },
   "limen.sfd.reference_architecture.direction_sizing": {
     "source": "limen/sfd/reference_architecture/direction_sizing.py",
     "symbol": "direction_sizing",
@@ -4022,11 +3797,6 @@
   "limen.sfd.reference_architecture.dlinear_regressor": {
     "source": "limen/sfd/reference_architecture/dlinear_regressor.py",
     "symbol": "dlinear_regressor",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.gaussian_hmm_binary": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "gaussian_hmm_binary",
     "role": "signature"
   },
   "limen.sfd.reference_architecture.lightgbm_binary": {
@@ -4039,24 +3809,9 @@
     "symbol": "logreg_binary",
     "role": "signature"
   },
-  "limen.sfd.reference_architecture.lstm_binary": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "lstm_binary",
-    "role": "signature"
-  },
   "limen.sfd.reference_architecture.random_binary": {
     "source": "limen/sfd/reference_architecture/random_binary.py",
     "symbol": "random_binary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.rbf_svm_binary": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "rbf_svm_binary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.residual_regressor": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "residual_regressor",
     "role": "signature"
   },
   "limen.sfd.reference_architecture.ridge_regressor": {
@@ -4077,36 +3832,6 @@
   "limen.sfd.reference_architecture.xgboost_regressor": {
     "source": "limen/sfd/reference_architecture/xgboost_regressor.py",
     "symbol": "xgboost_regressor",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.train": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.predict": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "CNN1DBinary.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.cnn1d_binary.cnn1d_binary": {
-    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-    "symbol": "cnn1d_binary",
     "role": "signature"
   },
   "limen.sfd.reference_architecture.direction_sizing.ComponentEstimator": {
@@ -4174,66 +3899,6 @@
     "symbol": "direction_sizing",
     "role": "signature"
   },
-  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.train": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.predict": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "GaussianHMMBinary.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.gaussian_hmm_binary.gaussian_hmm_binary": {
-    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-    "symbol": "gaussian_hmm_binary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.train": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.predict": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "LSTMBinary.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.lstm_binary.lstm_binary": {
-    "source": "limen/sfd/reference_architecture/lstm_binary.py",
-    "symbol": "lstm_binary",
-    "role": "signature"
-  },
   "limen.sfd.reference_architecture.meta_allocation.MetaAllocationModel": {
     "source": "limen/sfd/reference_architecture/meta_allocation.py",
     "symbol": "MetaAllocationModel",
@@ -4257,66 +3922,6 @@
   "limen.sfd.reference_architecture.meta_allocation.meta_allocation": {
     "source": "limen/sfd/reference_architecture/meta_allocation.py",
     "symbol": "meta_allocation",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.__init__": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.train": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.predict": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.evaluate": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "RBFSVMBinary.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.rbf_svm_binary.rbf_svm_binary": {
-    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
-    "symbol": "rbf_svm_binary",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.__init__": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.__init__",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.train": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.train",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.predict": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.predict",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.evaluate": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "ResidualRegressor.evaluate",
-    "role": "signature"
-  },
-  "limen.sfd.reference_architecture.residual_regressor.residual_regressor": {
-    "source": "limen/sfd/reference_architecture/residual_regressor.py",
-    "symbol": "residual_regressor",
     "role": "signature"
   },
   "limen.sfd.reference_architecture.ridge_regressor.RidgeRegressor": {
@@ -4922,6 +4527,401 @@
   "limen.yaml.validate": {
     "source": "limen/yaml/validator.py",
     "symbol": "validate",
+    "role": "signature"
+  },
+  "limen.Manifest.with_exit_rules": {
+    "source": "limen/experiment/_exit_rules.py",
+    "symbol": "with_exit_rules",
+    "role": "signature"
+  },
+  "limen.experiment.Manifest.with_exit_rules": {
+    "source": "limen/experiment/_exit_rules.py",
+    "symbol": "with_exit_rules",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.rbf_svm_binary": {
+    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
+    "symbol": "rbf_svm_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.rbf_svm_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.rbf_svm_binary.params": {
+    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.train": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "rbf_svm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.train": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.rbf_svm_binary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "rbf_svm_binary",
+    "role": "signature"
+  },
+  "limen.cohort.bayesian_cohort": {
+    "source": "limen/cohort/bayesian.py",
+    "symbol": "bayesian_cohort",
+    "role": "signature"
+  },
+  "limen.cohort.bayesian.bayesian_cohort": {
+    "source": "limen/cohort/bayesian.py",
+    "symbol": "bayesian_cohort",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.gaussian_hmm_binary": {
+    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
+    "symbol": "gaussian_hmm_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.gaussian_hmm_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.gaussian_hmm_binary.params": {
+    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.train": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "gaussian_hmm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.train": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.gaussian_hmm_binary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "gaussian_hmm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.lstm_binary": {
+    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
+    "symbol": "lstm_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.lstm_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.lstm_binary.params": {
+    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.train": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "lstm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.train": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.lstm_binary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "lstm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.residual_regressor": {
+    "source": "limen/sfd/foundational_sfd/residual_regressor.py",
+    "symbol": "residual_regressor",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.residual_regressor.manifest": {
+    "source": "limen/sfd/foundational_sfd/residual_regressor.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.residual_regressor.params": {
+    "source": "limen/sfd/foundational_sfd/residual_regressor.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.ResidualRegressor": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.ResidualRegressor.__init__": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.ResidualRegressor.train": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.ResidualRegressor.predict": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.ResidualRegressor.evaluate": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.residual_regressor": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "residual_regressor",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.__init__": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.train": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.predict": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.evaluate": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "ResidualRegressor.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.residual_regressor.residual_regressor": {
+    "source": "limen/sfd/reference_architecture/residual_regressor.py",
+    "symbol": "residual_regressor",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.cnn1d_binary": {
+    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+    "symbol": "cnn1d_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.cnn1d_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.cnn1d_binary.params": {
+    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.train": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.predict": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "cnn1d_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.train": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.predict": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.cnn1d_binary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "cnn1d_binary",
     "role": "signature"
   }
 }

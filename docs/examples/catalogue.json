@@ -1600,22 +1600,6 @@
         ],
         "reference": "limen/sfd/foundational_sfd/README.md"
       },
-      "limen.sfd.foundational_sfd.cnn1d_binary": {
-        "interfaces": [
-          "compiled"
-        ],
-        "project_context": [
-          "compiled/search"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
-        "entry_point": "limen.sfd.foundational_sfd.cnn1d_binary",
-        "names": [
-          "manifest",
-          "params"
-        ],
-        "reference": "limen/sfd/foundational_sfd/README.md"
-      },
       "limen.sfd.foundational_sfd.common_strategies": {
         "interfaces": [
           "compiled"
@@ -1674,22 +1658,6 @@
         "proof": "public-signature-inventory",
         "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
         "entry_point": "limen.sfd.foundational_sfd.rbf_svm_binary",
-        "names": [
-          "manifest",
-          "params"
-        ],
-        "reference": "limen/sfd/foundational_sfd/README.md"
-      },
-      "limen.sfd.foundational_sfd.residual_regressor": {
-        "interfaces": [
-          "compiled"
-        ],
-        "project_context": [
-          "compiled/search"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/sfd/foundational_sfd/residual_regressor.py",
-        "entry_point": "limen.sfd.foundational_sfd.residual_regressor",
         "names": [
           "manifest",
           "params"
@@ -1781,24 +1749,6 @@
           ]
         }
       },
-      "limen.sfd.reference_architecture.cnn1d_binary": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/search",
-          "compiled/search"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
-        "entry_point": "limen.sfd.reference_architecture.cnn1d_binary",
-        "names": [
-          "CNN1DBinary",
-          "cnn1d_binary"
-        ],
-        "reference": "limen/sfd/reference_architecture/README.md"
-      },
       "limen.sfd.reference_architecture.direction_sizing": {
         "interfaces": [
           "compiled"
@@ -1886,24 +1836,6 @@
         "names": [
           "RBFSVMBinary",
           "rbf_svm_binary"
-        ],
-        "reference": "limen/sfd/reference_architecture/README.md"
-      },
-      "limen.sfd.reference_architecture.residual_regressor": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/search",
-          "compiled/search"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/sfd/reference_architecture/residual_regressor.py",
-        "entry_point": "limen.sfd.reference_architecture.residual_regressor",
-        "names": [
-          "ResidualRegressor",
-          "residual_regressor"
         ],
         "reference": "limen/sfd/reference_architecture/README.md"
       },
@@ -2137,6 +2069,74 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
+      },
+      "limen.sfd.foundational_sfd.residual_regressor": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/residual_regressor.py",
+        "entry_point": "limen.sfd.foundational_sfd.residual_regressor",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture.residual_regressor": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/residual_regressor.py",
+        "entry_point": "limen.sfd.reference_architecture.residual_regressor",
+        "names": [
+          "ResidualRegressor",
+          "residual_regressor"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.foundational_sfd.cnn1d_binary": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+        "entry_point": "limen.sfd.foundational_sfd.cnn1d_binary",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture.cnn1d_binary": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+        "entry_point": "limen.sfd.reference_architecture.cnn1d_binary",
+        "names": [
+          "CNN1DBinary",
+          "cnn1d_binary"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
       }
     },
     "registries": {
