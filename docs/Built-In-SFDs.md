@@ -20,6 +20,7 @@ They show the packaged Limen experiment shape because each one combines:
 |---|---|---|
 | `logreg_binary` | binary classification | canonical manifest-driven logistic-regression reference flow |
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
+| `gaussian_hmm_binary` | binary next-return sign | causal window-local homogeneous Gaussian return model; requires `hmm` |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
@@ -233,3 +234,12 @@ The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template 
 - Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run loop.
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.
+
+
+## `gaussian_hmm_binary`
+
+The native manifest supplies hourly returns with 12/24-bar lookbacks and a
+bounded 2048-bar source. The YAML template bounds its input to 1024 hourly bars
+and eight random rounds over 16 combinations. Both use the observed next-close
+sign target. Native controls and probability semantics are documented in
+[Reference Architecture](Reference-Architecture.md#gaussianhmmbinary).

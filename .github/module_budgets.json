@@ -573,5 +573,7 @@
   "limen/features/_regime_rules.py": 150,
   "limen/features/classify_market_regime.py": 200,
   "limen/features/_regime_state.py": 190,
-  "limen/_feature_constraints.py": 110
+  "limen/_feature_constraints.py": 110,
+  "limen/sfd/reference_architecture/gaussian_hmm_binary.py": 140,
+  "limen/sfd/foundational_sfd/gaussian_hmm_binary.py": 40
 }

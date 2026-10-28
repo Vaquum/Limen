@@ -12,6 +12,7 @@ _LAZY_EXPORTS = {
         'limen.sfd.foundational_sfd.dollar_bar_crash_reversal',
         None,
     ),
+    'gaussian_hmm_binary': ('limen.sfd.foundational_sfd.gaussian_hmm_binary', None),
     'lightgbm_binary': ('limen.sfd.foundational_sfd.lightgbm_binary', None),
     'logreg_binary': ('limen.sfd.foundational_sfd.logreg_binary', None),
     'random_binary': ('limen.sfd.foundational_sfd.random_binary', None),
@@ -23,10 +24,9 @@ _LAZY_EXPORTS = {
 
 
 if TYPE_CHECKING:
-    from limen.sfd.foundational_sfd import common_strategies
-    from limen.sfd.foundational_sfd import dlinear_regressor
+    from limen.sfd.foundational_sfd import common_strategies, dlinear_regressor
     from limen.sfd.foundational_sfd import dollar_bar_crash_reversal
-    from limen.sfd.foundational_sfd import lightgbm_binary
+    from limen.sfd.foundational_sfd import gaussian_hmm_binary, lightgbm_binary
     from limen.sfd.foundational_sfd import logreg_binary
     from limen.sfd.foundational_sfd import random_binary
     from limen.sfd.foundational_sfd import ridge_regressor
@@ -39,6 +39,7 @@ __all__ = [
     'common_strategies',
     'dlinear_regressor',
     'dollar_bar_crash_reversal',
+    'gaussian_hmm_binary',
     'lightgbm_binary',
     'logreg_binary',
     'random_binary',

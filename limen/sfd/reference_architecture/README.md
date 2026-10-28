@@ -53,6 +53,7 @@ reference_architecture/
 ├── base.py
 ├── direction_sizing.py
 ├── dlinear_regressor.py
+├── gaussian_hmm_binary.py
 ├── lightgbm_binary.py
 ├── logreg_binary.py
 ├── meta_allocation.py
