@@ -258,7 +258,6 @@ training-source and 512 independent test-source bars. The matching YAML template
 is `limen/yaml/templates/rbf_svm_binary.yaml`. Probability fitting is always enabled;
 large sweeps should account for the recorded kernel cost.
 
-
 ## `residual_regressor`
 
 The native manifest supplies bounded hourly observations, lagged returns and

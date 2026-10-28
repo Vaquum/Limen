@@ -598,7 +598,6 @@ specific return-window configuration. The bundled Apple Silicon research lock
 requires macOS 14 or later for its pinned PyTorch wheel. The [native LSTM contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.LSTM.html)
 defines the sequence and final-state semantics.
 
-
 ## `ResidualRegressor`
 
 Install `vaquum-limen[boosting]`. `residual_regressor` fits Ridge to observed
