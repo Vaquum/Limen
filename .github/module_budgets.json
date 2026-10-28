@@ -52,6 +52,7 @@
   "limen/cli/git_utils.py": 120,
   "limen/cli/main.py": 350,
   "limen/cohort/__init__.py": 10,
+  "limen/cohort/bayesian.py": 90,
   "limen/cohort/cohort.py": 480,
   "limen/cohort/_python_cohort.py": 320,
   "limen/cohort/sfc/__init__.py": 30,
