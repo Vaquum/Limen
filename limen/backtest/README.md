@@ -23,6 +23,7 @@ Signal generation and operational account management belong to their respective 
 |-------------|-------------|-------|
 | `backtest_snapshot` | Vectorized evaluation across rounds | `from limen.backtest import backtest_snapshot` |
 | `long_flat_strategy` | Default execution model, or a template for a new strategy | Returns an `ExecutionResult`; `from limen.backtest import long_flat_strategy` |
+| `short_flat_strategy` | Explicit binary short/flat snapshot approximation | Import from `limen.backtest.short_flat_strategy`; [contract](../../docs/Backtest.md#explicit-shortflat-snapshots) |
 | `limen.backtest.funding` | Validated funding observations and event cash flows | Uses the declared funding clocks and product |
 | `limen.backtest.observed_costs` | Recorded retrospective cost calibration and stress comparisons | Python Research; requires the pinned calibration and benchmark |
 | `trade_execution` | Signed exposure with actual fill costs and persistent episodes | Accepts `TradeInputs` and `TradePolicy` with a `ProductSpec` |
@@ -40,6 +41,7 @@ The package root exports `backtest_snapshot`, `long_flat_strategy`, `ExecutionRe
 |---|---|
 | `backtest_snapshot.py` | Vectorized snapshot evaluator (price validation + ledger) |
 | `long_flat_strategy.py` | Default long-only execution model |
+| `short_flat_strategy.py` | Explicit constant-notional short/flat snapshot model |
 | `trade_contract.py` / `trade_execution.py` | Product, policy, event fills and inventory ledger |
 | `funding.py` / `funding_presets.py` | Funding records and declared venue conventions |
 | `observed_costs.py` | Cost calibration, dispositions and stress reports |
@@ -64,6 +66,7 @@ backtest/
 ├── funding_presets.py
 ├── long_flat_strategy.py
 ├── observed_costs.py
+├── short_flat_strategy.py
 ├── trade_contract.py
 └── trade_execution.py
 ```

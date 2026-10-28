@@ -14,6 +14,7 @@ from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest.long_flat_strategy import long_flat_strategy
+from limen.backtest.short_flat_strategy import short_flat_strategy
 from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
 from limen.log._snapshot_backtest_round import snapshot_backtest_round
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
@@ -675,6 +676,137 @@ def test_long_flat_strategy_returns_execution_result() -> None:
     assert isinstance(result, ExecutionResult)
     assert list(result.pos) == [0.0, 1.0, 1.0]
     assert result.net.tolist() == pytest.approx(result.gross.tolist())
+
+
+@pytest.fixture(scope='module')
+def short_prices():
+    recorded = pl.read_parquet(
+        Path(__file__).parent / 'fixtures/spot_1h_20240101_20240116.parquet',
+        columns=['open', 'close'],
+    ).head(16)
+    open_px, close_px = (recorded[name].to_numpy() for name in ('open', 'close'))
+    return open_px, close_px, close_px - open_px
+
+
+def test_short_flat_strategy_is_public() -> None:
+    import importlib
+
+    module = importlib.import_module('limen.backtest.short_flat_strategy')
+    assert 'short_flat_strategy' in module.__all__
+    assert module.short_flat_strategy is short_flat_strategy
+
+
+def test_short_flat_strategy_profits_on_falling_entry_bar(short_prices) -> None:
+    open_px, close_px, change = short_prices
+    for index in (int(np.flatnonzero(change < 0)[0]), int(np.flatnonzero(change > 0)[0])):
+        result = short_flat_strategy(
+            [1], open_px[index:index + 1], close_px[index:index + 1], change[index:index + 1],
+            execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0,
+        )
+        assert result.pos.tolist() == [1.0]
+        assert result.gross[0] == pytest.approx(-change[index] / open_px[index])
+        assert result.net == pytest.approx(result.gross)
+        assert (result.gross[0] > 0) == (change[index] < 0)
+
+
+def test_short_flat_strategy_applies_entry_and_cover_costs(short_prices) -> None:
+    open_px, close_px, change = (values[:3] for values in short_prices)
+    result = short_flat_strategy(
+        [1, 1, 0], open_px, close_px, change,
+        execution_lag_bars=0, fee_bps=50.0, slip_bps=50.0,
+    )
+    expected_gross = [-change[0] / open_px[0], 1 - close_px[1] / close_px[0], 0]
+    entry_sell = (1 - 0.005) * (1 - 0.005)
+    exit_cover = (1 - 0.005) / (1 + 0.005)
+    assert result.gross == pytest.approx(expected_gross)
+    assert result.net == pytest.approx([
+        (1 + expected_gross[0]) * entry_sell - 1,
+        (1 + expected_gross[1]) * exit_cover - 1,
+        0,
+    ])
+    assert round((1 - entry_sell * exit_cover) * 10000, 1) == 198.3
+    single = short_flat_strategy(
+        [1], open_px[:1], close_px[:1], change[:1],
+        execution_lag_bars=0, fee_bps=50.0, slip_bps=50.0,
+    )
+    assert single.net[0] == pytest.approx((1 + single.gross[0]) * entry_sell * exit_cover - 1)
+
+
+def test_backtest_snapshot_short_strategy_preserves_ledger_columns(short_prices) -> None:
+    open_px, close_px, change = short_prices
+    result = backtest_snapshot(
+        {'predictions': np.ones(len(open_px)), 'open': open_px, 'close': close_px, 'price_change': change},
+        strategy=short_flat_strategy, fee_bps=0.0, slip_bps=0.0,
+    )
+    assert len(result) == 20
+    assert list(result) == BACKTEST_SNAPSHOT_COLUMNS
+    assert result['trades_per_bar'] == 1 / len(open_px)
+    assert result['inventory_per_bar'] == (len(open_px) - 1) / len(open_px)
+
+
+def test_backtest_snapshot_default_strategy_remains_long_flat() -> None:
+    assert inspect.signature(backtest_snapshot).parameters['strategy'].default is long_flat_strategy
+
+
+@pytest.mark.parametrize('lag', [0, 1, 2, 16, 20])
+def test_short_flat_strategy_lag_and_continuation(short_prices, lag) -> None:
+    open_px, close_px, change = short_prices
+    result = short_flat_strategy(
+        np.ones(len(open_px)), open_px, close_px, change,
+        execution_lag_bars=lag, fee_bps=0.0, slip_bps=0.0,
+    )
+    expected = np.zeros(len(open_px))
+    if lag < len(open_px):
+        expected[lag] = -change[lag] / open_px[lag]
+        expected[lag + 1:] = 1 - close_px[lag + 1:] / close_px[lag:-1]
+    assert result.pos.tolist() == [float(index >= lag) for index in range(len(open_px))]
+    assert result.gross == pytest.approx(expected)
+    assert result.net == pytest.approx(expected)
+
+
+def test_short_flat_strategy_gap_closes_and_reopens(short_prices) -> None:
+    open_px, close_px, change = (values[:5].copy() for values in short_prices)
+    close_px[2] = np.nan
+    result = short_flat_strategy(
+        [1, 1, 1, 1, 0], open_px, close_px, change,
+        execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0,
+    )
+    assert result.pos.tolist() == [1, 1, 0, 1, 0]
+    assert result.gross[2] == result.net[2] == 0
+    assert result.gross[3] == pytest.approx(-change[3] / open_px[3])
+
+
+@pytest.mark.parametrize('predictions', [[np.nan], [np.inf], [-1], [2], ['bad']])
+def test_short_flat_strategy_rejects_invalid_signals(short_prices, predictions) -> None:
+    with pytest.raises(ValueError, match='short_flat_strategy predictions'):
+        short_flat_strategy(predictions, *(values[:1] for values in short_prices))
+
+
+@pytest.mark.parametrize('lag', [-1, 0.5, True])
+def test_short_flat_strategy_rejects_invalid_lag(short_prices, lag) -> None:
+    with pytest.raises(ValueError, match='short_flat_strategy execution_lag_bars'):
+        short_flat_strategy([1], *(values[:1] for values in short_prices), execution_lag_bars=lag)
+
+
+@pytest.mark.parametrize('predictions', [1, [[1]], [1, 0]])
+def test_short_flat_strategy_rejects_invalid_shapes(short_prices, predictions) -> None:
+    with pytest.raises(ValueError, match='equal-length 1D arrays'):
+        short_flat_strategy(predictions, *(values[:1] for values in short_prices))
+
+
+def test_short_flat_strategy_rejects_invalid_prices_and_costs(short_prices) -> None:
+    open_px, close_px, change = (values[:1] for values in short_prices)
+    for bad in ('bad', np.inf, 0, -1):
+        with pytest.raises(ValueError, match='short_flat_strategy prices'):
+            short_flat_strategy([1], [bad], close_px, change)
+    with pytest.raises(ValueError, match='price_change must equal close - open'):
+        short_flat_strategy([1], open_px, close_px, -change)
+    for key in ('fee_bps', 'slip_bps'):
+        for bad in (np.nan, np.inf, -1, 10000, True, 'bad'):
+            with pytest.raises(ValueError, match=key):
+                short_flat_strategy([1], open_px, close_px, change, **{key: bad})
+    with pytest.raises(ValueError, match='at least one row'):
+        short_flat_strategy([], [], [], [])
 
 
 def test_long_flat_strategy_rejects_negative_lag() -> None:

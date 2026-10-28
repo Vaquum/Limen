@@ -307,7 +307,7 @@ For the bundled dollar-bar crash-reversal sweep, `fee_bps=10.0` and `slip_bps=5.
 
 ## Strategy boundary
 
-With both barriers disabled, the execution model is swappable. Enabled barriers require the default long-flat strategy and reject a custom callback. `backtest_snapshot()` validates price columns, calls a strategy, and builds the ledger from the returned per-bar arrays. The shipped strategy is `long_flat_strategy` in `limen.backtest.long_flat_strategy`.
+With both barriers disabled, the execution model is swappable. Enabled barriers require the default long-flat strategy and reject a custom callback. `backtest_snapshot()` validates price columns, calls a strategy, and builds the ledger from the returned per-bar arrays. The default strategy is `long_flat_strategy` in `limen.backtest.long_flat_strategy`.
 
 A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execution_lag_bars`, `fee_bps`, and `slip_bps`. It returns `ExecutionResult(pos, gross, net)`, where each field is a finite numeric per-bar array over the full window, aligned positionally to the input length. `backtest_snapshot()` rejects malformed custom strategy outputs before computing the ledger.
 
@@ -318,6 +318,23 @@ def backtest_snapshot(columns: Mapping[str, Any], *, pred_col: str='predictions'
 ```
 
 The strategy owns its signal contract and fill mechanics. `backtest_snapshot()` applies `notional_rate` after the strategy returns, so position sizing remains a ledger-level scale rather than a strategy argument.
+
+### Explicit short/flat snapshots
+
+Direct callers can select `limen.backtest.short_flat_strategy.short_flat_strategy`:
+
+```python
+from limen.backtest.backtest_snapshot import backtest_snapshot
+from limen.backtest.short_flat_strategy import short_flat_strategy
+
+result = backtest_snapshot(perf, strategy=short_flat_strategy)
+```
+
+Here binary `1` activates a short and `0` is flat. `pos` remains a non-negative exposure magnitude, preserving the 20-column ledger and its trade/inventory counts. After the declared lag, entries use the execution-row open: gross return is `-(close - open) / open`. Continuations use `-(close_t / close_previous - 1)`. Missing price rows flatten the position; a later active valid row starts a new trade at its open. Zero lag can trade the first row and is a same-row research diagnostic.
+
+Per-bar growth is `1 + gross`, multiplied at entry by `(1 - fee) * (1 - slip)` and at exit by `(1 - fee) / (1 + slip)`, where fee/slip are basis points divided by 10000. A one-bar trade pays both. At flat prices, 50 bps each of fee and slippage produces 198.3 bps of round-trip drag. Continuation bars pay no fill costs.
+
+This is a constant-notional `-1×` return approximation. It does not model fixed-quantity short-sale accounting, borrowing, margin, liquidation or funding. It is explicit-call only; Manifest/Log execution and default long fills keep their contracts. Snapshot TP/SL cannot be combined with this strategy.
 
 ## Usage
 
@@ -356,7 +373,7 @@ Table 7. These concerns sit outside the snapshot contract.
 |---|---|
 | Venue-aware execution | Out of scope. |
 | Portfolio allocation | Out of scope. |
-| Short selling | Out of scope. |
+| Short selling | Explicit constant-notional short/flat snapshots only; borrowing and margin mechanics are out of scope. |
 | Latency-aware order modeling | Out of scope. |
 
 ## Signed exposure, elapsed exits and funding
