@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T10:16:04.367784+00:00",
-  "execution_checkout_head": "2f0c774a363935ad22a27b8176b0c2caa600eae4",
+  "observed_at": "2026-10-28T10:33:13.188489+00:00",
+  "execution_checkout_head": "8db0a684fdd1e365c4ee139cbc957c4f4649f3a3",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -14,7 +14,7 @@
     "backtest/_cost_identity.py": "2f9467cfc50ecacca7a4cf926913f16a380004a109a3b56a3d652877056350a1",
     "backtest/_cost_statistics.py": "68bc84acbf72ff375b48e53052eb45a7840bea86493f1dc3d7a27e2355216dba",
     "backtest/_event_clock.py": "4d0505b0b531763c930963b90a597eeae0226994a3c4d78f9acab5e653ce51fb",
-    "backtest/_event_plan.py": "9c7076733624d9d2f1668f15ed60d12a6248c85a4df281a50c1b24f836571d6b",
+    "backtest/_event_plan.py": "3c9c28ce5849f376b22d6c36ce8ee4771684325ea11dbf1b5447878ee010d1e9",
     "backtest/_exit_evidence.py": "2e35572105d0fd13ee2388227da274218f4b0fbe278d439d519dfc25dbdc0ae2",
     "backtest/_explicit_exit_strategy.py": "6e2adeec418a69b9650237eac8fe972da7ad65f3635ccc565613c485fc4d47d6",
     "backtest/_long_flat_tp_sl.py": "8c05a4ac215a6a25aad96a42d5ca113c349846d93da51aa7de1e9291dd57fef0",
@@ -126,7 +126,7 @@
     "experiment/_objective_run.py": "201bd1cc7842783f062c8fabe22c688a6be980f97553d94f1dfae219f453a34a",
     "experiment/_parallel_commit.py": "412555ee347af4f47709a94bee6cd10b08b3db3b2de376d79eb143aeeccc8090",
     "experiment/_parallel_resume.py": "8a937244dbf8e885154d3254ca2b9a93ccc8291f1421f6a1974f96c73b99d2e7",
-    "experiment/_parallel_rounds.py": "8a0c55f5d208ef9df736f692a07e8bfaaf2853a224b4aa78a25f063f5b5cb158",
+    "experiment/_parallel_rounds.py": "2e45b4d94476a2241fe66a2f3012e3133fc96682e01181653d9a9e7508f5759f",
     "experiment/_parallel_sources.py": "1f14a9f7ad5e1d4d5c8679de43a2e5088b795e2cf6bb12f0964170ad73470670",
     "experiment/_parallel_worker.py": "79064889905dd404074d5b79a6ace79a060ec8010e37e0ea7f37861a2e117252",
     "experiment/_prepare_backtest_data.py": "8c6800f2049ded544cede268a66cd2f2023d75b9f0bca50a2e5d8b46b427ad81",
@@ -553,7 +553,7 @@
     "yaml/profiler.py": "1e412c4ca48fc0d67fcf05ec6ec7811cdd37d256273af3833a56895a1931dd5d",
     "yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
     "yaml/rules.py": "59b49fc139484d1b7292de56cc66ed869c931c980a8c46c9d7b0eadf5406eb1d",
-    "yaml/schema.py": "39a1b435d2f7ccc5b7204119aa2b072f1a71e02797f4823230335905d3150273",
+    "yaml/schema.py": "20f0281500143590216c8d3c8cc7681ad7039e143ad1908bb63ed6fedaf60e6a",
     "yaml/store.py": "53e4eb7724597f09c7bf71739996b5fb854d07950720868d6d93b125b6d3ac0c",
     "yaml/validator.py": "226ab874d5e5f493574b6a755e14445fd0958b21201385bd6386ef303cb9ac9d"
   },
