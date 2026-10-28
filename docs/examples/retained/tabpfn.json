@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T14:08:46.828434+00:00",
-  "execution_checkout_head": "4d570dfde65481e4659a458570d59e03faa08584",
+  "observed_at": "2026-10-28T14:34:33.758452+00:00",
+  "execution_checkout_head": "af857ac72ade6ebc2765c9efb8dd58491fbba4b6",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -485,7 +485,7 @@
     "sfd/reference_architecture/logreg_binary.py": "80788eba5856aa65f385b223af4d4ea247459a79e95dbe2ec8444a027ab75621",
     "sfd/reference_architecture/meta_allocation.py": "af77f5d5469da2a396ba8a039328da0ca54551dc316dd5768c24cef33ee6e3af",
     "sfd/reference_architecture/random_binary.py": "5ca371728d2d64d4cabdcfbffe3973c888000f4ca0e2cde61b9c76debed86c12",
-    "sfd/reference_architecture/rbf_svm_binary.py": "20011fcc2ac86c1f31ead409c3d19af1e381ae303cc9b6a45b3e0feb9993ee79",
+    "sfd/reference_architecture/rbf_svm_binary.py": "503d2384e068b9ec10cac57d2cb601910db2d84a03e11e6faa060b761da712c9",
     "sfd/reference_architecture/ridge_regressor.py": "cec41523234c2034b7260d2d52e2c58eee02781c5c104f9f8a01d4d03473132d",
     "sfd/reference_architecture/rule_based.py": "92bf6862697eeefc5a976a45c8cdb0a3e5a2c113632ffb901498a3a7d378d4ca",
     "sfd/reference_architecture/tabpfn_binary.py": "a6fa31f0813aca5c7db5e773c6f51b5288ffa4a9bbbacacddcb0370cfa23375a",
