@@ -90,13 +90,19 @@ def test_recorded_pool_selection_native_fit_populations_and_observed_metrics(rec
 
 
 def test_pseudo_native_source_recording_reconstruction_and_changed_pool(tmp_path, recorded, monkeypatch):
-    bars, _, _ = recorded
+    bars, params, _ = recorded
     pool_path = tmp_path / 'recorded_pool.parquet'
     shutil.copyfile(SOURCE, pool_path)
     config = YAML(typ='safe').load(ROOT / 'limen/yaml/templates/pseudo_label_binary.yaml')
     config['sfd']['params']['pool_path'] = [str(pool_path)]
     assert validate(config).valid
     monkeypatch.setattr(import_module('limen.data.historical_data'), '_read_any_file', lambda *_args, **_kwargs: bars)
+    native = foundational.manifest()
+    native_source = native.fetch_data()
+    assert native_source.height == 22 * 24 < bars.height
+    assert native_source['datetime'].max() == datetime(2024, 1, 22, 23, tzinfo=timezone.utc)
+    native_params = params | {'pool_path': str(pool_path)}
+    assert native.run_model(native.prepare_data(native_source, native_params), native_params)['linkage_pseudo_rows'] == 6
     compiled = CompiledSFD(config)
     source = compiled.manifest().fetch_data()
     output = tmp_path / 'experiment'

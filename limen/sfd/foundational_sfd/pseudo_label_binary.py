@@ -21,7 +21,8 @@ def params() -> dict[str, list[object]]:
 
 
 def manifest() -> MLManifest:
-    base = (MLManifest().set_data_source(HistoricalData.get_spot_klines, {'kline_size': 3600})
+    base = (MLManifest().set_data_source(HistoricalData.get_spot_klines,
+                {'kline_size': 3600, 'start_date_limit': '2024-01-01', 'end_date_limit': '2024-01-22'})
             .set_split_dates(*(date.fromisoformat(value) for value in
                 ('2024-01-01', '2024-01-10', '2024-01-18', '2024-01-20', '2024-01-20', '2024-01-22')))
             .add_indicator(window_return, period=1).add_feature(lag_range, col='ret_1', start=0, end='lookback_end')
