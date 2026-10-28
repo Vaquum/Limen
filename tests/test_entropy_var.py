@@ -32,12 +32,12 @@ def _entropy(frame):
                        for row in windows])[:, None]
 
 
-@pytest.mark.parametrize('quantile,fit_intercept', [(0.01, True), (0.05, True), (0.1, False)])
-def test_recorded_entropy_quantile_and_independent_losses(recorded, quantile, fit_intercept):
+@pytest.mark.parametrize('quantile,fit_intercept,alpha,solver_options', [(0.01, True, 0., None), (0.05, True, .1, {'presolve': False}), (0.1, False, 0., None)])
+def test_recorded_entropy_quantile_and_independent_losses(recorded, quantile, fit_intercept, alpha, solver_options):
     _, params, manifest, data = recorded
-    result = manifest.run_model(data, params | {'quantile': quantile, 'fit_intercept': fit_intercept})
+    result = manifest.run_model(data, params | {'quantile': quantile, 'fit_intercept': fit_intercept, 'alpha': alpha, 'solver_options': solver_options})
     model = result['_model']
-    native = QuantileRegressor(quantile=quantile, alpha=0, fit_intercept=fit_intercept, solver='highs').fit(_entropy(data['x_train']), data['y_train'])
+    native = QuantileRegressor(quantile=quantile, alpha=alpha, fit_intercept=fit_intercept, solver='highs', solver_options=solver_options).fit(_entropy(data['x_train']), data['y_train'])
     assert isinstance(model, EntropyVaRRegressor)
     np.testing.assert_allclose(model._entropy(data['x_train']), _entropy(data['x_train']), atol=1e-15)
     expected = _entropy(data['x_test'])[:, 0] * native.coef_[0] + native.intercept_
@@ -59,7 +59,7 @@ def test_recorded_entropy_quantile_and_independent_losses(recorded, quantile, fi
     altered = deepcopy(data)
     altered['y_test'] = np.asarray(data['y_test'])[::-1]
     altered['y_val'] = np.asarray(data['y_val'])[::-1]
-    repeated = EntropyVaRRegressor().train(altered, quantile=quantile, fit_intercept=fit_intercept)
+    repeated = EntropyVaRRegressor().train(altered, quantile=quantile, fit_intercept=fit_intercept, alpha=alpha, solver_options=solver_options)
     np.testing.assert_array_equal(model.model.coef_, repeated.model.coef_)
 
 
@@ -100,3 +100,21 @@ def test_entropy_guards_and_native_template_controls(recorded):
     controls = set(inspect.signature(entropy_var_regressor).parameters) - {'data'}
     assert controls <= config['sfd']['params'].keys() and controls <= foundational.params().keys()
     assert build_search_strategy(config).domain.total_combinations == 4
+
+
+def test_recorded_sign_entropy_endpoint_and_balanced_windows(recorded):
+    _, _, _, data = recorded
+    model = EntropyVaRRegressor().train(data)
+    for end in (0, 1):
+        columns = ['ret_1_lag_' + str(lag) for lag in range(end + 1)]
+        fitted = EntropyVaRRegressor().train(data | {'x_train': data['x_train'].select(columns)})
+        observed = data['x_test'].select(columns)
+        actual = fitted._entropy(observed)[:, 0]
+        if end == 0:
+            assert np.array_equal(actual, np.zeros(observed.height))
+        else:
+            values = observed.to_numpy()
+            expected = (np.signbit(values[:, 0]) != np.signbit(values[:, 1])).astype(float)
+            np.testing.assert_array_equal(actual, expected)
+    with pytest.raises(ValueError, match='fitted feature order'):
+        model.predict({'x_test': data['x_test'].to_numpy()[:, :-1]})
