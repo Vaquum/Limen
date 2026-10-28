@@ -205,7 +205,7 @@ def verify(interface, name, result, output, inputs):
                 assert row['id'] == original['id'] and row['accuracy'] == pytest.approx(original['accuracy'])
         verify_feedback(interface, result['feedback'], inputs)
         if interface == 'compiled':
-            assert set(result['families']) == {'ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary'}
+            assert set(result['families']) == {'direction_sizing', 'dlinear_regressor', 'gaussian_hmm_binary', 'lstm_binary', 'random_binary', 'rbf_svm_binary', 'residual_regressor', 'ridge_regressor', 'xgboost_regressor', 'cnn1d_binary'}
             raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')
             labels = raw.with_columns(((pl.col('close').shift(-1)/pl.col('close')-1)*100).alias('next_return'))
             for family, observed in result['families'].items():
