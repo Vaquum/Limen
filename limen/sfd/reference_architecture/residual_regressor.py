@@ -48,7 +48,9 @@ class ResidualRegressor(ReferenceModel):
     @override
     def train(self, data: dict[str, object], *, ridge_params: dict[str, object] | None = None,
               xgboost_params: dict[str, object] | None = None,
-              correction_scale: float = 1.0) -> 'ResidualRegressor':
+              correction_scale: float = 1.0, **params: object) -> 'ResidualRegressor':
+        if params:
+            raise TypeError('ResidualRegressor accepts only ridge_params, xgboost_params and correction_scale')
         if not np.isfinite(correction_scale):
             raise ValueError('ResidualRegressor correction_scale must be finite')
         settings = {'n_estimators': 32, 'max_depth': 2, 'learning_rate': .1,

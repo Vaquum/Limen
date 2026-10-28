@@ -13,7 +13,7 @@ from scenario_oracles import execution_clocks, verify_acceptance, verify_common_
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-parallel', 'compiled-rule-contracts', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-parallel', 'compiled-rule-contracts', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
     'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment', 'compiled-calibration-isotonic'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
@@ -49,7 +49,7 @@ def verify_regressors(project):
     raw = pl.read_parquet(project / 'inputs/spot_15m_20250101_20250531.parquet')
     labels = raw.with_columns(((pl.col('close').shift(-1) / pl.col('close') - 1) * 100).alias('label'))
     result = {}
-    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor'):
+    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor'):
         directory = project / 'results/dev' / ('compiled-family_' + family)
         log = checked_log(directory, 1)
         record = records(directory)[0]
