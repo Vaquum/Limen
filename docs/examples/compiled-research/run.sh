@@ -75,7 +75,8 @@ limen run --no-progress-bar \
   compiled-research/family_gaussian_hmm_binary.yaml \
   compiled-research/family_lstm_binary.yaml \
   compiled-research/family_residual_regressor.yaml \
-  compiled-research/family_cnn1d_binary.yaml
+  compiled-research/family_cnn1d_binary.yaml \
+  compiled-research/family_entropy_var_regressor.yaml
 # endregion models
 }
 diagnostics &

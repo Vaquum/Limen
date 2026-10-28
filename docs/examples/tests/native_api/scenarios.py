@@ -216,7 +216,7 @@ def recorded_predictions(directory: Path, record):
 # region model_comparisons
 def model_comparisons(data_dir, output):
     families = {}
-    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary'):
+    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary', 'entropy_var_regressor'):
         config = configuration('family_' + family, data_dir)
         # This diagnostic baseline uses NumPy's caller-owned process RNG.
         if family == 'random_binary':
@@ -230,7 +230,7 @@ def model_comparisons(data_dir, output):
         selected = log['id'].head(1).to_list()
         sensors = [] if family == 'random_binary' else Trainer(directory).train(selected)
         predictions = {record['round_id']: recorded_predictions(directory, record) for record in records}
-        families[family] = {'metrics': log.select('id', metric).to_dicts(), 'records': records, 'predictions': predictions, 'reconstructed_sensors': len(sensors), 'replay': 'stochastic baseline; replay is not asserted' if family == 'random_binary' else 'selected recorded round reconstructed by Trainer'}
+        families[family] = {'metrics': log.select('id', metric, *(['pinball_loss', 'violation_rate'] if family == 'entropy_var_regressor' else [])).to_dicts(), 'records': records, 'predictions': predictions, 'reconstructed_sensors': len(sensors), 'replay': 'stochastic baseline; replay is not asserted' if family == 'random_binary' else 'selected recorded round reconstructed by Trainer'}
     return families
 # endregion model_comparisons
 

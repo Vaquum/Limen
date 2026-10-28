@@ -25,6 +25,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `residual_regressor` | regression | Ridge plus an XGBoost correction trained on observed errors; requires `boosting` |
 | `cnn1d_binary` | binary next-return sign | bounded CPU temporal convolution; requires `neural` |
+| `entropy_var_regressor` | signed lower return quantile | raw sign entropy; continuous risk output, no execution |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
@@ -162,7 +163,8 @@ limen run --no-progress-bar \
   compiled-research/family_gaussian_hmm_binary.yaml \
   compiled-research/family_lstm_binary.yaml \
   compiled-research/family_residual_regressor.yaml \
-  compiled-research/family_cnn1d_binary.yaml
+  compiled-research/family_cnn1d_binary.yaml \
+  compiled-research/family_entropy_var_regressor.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.

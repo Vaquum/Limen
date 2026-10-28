@@ -204,6 +204,11 @@
       "interface": "compiled",
       "scenario": "search",
       "configuration": "docs/examples/compiled-research/family_cnn1d_binary.yaml"
+    },
+    "entropy_var_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_entropy_var_regressor.yaml"
     }
   },
   "recorded_inputs": {
@@ -1586,6 +1591,7 @@
           "common_strategies",
           "dlinear_regressor",
           "dollar_bar_crash_reversal",
+          "entropy_var_regressor",
           "gaussian_hmm_binary",
           "lightgbm_binary",
           "logreg_binary",
@@ -1712,6 +1718,7 @@
           "CNN1DBinary",
           "DLinearRegressor",
           "DirectionSizingModel",
+          "EntropyVaRRegressor",
           "GaussianHMMBinary",
           "LSTMBinary",
           "LightGBMBinary",
@@ -1727,6 +1734,7 @@
           "cnn1d_binary",
           "direction_sizing",
           "dlinear_regressor",
+          "entropy_var_regressor",
           "gaussian_hmm_binary",
           "lightgbm_binary",
           "logreg_binary",
@@ -2135,6 +2143,40 @@
         "names": [
           "CNN1DBinary",
           "cnn1d_binary"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.foundational_sfd.entropy_var_regressor": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/entropy_var_regressor.py",
+        "entry_point": "limen.sfd.foundational_sfd.entropy_var_regressor",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture.entropy_var_regressor": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
+        "entry_point": "limen.sfd.reference_architecture.entropy_var_regressor",
+        "names": [
+          "EntropyVaRRegressor",
+          "entropy_var_regressor"
         ],
         "reference": "limen/sfd/reference_architecture/README.md"
       }

@@ -14,6 +14,7 @@ This page covers:
 The current public reference-architecture exports are:
 
 - `ReferenceModel`
+- `EntropyVaRRegressor`
 - `CNN1DBinary`
 - `DLinearRegressor`
 - `DirectionSizingModel`
@@ -31,7 +32,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `entropy_var_regressor`, `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -647,3 +648,28 @@ market, sentiment and blockchain inputs; this raw-return variant does not
 replicate its accuracy. The [native Conv1d contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.Conv1d.html)
 defines temporal kernel, stride and dilation semantics. Recorded-data tests
 verify gradients and an independent NumPy convolution/pooling/probability oracle.
+
+## `EntropyVaRRegressor`
+
+`entropy_var_regressor` fits a lower conditional return quantile using sklearn
+QuantileRegressor. For each completed raw `ret_1_lag_0..N` window it computes
+binary Shannon entropy of the negative/nonnegative return fractions. Zero terms
+contribute zero. Unrelated feature columns are ignored. Fit uses observed training
+returns only; inference retains the coefficients and requires no target labels.
+
+Output is a signed return quantile in the target's units. The foundational SFD
+uses 24 completed hourly returns and the following 24-hour simple percentage
+return; the compiled example uses 96 quarter-hour returns and a 96-bar horizon.
+It reports pinball loss and strict violation rate (observed return below forecast),
+plus descriptive continuous metrics. It produces no direction, probability or
+trading metrics. Fitted scaler/PCA and execution policies are rejected; raw signs
+must retain their meaning. Manager owns downstream decisions and execution.
+
+Controls expose quantile (strictly between 0 and 0.5), alpha, fit_intercept,
+solver and solver_options, plus SFD lookback/horizon. Defaults are quantile0.05,
+alpha0, intercept enabled and HiGHS. Solver validation and warnings stay visible.
+The [Bitcoin entropy-VaR study](https://pmc.ncbi.nlm.nih.gov/articles/PMC7514585/)
+motivates the sign-entropy predictor. This rolling-window, simple-return,
+frozen-fit variant does not replicate its calendar-day log-return and rolling
+coefficient protocol. Overlapping horizons imply dependent observations;
+violation rate alone establishes neither calibrated tails nor GARCH superiority.
