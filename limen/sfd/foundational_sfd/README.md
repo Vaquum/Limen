@@ -50,6 +50,7 @@ foundational_sfd/
 ├── __init__.py
 ├── _tabpfn_params.py
 ├── _xgboost_features.py
+├── cnn1d_binary.py
 ├── common_strategies.py
 ├── dlinear_regressor.py
 ├── dollar_bar_crash_reversal.py

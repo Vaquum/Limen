@@ -63,12 +63,14 @@ def test_optional_model_modules_import_without_optional_backends() -> None:
 import sys
 
 from limen.sfd.reference_architecture.lstm_binary import LSTMBinary
+from limen.sfd.reference_architecture.cnn1d_binary import CNN1DBinary
 from limen.sfd.reference_architecture.gaussian_hmm_binary import GaussianHMMBinary
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.tabpfn_binary import TabPFNBinary
 from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor
 
 assert LSTMBinary.__name__ == 'LSTMBinary'
+assert CNN1DBinary.__name__ == 'CNN1DBinary'
 assert GaussianHMMBinary.__name__ == 'GaussianHMMBinary'
 assert LightGBMBinary.__name__ == 'LightGBMBinary'
 assert TabPFNBinary.__name__ == 'TabPFNBinary'
