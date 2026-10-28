@@ -305,6 +305,7 @@ def test_exit_replay_and_plan_cache_binding(prepared_exits):
     from copy import deepcopy
     from limen.experiment._exit_rules import verify_replay
     from limen.log._snapshot_backtest_round import snapshot_backtest_round
+    from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
     from types import SimpleNamespace
     for manifest, raw, data in prepared_exits:
         result = manifest.run_model(data, {'risk_span': 6})
@@ -315,12 +316,12 @@ def test_exit_replay_and_plan_cache_binding(prepared_exits):
         with pytest.raises(ValueError, match='evidence'):
             verify_replay(corrupted, data)
         log = SimpleNamespace(manifest=manifest, data=raw, round_params=[{'risk_span': 6}], preds=[result['_preds']], _alignment=[saved])
-        metrics = snapshot_backtest_round(log, 0, lambda frame: frame)
+        metrics = snapshot_backtest_round(log, 0, _prepare_snapshot_backtest_input)
         assert 'total_return' in metrics if manifest.resolve_trade_policy({'risk_span': 6}) is not None else len(metrics) == 20
         corrupted = {key: value for key, value in saved.items() if key != 'exit_evidence'}
         log._alignment = [corrupted]
         with pytest.raises(ValueError, match='evidence'):
-            snapshot_backtest_round(log, 0, lambda frame: frame)
+            snapshot_backtest_round(log, 0, _prepare_snapshot_backtest_input)
 
 
 def test_unsupported_exit_combinations_fail(prepared_exits):
