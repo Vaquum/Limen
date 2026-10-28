@@ -681,6 +681,7 @@ downstream cutoff, and recoverable selected-row JSON. Each generated row records
 its timestamp, availability, label, probability, confidence and `origin: pseudo`.
 SHA-256 covers the exact selected JSON; matrix fingerprints use compact JSON
 `[shape, dtype]` plus C-order little-endian float64/int64 bytes. Trainer validates
-the same pool identity and reconstructs identical provenance. Generated labels
+the same pool identity and reconstructs identical provenance. Relative pool paths
+resolve from the working directory; use an absolute path for replay elsewhere. Generated labels
 remain distinct from observed labels. Model confidence does not establish label
 correctness or predictive/trading benefit.
