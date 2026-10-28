@@ -17,9 +17,11 @@ The current public reference-architecture exports are:
 - `DLinearRegressor`
 - `DirectionSizingModel`
 - `LSTMBinary`
+- `GaussianHMMBinary`
 - `LightGBMBinary`
 - `LogRegBinary`
 - `RandomBinary`
+- `RBFSVMBinary`
 - `RidgeRegressor`
 - `RuleBasedStrategy`
 - `XGBoostRegressor`
@@ -27,7 +29,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `direction_sizing`, `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -511,6 +513,39 @@ For signed sizing, elapsed exits, recorded execution clocks and funding configur
 The compiled manifest's `with_allocation(method, params)` adds a research allocator around its original primary. The native method is `limen.sfd.reference_architecture.meta_allocation.meta_allocation`; a second allocation declaration rejects. Factory callables follow `direction_sizing`'s source-bound estimator pattern. See [Backtest](Backtest.md#learned-allocation-around-a-primary) for fitting, cost and exposure semantics.
 
 Prepared data exposes `_allocation_batches['val']` and `['test']`. The fitted model accepts `model.predict({'allocation_batch': batch})` without targets or outcomes. `AllocationBatch` binds full partition bounds, original ordered source IDs and availability, target-free primary inputs, named numeric meta features and decision-time stop/readiness values. Reordered, changed or truncated batches reject. This is not an incremental future-window inference protocol.
+
+## `GaussianHMMBinary`
+
+Install `vaquum-limen[hmm]`. The matching `gaussian_hmm_binary` function fits
+hmmlearn's homogeneous univariate GaussianHMM on chronological training
+`ret_1_lag_0` values. Inputs require contiguous `ret_1_lag_0..N` columns;
+other feature columns are ignored. Use raw fractional returns, without a
+per-lag scaler. The adapter converts training and inference to percentage
+returns consistently, so Gaussian priors and covariance controls use those units.
+
+Each prediction uses one completed lookback window, oldest first, restarting
+from the fitted initial-state distribution. Only the terminal posterior is
+retained: multiply it by the transition matrix and Gaussian positive-tail
+probabilities to obtain P(next return > 0). Decisions use probability > 0.5.
+This window-local filtering is causal and has identical row/batch behavior;
+it deliberately differs from maintaining an online full-history state.
+State IDs have no directional meaning. Labels do not fit the unsupervised model.
+
+The function exposes 14 native controls for states, covariance, priors,
+initial seed, EM iteration/tolerance/verbosity and log/scaling implementation.
+`n_iter` caps EM; termination at the cap does not establish tolerance convergence.
+The fitted backend retains its diagnostics. Supervised calibration is not part
+of this variant. The [Bitcoin HMM study](https://arxiv.org/abs/2011.03741)
+studies richer Bayesian/nonhomogeneous alternatives, rather than establishing
+performance for this narrower EM implementation.
+
+A recorded hourly-return CPU probe with two states, 24 lags, 30 EM iterations
+and one thread measured median complete-cycle costs of 0.103/0.087s for
+HMM/LogReg at 384 bars, 0.095/0.082s at 2048 and 0.264/0.098s at 8192.
+Three alternating repeats included fresh preparation, fit and test prediction.
+The larger HMM runs hit the iteration cap. These are configuration-specific
+cost observations on macOS/Python 3.12.12, NumPy 2.2.6, sklearn 1.7.2,
+Polars 1.42.1 and hmmlearn 0.3.3, with no efficacy or profitability claim.
 
 ## RBF SVM binary classifier
 

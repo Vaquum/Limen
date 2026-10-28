@@ -1,0 +1,58 @@
+schema_version: '1.0'
+metadata:
+  name: gaussian_hmm_binary_experiment
+  limen_version: '5.46.2'
+  mode: development
+  description: Homogeneous Gaussian return regimes predicting the next positive return
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+        row_count_limit: 1024
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: '{lookback_end}'
+    target:
+      name: next_close_up
+      class: limen.targets.NextBarUpTarget
+    strict_mode: true
+    reference_architecture: limen.sfd.reference_architecture.gaussian_hmm_binary
+  params:
+    lookback_end: [11, 23]
+    n_components: [2, 3]
+    covariance_type: [diag]
+    min_covar: [0.001]
+    startprob_prior: [1.0]
+    transmat_prior: [1.0, 2.0]
+    means_prior: [0.0]
+    means_weight: [0.0]
+    covars_prior: [0.01]
+    covars_weight: [1.0]
+    random_state: [42]
+    n_iter: [30]
+    tol: [0.01]
+    verbose: [false]
+    implementation: [scaling, log]
+uel:
+  n_permutations: 8
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv

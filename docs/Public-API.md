@@ -913,6 +913,21 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.rbf_svm_binary.rbf_svm_binary`](Public-API.md#limensfdreference_architecturerbf_svm_binary) | `signature` | `limen/sfd/reference_architecture/rbf_svm_binary.py` |
 | [`limen.cohort.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
 | [`limen.cohort.bayesian.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
+| `limen.sfd.foundational_sfd.gaussian_hmm_binary` | `module` | `limen/sfd/foundational_sfd/gaussian_hmm_binary.py` |
+| [`limen.sfd.foundational_sfd.gaussian_hmm_binary.manifest`](Public-API.md#limensfdfoundational_sfdgaussian_hmm_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/gaussian_hmm_binary.py` |
+| [`limen.sfd.foundational_sfd.gaussian_hmm_binary.params`](Public-API.md#limensfdfoundational_sfdgaussian_hmm_binaryparams) | `signature` | `limen/sfd/foundational_sfd/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.GaussianHMMBinary`](Public-API.md#limensfdreference_architecturegaussianhmmbinary) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.GaussianHMMBinary.__init__`](Public-API.md#limensfdreference_architecturegaussianhmmbinary__init__) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.GaussianHMMBinary.train`](Public-API.md#limensfdreference_architecturegaussianhmmbinarytrain) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.GaussianHMMBinary.predict`](Public-API.md#limensfdreference_architecturegaussianhmmbinarypredict) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.GaussianHMMBinary.evaluate`](Public-API.md#limensfdreference_architecturegaussianhmmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.gaussian_hmm_binary`](Public-API.md#limensfdreference_architecturegaussian_hmm_binary) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary`](Public-API.md#limensfdreference_architecturegaussianhmmbinary) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.__init__`](Public-API.md#limensfdreference_architecturegaussianhmmbinary__init__) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.train`](Public-API.md#limensfdreference_architecturegaussianhmmbinarytrain) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.predict`](Public-API.md#limensfdreference_architecturegaussianhmmbinarypredict) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.evaluate`](Public-API.md#limensfdreference_architecturegaussianhmmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| [`limen.sfd.reference_architecture.gaussian_hmm_binary.gaussian_hmm_binary`](Public-API.md#limensfdreference_architecturegaussian_hmm_binary) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
 | `limen.sfd.foundational_sfd.lstm_binary` | `module` | `limen/sfd/foundational_sfd/lstm_binary.py` |
 | [`limen.sfd.foundational_sfd.lstm_binary.manifest`](Public-API.md#limensfdfoundational_sfdlstm_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/lstm_binary.py` |
 | [`limen.sfd.foundational_sfd.lstm_binary.params`](Public-API.md#limensfdfoundational_sfdlstm_binaryparams) | `signature` | `limen/sfd/foundational_sfd/lstm_binary.py` |
@@ -4793,6 +4808,73 @@ def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[s
 <!-- reference: public-limen-sfd-reference-architecture-rbf-svm-binary source=limen/sfd/reference_architecture/rbf_svm_binary.py region=signature:rbf_svm_binary role=signature -->
 ```python
 def rbf_svm_binary(data: dict[str, object], C: float=1.0, gamma: str | float='scale', shrinking: bool=True, tol: float=0.001, cache_size: float=200, class_weight: str | dict[int, float] | None=None, verbose: bool=False, max_iter: int=-1, random_state: int | None=42, prediction_calibration_config: 'CalibrationConfig | None'=None) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.gaussian_hmm_binary.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-gaussian-hmm-binary-manifest source=limen/sfd/foundational_sfd/gaussian_hmm_binary.py region=signature:manifest role=signature -->
+```python
+def manifest() -> Manifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.gaussian_hmm_binary.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-gaussian-hmm-binary-params source=limen/sfd/foundational_sfd/gaussian_hmm_binary.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.GaussianHMMBinary`
+
+<!-- reference: public-limen-sfd-reference-architecture-gaussianhmmbinary source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:GaussianHMMBinary role=signature -->
+```python
+class GaussianHMMBinary(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.GaussianHMMBinary.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-gaussianhmmbinary---init-- source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:GaussianHMMBinary.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.GaussianHMMBinary.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-gaussianhmmbinary-train source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:GaussianHMMBinary.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], **params: object) -> 'GaussianHMMBinary':
+    ...
+```
+
+### `limen.sfd.reference_architecture.GaussianHMMBinary.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-gaussianhmmbinary-predict source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:GaussianHMMBinary.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.GaussianHMMBinary.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-gaussianhmmbinary-evaluate source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:GaussianHMMBinary.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.gaussian_hmm_binary`
+
+<!-- reference: public-limen-sfd-reference-architecture-gaussian-hmm-binary source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:gaussian_hmm_binary role=signature -->
+```python
+def gaussian_hmm_binary(data: dict[str, object], n_components: int=2, covariance_type: str='diag', min_covar: float=0.001, startprob_prior: float=1.0, transmat_prior: float=1.0, means_prior: float=0.0, means_weight: float=0.0, covars_prior: float=0.01, covars_weight: float=1.0, random_state: int | None=42, n_iter: int=30, tol: float=0.01, verbose: bool=False, implementation: str='scaling') -> dict[str, object]:
     ...
 ```
 

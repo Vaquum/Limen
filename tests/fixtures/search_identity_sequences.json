@@ -377,6 +377,51 @@
         "scipy": "1.15.3"
       },
       "domain_cardinality": 16,
+      "observation_checkout": "5aed5402d05b1c237de7e91a50afa55a502ae062",
+      "seed": 42,
+      "sequence_sha256": "99df166458668a5a549df14c7d79cd414a88f966dbd2fbec382f706ebad5e20c",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/gaussian_hmm_binary.yaml",
+      "template_sha256": "4b3e2daa142971206455198fec640e1c0814ec1c1e0559eb3d0d8063f6d7014b"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 16,
+      "observation_checkout": "5aed5402d05b1c237de7e91a50afa55a502ae062",
+      "seed": 42,
+      "sequence_sha256": "470a9bdc1bd62182721bc53d9f1bc5ac4f5fe9e4e25c5ccaf70e2d9dbf162752",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/gaussian_hmm_binary.yaml",
+      "template_sha256": "4b3e2daa142971206455198fec640e1c0814ec1c1e0559eb3d0d8063f6d7014b"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 16,
+      "observation_checkout": "5aed5402d05b1c237de7e91a50afa55a502ae062",
+      "seed": 42,
+      "sequence_sha256": "c523343fd1ca4341b1dc813be1f1fb297946a45009f7cc38f46f1e3e9266ee9d",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/gaussian_hmm_binary.yaml",
+      "template_sha256": "4b3e2daa142971206455198fec640e1c0814ec1c1e0559eb3d0d8063f6d7014b"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 16,
       "observation_checkout": "2ee46d4c8d5b24d26c193b5d4a5493f2b6255595",
       "seed": 42,
       "sequence_sha256": "e621fa01929013bd9365efc7d3e5c8bed8a90b24c6f2ee2f7d3a0edb34a1b219",
