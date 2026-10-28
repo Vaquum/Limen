@@ -17,6 +17,7 @@ The current public reference-architecture exports are:
 - `EntropyVaRRegressor`
 - `DLinearRegressor`
 - `DirectionSizingModel`
+- `LSTMBinary`
 - `GaussianHMMBinary`
 - `LightGBMBinary`
 - `LogRegBinary`
@@ -29,7 +30,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `entropy_var_regressor`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `rbf_svm_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `direction_sizing`, `dlinear_regressor`, `entropy_var_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -576,6 +577,26 @@ The matching foundational SFD reuses LogReg preparation with SVM control domains
 and bounded native data requests. The shipped `rbf_svm_binary` template supplies
 every public control and a small dated experiment. The canonical compiled example
 is `docs/examples/compiled-research/family_rbf_svm_binary.yaml`.
+
+## `LSTMBinary`
+
+Install `vaquum-limen[neural]`. `lstm_binary` fits a PyTorch LSTM and a scalar
+linear head using binary cross-entropy with logits and Adam on CPU. Each input
+is a completed contiguous `ret_1_lag_0..N` window ordered oldest first. Other
+feature columns are ignored. One shared mean/std is fitted to training windows
+only, retained, and used unchanged in target-free inference. Hidden state resets
+for each window. Bidirectional mode combines both final-layer final states;
+all observations in either direction are already available at the decision.
+
+Inference uses eval mode, sigmoid probabilities and probability >0.5 decisions.
+Initialization and training restore the caller's CPU RNG state. Exposed controls
+cover the native LSTM structure, Adam configuration, epochs, minibatch size and
+seed. Supervised validation calibration and GPU execution are outside this variant.
+The [Bitcoin LSTM direction study](https://doi.org/10.1109/PDP2018.2018.00060)
+establishes application relevance, without demonstrating efficacy for this
+specific return-window configuration. The bundled Apple Silicon research lock
+requires macOS 14 or later for its pinned PyTorch wheel. The [native LSTM contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.LSTM.html)
+defines the sequence and final-state semantics.
 
 ## `EntropyVaRRegressor`
 

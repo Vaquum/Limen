@@ -2242,7 +2242,10 @@ torch==2.13.0 \
     --hash=sha256:cc26eead4cf51d0b544e31e364dcf000846549c273bd148936fe9d24d29acb92 \
     --hash=sha256:d849b390e07d8d333ce8ecaf91b273c656c598379a19c9acf1318a883f6b391c \
     --hash=sha256:e76f9bcecc52b8ff711239a2f7547d5353df95878ab232f0773c1d95928b92f8
-    # via tabpfn
+    # via
+    #   -c requirements/constraints.txt
+    #   tabpfn
+    #   vaquum-limen
 tqdm==4.68.4 \
     --hash=sha256:19829c9673638f2a0b8617da4cdcb927e831cd88bcfcb6e78d42a4d1af131520 \
     --hash=sha256:5168118b2368f48c561afda8020fd79195b1bdb0bdf8086b88442c267a315dc2

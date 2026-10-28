@@ -57,6 +57,7 @@ reference_architecture/
 ├── gaussian_hmm_binary.py
 ├── lightgbm_binary.py
 ├── logreg_binary.py
+├── lstm_binary.py
 ├── meta_allocation.py
 ├── random_binary.py
 ├── rbf_svm_binary.py

@@ -578,6 +578,8 @@
   "limen/_feature_constraints.py": 110,
   "limen/sfd/reference_architecture/gaussian_hmm_binary.py": 140,
   "limen/sfd/foundational_sfd/gaussian_hmm_binary.py": 40,
+  "limen/sfd/reference_architecture/lstm_binary.py": 180,
+  "limen/sfd/foundational_sfd/lstm_binary.py": 40,
   "limen/sfd/reference_architecture/entropy_var_regressor.py": 130,
   "limen/sfd/foundational_sfd/entropy_var_regressor.py": 40
 }
