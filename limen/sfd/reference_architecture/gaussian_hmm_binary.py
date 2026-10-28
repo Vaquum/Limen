@@ -16,6 +16,7 @@ __all__ = ['GaussianHMMBinary', 'gaussian_hmm_binary']
 _FloatArray = npt.NDArray[np.float64]
 _PERCENT = 100.0
 _THRESHOLD = 0.5
+_FEATURE_DIMENSIONS = 2
 
 
 class _GaussianModel(Protocol):
@@ -48,7 +49,7 @@ class GaussianHMMBinary(ReferenceModel):
             values = inputs.select(self._columns).to_numpy()
         else:
             matrix = np.asarray(inputs, dtype=np.float64)
-            if matrix.ndim != 2 or matrix.shape[1] != self._width:
+            if matrix.ndim != _FEATURE_DIMENSIONS or matrix.shape[1] != self._width:
                 raise ValueError('GaussianHMMBinary inference requires the fitted feature order and width')
             values = matrix[:, self._indices]
         windows = np.asarray(values, dtype=np.float64) * _PERCENT

@@ -30,3 +30,5 @@ The deployment toolchain pins Cloudflare Wrangler 4.151.2 (MIT OR Apache-2.0) in
 Chainticks Perp Data, derived from public chain/archive state. https://chainticks.com
 
 Modified: normalized/hashed, selected recorded populations and separately labelled diagnostics. Deterministic hashes normalize account identity; they do not anonymize public addresses. The full publisher notice, source pins, attribution and reproduction instructions are retained in the fixture's `license.json`, `provenance.json` and `reproduce.py`. This data license is separate from the package MIT license.
+
+- Optional `hmmlearn` support is installed through the `hmm` extra for GaussianHMM return models.
