@@ -92,7 +92,8 @@ def begin_run(host: object, workers: int | None, prep_each_round: bool, resume: 
 
 
 def worker_metadata(workers: int, metadata: dict[str, object], *, context_parameter_keys: list[str] | None = None, manifest: object = None) -> dict[str, object]:
-    metadata['exit_rules_declaration'] = declaration(manifest)
+    if (exits := declaration(manifest)) is not None:
+        metadata['exit_rules_declaration'] = exits
     if workers > 1:
         metadata.update(workers=workers, worker_native_threads=1, context_parameter_keys=context_parameter_keys or [])
     return metadata

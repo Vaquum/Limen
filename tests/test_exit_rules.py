@@ -363,6 +363,8 @@ def test_unconfigured_results_are_unchanged():
     inputs, policy = recorded_inputs()
     assert 'exit_rules' not in export_trade_contract(policy, inputs)['policy']
     assert SIGNAL_COLUMNS == ('row_id', 'available_at_ns', 'target')
+    from limen.experiment._parallel_rounds import worker_metadata
+    assert worker_metadata(1, {}, manifest=None) == {}
     assert_ledgers(trade_execution(inputs, policy), reference_trade_execution(inputs, policy))
     frozen = replace(inputs, sources=tuple(replace(source, identity='recorded-test-fixture') for source in inputs.sources))
     contract = export_trade_contract(policy, frozen)

@@ -625,6 +625,7 @@
         "operands",
         "operator",
         "other_column",
+        "params",
         "persistence_n",
         "recency_n",
         "type",
@@ -860,7 +861,7 @@
     "limen/yaml/profiler.py": "1e412c4ca48fc0d67fcf05ec6ec7811cdd37d256273af3833a56895a1931dd5d",
     "limen/yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
     "limen/yaml/rules.py": "59b49fc139484d1b7292de56cc66ed869c931c980a8c46c9d7b0eadf5406eb1d",
-    "limen/yaml/schema.py": "39a1b435d2f7ccc5b7204119aa2b072f1a71e02797f4823230335905d3150273",
+    "limen/yaml/schema.py": "20f0281500143590216c8d3c8cc7681ad7039e143ad1908bb63ed6fedaf60e6a",
     "limen/yaml/store.py": "53e4eb7724597f09c7bf71739996b5fb854d07950720868d6d93b125b6d3ac0c",
     "limen/yaml/validator.py": "226ab874d5e5f493574b6a755e14445fd0958b21201385bd6386ef303cb9ac9d"
   }

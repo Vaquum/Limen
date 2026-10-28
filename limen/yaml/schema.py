@@ -49,7 +49,7 @@ TARGET_OPTIONAL = {'fit_params', 'transform_params'}
 
 STRATEGY_REQUIRED = {'conditions', 'entry'}
 CONDITION_REQUIRED = {'id', 'name'}
-CONDITION_OPTIONAL = {'persistence_n', 'recency_n'}
+CONDITION_OPTIONAL = {'persistence_n', 'recency_n', 'params'}
 
 SCALER_EXPLICIT_REQUIRED = {'class'}
 SCALER_EXPLICIT_OPTIONAL = {'params'}

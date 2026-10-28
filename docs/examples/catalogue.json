@@ -2118,6 +2118,7 @@
           "name"
         ],
         "CONDITION_OPTIONAL": [
+          "params",
           "persistence_n",
           "recency_n"
         ],
