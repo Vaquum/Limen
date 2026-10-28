@@ -78,6 +78,7 @@ limen run --no-progress-bar \
   compiled-research/family_cnn1d_binary.yaml \
   compiled-research/family_entropy_var_regressor.yaml \
   compiled-research/family_feature_link_binary.yaml \
+  compiled-research/family_pseudo_label_binary.yaml \
   compiled-research/family_weight_link_binary.yaml
 # endregion models
 }

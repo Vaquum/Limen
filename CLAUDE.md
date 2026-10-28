@@ -98,7 +98,7 @@ The gates check shape, scope, format, ratchets, and named test suites. They do n
 
 **Minimal scope.** Touch only the files the task demands. Drive-by cleanups go in a separate PR.
 
-**No synthetic data.** Ever. Inventing data is not a shortcut — it corrupts everything downstream. If the real data isn't there, stop and ask.
+**No synthetic market observations or evaluation outcomes.** If the real data is missing, stop and ask. Explicit pseudo-label training is permitted only for a supplied pool of real observations, with generated labels clearly distinguished from observed labels and recoverable source, selection and model provenance. Evaluation uses observed outcomes.
 
 **Validate against the stated expectation.** The question is never "did it run" — it's "did it return what the issue promised."
 

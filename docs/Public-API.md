@@ -1004,6 +1004,22 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.evaluate`](Public-API.md#limensfdreference_architecturefeaturelinkedbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
 | [`limen.sfd.reference_architecture.feature_link_binary.feature_link_binary`](Public-API.md#limensfdreference_architecturefeature_link_binary) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
 | [`limen.sfd.reference_architecture.feature_link_binary.recorded_rows`](Public-API.md#limensfdreference_architecturefeature_link_binaryrecorded_rows) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| `limen.sfd.foundational_sfd.pseudo_label_binary` | `module` | `limen/sfd/foundational_sfd/pseudo_label_binary.py` |
+| [`limen.sfd.foundational_sfd.pseudo_label_binary.manifest`](Public-API.md#limensfdfoundational_sfdpseudo_label_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/pseudo_label_binary.py` |
+| [`limen.sfd.foundational_sfd.pseudo_label_binary.params`](Public-API.md#limensfdfoundational_sfdpseudo_label_binaryparams) | `signature` | `limen/sfd/foundational_sfd/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.PseudoLabelBinary`](Public-API.md#limensfdreference_architecturepseudolabelbinary) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.PseudoLabelBinary.__init__`](Public-API.md#limensfdreference_architecturepseudolabelbinary__init__) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.PseudoLabelBinary.train`](Public-API.md#limensfdreference_architecturepseudolabelbinarytrain) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.PseudoLabelBinary.predict`](Public-API.md#limensfdreference_architecturepseudolabelbinarypredict) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.PseudoLabelBinary.evaluate`](Public-API.md#limensfdreference_architecturepseudolabelbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary`](Public-API.md#limensfdreference_architecturepseudo_label_binary) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary`](Public-API.md#limensfdreference_architecturepseudolabelbinary) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.__init__`](Public-API.md#limensfdreference_architecturepseudolabelbinary__init__) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.train`](Public-API.md#limensfdreference_architecturepseudolabelbinarytrain) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.predict`](Public-API.md#limensfdreference_architecturepseudolabelbinarypredict) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.evaluate`](Public-API.md#limensfdreference_architecturepseudolabelbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary.pseudo_label_binary`](Public-API.md#limensfdreference_architecturepseudo_label_binary) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| [`limen.sfd.reference_architecture.pseudo_label_binary.recorded_rows`](Public-API.md#limensfdreference_architecturepseudo_label_binaryrecorded_rows) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
 | `limen.sfd.foundational_sfd.weight_link_binary` | `module` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
 | [`limen.sfd.foundational_sfd.weight_link_binary.manifest`](Public-API.md#limensfdfoundational_sfdweight_link_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
 | [`limen.sfd.foundational_sfd.weight_link_binary.params`](Public-API.md#limensfdfoundational_sfdweight_link_binaryparams) | `signature` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
@@ -5293,6 +5309,81 @@ def feature_link_binary(data: dict[str, object], upstream_params: dict[str, obje
 ### `limen.sfd.reference_architecture.feature_link_binary.recorded_rows`
 
 <!-- reference: public-limen-sfd-reference-architecture-feature-link-binary-recorded-rows source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:recorded_rows role=signature -->
+```python
+def recorded_rows(data_dict: dict[str, object], split_data: list[pl.DataFrame], round_params: dict[str, object], fitted_params: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.pseudo_label_binary.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-pseudo-label-binary-manifest source=limen/sfd/foundational_sfd/pseudo_label_binary.py region=signature:manifest role=signature -->
+```python
+def manifest() -> MLManifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.pseudo_label_binary.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-pseudo-label-binary-params source=limen/sfd/foundational_sfd/pseudo_label_binary.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.PseudoLabelBinary`
+
+<!-- reference: public-limen-sfd-reference-architecture-pseudolabelbinary source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:PseudoLabelBinary role=signature -->
+```python
+class PseudoLabelBinary(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.PseudoLabelBinary.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-pseudolabelbinary---init-- source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:PseudoLabelBinary.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.PseudoLabelBinary.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-pseudolabelbinary-train source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:PseudoLabelBinary.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], *, pool_path: str, pool_sha256: str, pool_start: str, pool_end: str, training_cutoff: str, observation_interval_seconds: int, confidence_threshold: float=0.8, upstream_params: dict[str, object] | None=None, downstream_params: dict[str, object] | None=None, **params: object) -> 'PseudoLabelBinary':
+    ...
+```
+
+### `limen.sfd.reference_architecture.PseudoLabelBinary.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-pseudolabelbinary-predict source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:PseudoLabelBinary.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.PseudoLabelBinary.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-pseudolabelbinary-evaluate source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:PseudoLabelBinary.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.pseudo_label_binary`
+
+<!-- reference: public-limen-sfd-reference-architecture-pseudo-label-binary source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:pseudo_label_binary role=signature -->
+```python
+def pseudo_label_binary(data: dict[str, object], pool_path: str, pool_sha256: str, pool_start: str, pool_end: str, training_cutoff: str, observation_interval_seconds: int, confidence_threshold: float=0.8, upstream_params: dict[str, object] | None=None, downstream_params: dict[str, object] | None=None) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.pseudo_label_binary.recorded_rows`
+
+<!-- reference: public-limen-sfd-reference-architecture-pseudo-label-binary-recorded-rows source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:recorded_rows role=signature -->
 ```python
 def recorded_rows(data_dict: dict[str, object], split_data: list[pl.DataFrame], round_params: dict[str, object], fitted_params: dict[str, object]) -> dict[str, object]:
     ...

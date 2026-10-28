@@ -215,6 +215,11 @@
       "scenario": "search",
       "configuration": "docs/examples/compiled-research/family_feature_link_binary.yaml"
     },
+    "pseudo_label_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_pseudo_label_binary.yaml"
+    },
     "weight_link_binary": {
       "interface": "compiled",
       "scenario": "search",
@@ -1607,6 +1612,7 @@
           "lightgbm_binary",
           "logreg_binary",
           "lstm_binary",
+          "pseudo_label_binary",
           "random_binary",
           "rbf_svm_binary",
           "residual_regressor",
@@ -1736,6 +1742,7 @@
           "LSTMBinary",
           "LightGBMBinary",
           "LogRegBinary",
+          "PseudoLabelBinary",
           "RBFSVMBinary",
           "RandomBinary",
           "ReferenceModel",
@@ -1754,6 +1761,7 @@
           "lightgbm_binary",
           "logreg_binary",
           "lstm_binary",
+          "pseudo_label_binary",
           "random_binary",
           "rbf_svm_binary",
           "residual_regressor",
@@ -2227,6 +2235,41 @@
         "names": [
           "FeatureLinkedBinary",
           "feature_link_binary",
+          "recorded_rows"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.foundational_sfd.pseudo_label_binary": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/pseudo_label_binary.py",
+        "entry_point": "limen.sfd.foundational_sfd.pseudo_label_binary",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture.pseudo_label_binary": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/pseudo_label_binary.py",
+        "entry_point": "limen.sfd.reference_architecture.pseudo_label_binary",
+        "names": [
+          "PseudoLabelBinary",
+          "pseudo_label_binary",
           "recorded_rows"
         ],
         "reference": "limen/sfd/reference_architecture/README.md"

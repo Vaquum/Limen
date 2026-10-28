@@ -27,6 +27,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `cnn1d_binary` | binary next-return sign | bounded CPU temporal convolution; requires `neural` |
 | `entropy_var_regressor` | signed lower return quantile | raw sign entropy; continuous risk output, no execution |
 | `feature_link_binary` | binary next-return sign | chronological upstream probabilities appended to downstream inputs |
+| `pseudo_label_binary` | binary next-return sign | explicit recorded pool and recoverable generated-training-label provenance |
 | `weight_link_binary` | binary next-return sign | chronological observed difficulty consumed as downstream row weights |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
@@ -168,6 +169,7 @@ limen run --no-progress-bar \
   compiled-research/family_cnn1d_binary.yaml \
   compiled-research/family_entropy_var_regressor.yaml \
   compiled-research/family_feature_link_binary.yaml \
+  compiled-research/family_pseudo_label_binary.yaml \
   compiled-research/family_weight_link_binary.yaml
 ```
 
@@ -289,6 +291,15 @@ windows and recorded row times. The dated YAML template exposes eight
 combinations of lookback and upstream/downstream regularization. See
 [Reference Architecture](Reference-Architecture.md#featurelinkedbinary) for
 out-of-sample features, availability and retained inference.
+
+## `pseudo_label_binary`
+
+The SFD/YAML requires the explicitly provisioned recorded pool, source digest,
+pool bounds, training cutoff and observation interval. Eight combinations vary
+confidence and upstream/downstream regularization. The data-dictionary extension
+carries real split row times; generated labels and their provenance remain
+visible in the experiment log. See [Reference Architecture](Reference-Architecture.md#pseudolabelbinary)
+for selection, disjointness, replay and the protected-holdout restriction.
 
 ## `weight_link_binary`
 
