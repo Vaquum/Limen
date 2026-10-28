@@ -1,4 +1,5 @@
 from copy import deepcopy
+from importlib import import_module
 import inspect
 import json
 from pathlib import Path
@@ -84,14 +85,18 @@ def test_recorded_lstm_trains_scales_and_reconstructs_probabilities(recorded, mo
     assert torch.equal(torch.get_rng_state(), before)
 
 
-def test_lstm_compiled_recording_and_reconstruction(tmp_path, recorded):
+def test_lstm_compiled_recording_and_reconstruction(tmp_path, recorded, monkeypatch):
     bars, _, _, _ = recorded
     config = YAML(typ='safe').load(ROOT / 'limen/yaml/templates/lstm_binary.yaml')
-    config['sfd']['manifest']['data_source'] = {'method': 'limen.data.HistoricalData.get_any_file',
-        'params': {'file_path_or_url': str(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet')}}
+    monkeypatch.setattr(import_module('limen.data.historical_data'), '_read_any_file', lambda *_args, **_kwargs: bars)
+    compiled = CompiledSFD(config)
+    source = compiled.manifest()
+    assert 'row_count_limit' not in source.data_source_config.params
+    admitted = source.fetch_data()
+    assert admitted.height > 0 and admitted['datetime'].min().year == 2024
     config['sfd']['params']['epochs'] = [2]
     assert validate(config).valid
-    loop = UniversalExperimentLoop(sfd=CompiledSFD(config), data=bars, experiment_dir=tmp_path,
+    loop = UniversalExperimentLoop(sfd=compiled, data=admitted, experiment_dir=tmp_path,
                                    search_strategy=build_search_strategy(config), yaml_reference=config)
     loop.run('recorded_lstm', n_permutations=1, prep_each_round=True, progress_bar=False,
              record_model_outputs=True, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
