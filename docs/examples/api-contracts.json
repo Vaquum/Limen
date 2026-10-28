@@ -4998,5 +4998,85 @@
     "source": "limen/sfd/reference_architecture/entropy_var_regressor.py",
     "symbol": "entropy_var_regressor",
     "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.feature_link_binary": {
+    "source": "limen/sfd/foundational_sfd/feature_link_binary.py",
+    "symbol": "feature_link_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.feature_link_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/feature_link_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.feature_link_binary.params": {
+    "source": "limen/sfd/foundational_sfd/feature_link_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.FeatureLinkedBinary": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.FeatureLinkedBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.FeatureLinkedBinary.train": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.FeatureLinkedBinary.predict": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.FeatureLinkedBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "feature_link_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.train": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.predict": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "FeatureLinkedBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary.feature_link_binary": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "feature_link_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.feature_link_binary.recorded_rows": {
+    "source": "limen/sfd/reference_architecture/feature_link_binary.py",
+    "symbol": "recorded_rows",
+    "role": "signature"
   }
 }

@@ -988,6 +988,22 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.predict`](Public-API.md#limensfdreference_architectureentropyvarregressorpredict) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
 | [`limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.evaluate`](Public-API.md#limensfdreference_architectureentropyvarregressorevaluate) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
 | [`limen.sfd.reference_architecture.entropy_var_regressor.entropy_var_regressor`](Public-API.md#limensfdreference_architectureentropy_var_regressor) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| `limen.sfd.foundational_sfd.feature_link_binary` | `module` | `limen/sfd/foundational_sfd/feature_link_binary.py` |
+| [`limen.sfd.foundational_sfd.feature_link_binary.manifest`](Public-API.md#limensfdfoundational_sfdfeature_link_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/feature_link_binary.py` |
+| [`limen.sfd.foundational_sfd.feature_link_binary.params`](Public-API.md#limensfdfoundational_sfdfeature_link_binaryparams) | `signature` | `limen/sfd/foundational_sfd/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.FeatureLinkedBinary`](Public-API.md#limensfdreference_architecturefeaturelinkedbinary) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.FeatureLinkedBinary.__init__`](Public-API.md#limensfdreference_architecturefeaturelinkedbinary__init__) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.FeatureLinkedBinary.train`](Public-API.md#limensfdreference_architecturefeaturelinkedbinarytrain) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.FeatureLinkedBinary.predict`](Public-API.md#limensfdreference_architecturefeaturelinkedbinarypredict) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.FeatureLinkedBinary.evaluate`](Public-API.md#limensfdreference_architecturefeaturelinkedbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary`](Public-API.md#limensfdreference_architecturefeature_link_binary) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary`](Public-API.md#limensfdreference_architecturefeaturelinkedbinary) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.__init__`](Public-API.md#limensfdreference_architecturefeaturelinkedbinary__init__) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.train`](Public-API.md#limensfdreference_architecturefeaturelinkedbinarytrain) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.predict`](Public-API.md#limensfdreference_architecturefeaturelinkedbinarypredict) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary.FeatureLinkedBinary.evaluate`](Public-API.md#limensfdreference_architecturefeaturelinkedbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary.feature_link_binary`](Public-API.md#limensfdreference_architecturefeature_link_binary) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
+| [`limen.sfd.reference_architecture.feature_link_binary.recorded_rows`](Public-API.md#limensfdreference_architecturefeature_link_binaryrecorded_rows) | `signature` | `limen/sfd/reference_architecture/feature_link_binary.py` |
 
 ## Additional component contracts
 
@@ -5188,5 +5204,80 @@ def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[s
 <!-- reference: public-limen-sfd-reference-architecture-entropy-var-regressor source=limen/sfd/reference_architecture/entropy_var_regressor.py region=signature:entropy_var_regressor role=signature -->
 ```python
 def entropy_var_regressor(data: dict[str, object], quantile: float=0.05, alpha: float=0.0, fit_intercept: bool=True, solver: str='highs', solver_options: dict[str, object] | None=None) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.feature_link_binary.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-feature-link-binary-manifest source=limen/sfd/foundational_sfd/feature_link_binary.py region=signature:manifest role=signature -->
+```python
+def manifest() -> MLManifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.feature_link_binary.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-feature-link-binary-params source=limen/sfd/foundational_sfd/feature_link_binary.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.FeatureLinkedBinary`
+
+<!-- reference: public-limen-sfd-reference-architecture-featurelinkedbinary source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:FeatureLinkedBinary role=signature -->
+```python
+class FeatureLinkedBinary(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.FeatureLinkedBinary.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-featurelinkedbinary---init-- source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:FeatureLinkedBinary.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.FeatureLinkedBinary.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-featurelinkedbinary-train source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:FeatureLinkedBinary.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], *, upstream_params: dict[str, object] | None=None, downstream_params: dict[str, object] | None=None, n_splits: int=3, observation_interval_seconds: int=3600, **params: object) -> 'FeatureLinkedBinary':
+    ...
+```
+
+### `limen.sfd.reference_architecture.FeatureLinkedBinary.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-featurelinkedbinary-predict source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:FeatureLinkedBinary.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.FeatureLinkedBinary.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-featurelinkedbinary-evaluate source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:FeatureLinkedBinary.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.feature_link_binary`
+
+<!-- reference: public-limen-sfd-reference-architecture-feature-link-binary source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:feature_link_binary role=signature -->
+```python
+def feature_link_binary(data: dict[str, object], upstream_params: dict[str, object] | None=None, downstream_params: dict[str, object] | None=None, n_splits: int=3, observation_interval_seconds: int=3600) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.feature_link_binary.recorded_rows`
+
+<!-- reference: public-limen-sfd-reference-architecture-feature-link-binary-recorded-rows source=limen/sfd/reference_architecture/feature_link_binary.py region=signature:recorded_rows role=signature -->
+```python
+def recorded_rows(data_dict: dict[str, object], split_data: list[pl.DataFrame], round_params: dict[str, object], fitted_params: dict[str, object]) -> dict[str, object]:
     ...
 ```
