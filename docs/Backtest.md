@@ -321,14 +321,7 @@ The strategy owns its signal contract and fill mechanics. `backtest_snapshot()` 
 
 ### Explicit short/flat snapshots
 
-Direct callers can select `limen.backtest.short_flat_strategy.short_flat_strategy`:
-
-```python
-from limen.backtest.backtest_snapshot import backtest_snapshot
-from limen.backtest.short_flat_strategy import short_flat_strategy
-
-result = backtest_snapshot(perf, strategy=short_flat_strategy)
-```
+Import `short_flat_strategy` from `limen.backtest.short_flat_strategy`, then call `backtest_snapshot(perf, strategy=short_flat_strategy)` with retained prediction and price rows.
 
 Here binary `1` activates a short and `0` is flat. `pos` remains a non-negative exposure magnitude, preserving the 20-column ledger and its trade/inventory counts. After the declared lag, entries use the execution-row open: gross return is `-(close - open) / open`. Continuations use `-(close_t / close_previous - 1)`. Missing price rows flatten the position; a later active valid row starts a new trade at its open. Zero lag can trade the first row and is a same-row research diagnostic.
 

@@ -476,6 +476,21 @@
         ],
         "reference": "docs/Backtest.md"
       },
+      "limen.backtest.short_flat_strategy": {
+        "interfaces": [
+          "python"
+        ],
+        "project_context": [
+          "python/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/short_flat_strategy.py",
+        "entry_point": "limen.backtest.short_flat_strategy",
+        "names": [
+          "short_flat_strategy"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
       "limen.backtest.trade_contract": {
         "interfaces": [
           "python",
@@ -644,6 +659,24 @@
         ],
         "reference": "limen/data/bars/README.md"
       },
+      "limen.data.bars.adaptive_bars": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/bars/adaptive_bars.py",
+        "entry_point": "limen.data.bars.adaptive_bars",
+        "names": [
+          "imbalance_bars",
+          "run_bars"
+        ],
+        "reference": "limen/data/bars/README.md"
+      },
       "limen.data.utils": {
         "interfaces": [
           "python",
@@ -667,6 +700,40 @@
           "split_random",
           "split_sequential",
           "split_walk_forward"
+        ],
+        "reference": "limen/data/utils/README.md"
+      },
+      "limen.data.utils.lookback_window": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/lookback_window.py",
+        "entry_point": "limen.data.utils.lookback_window",
+        "names": [
+          "lookback_window"
+        ],
+        "reference": "limen/data/utils/README.md"
+      },
+      "limen.data.utils.sample_regime_blocks": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/sample_regime_blocks.py",
+        "entry_point": "limen.data.utils.sample_regime_blocks",
+        "names": [
+          "sample_regime_blocks"
         ],
         "reference": "limen/data/utils/README.md"
       },
@@ -1839,58 +1906,6 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
-      },
-      "limen.data.bars.adaptive_bars": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/bars",
-          "compiled/bars"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/data/bars/adaptive_bars.py",
-        "entry_point": "limen.data.bars.adaptive_bars",
-        "names": [
-          "imbalance_bars",
-          "run_bars"
-        ],
-        "reference": "limen/data/bars/README.md"
-      },
-      "limen.data.utils.lookback_window": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/bars",
-          "compiled/bars"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/data/utils/lookback_window.py",
-        "entry_point": "limen.data.utils.lookback_window",
-        "names": [
-          "lookback_window"
-        ],
-        "reference": "limen/data/utils/README.md"
-      },
-      "limen.data.utils.sample_regime_blocks": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/bars",
-          "compiled/bars"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/data/utils/sample_regime_blocks.py",
-        "entry_point": "limen.data.utils.sample_regime_blocks",
-        "names": [
-          "sample_regime_blocks"
-        ],
-        "reference": "limen/data/utils/README.md"
       }
     },
     "registries": {
