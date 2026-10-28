@@ -29,9 +29,7 @@ _LAZY_EXPORTS = {
 
 
 if TYPE_CHECKING:
-    from limen.sfd.foundational_sfd import weight_link_binary
-    from limen.sfd.foundational_sfd import pseudo_label_binary
-    from limen.sfd.foundational_sfd import feature_link_binary
+    from limen.sfd.foundational_sfd import feature_link_binary, pseudo_label_binary, weight_link_binary
     from limen.sfd.foundational_sfd import entropy_var_regressor
     from limen.sfd.foundational_sfd import cnn1d_binary
     from limen.sfd.foundational_sfd import residual_regressor
