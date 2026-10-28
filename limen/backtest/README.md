@@ -61,6 +61,7 @@ backtest/
 ├── _long_flat_tp_sl.py
 ├── _snapshot_execution.py
 ├── _snapshot_ledger.py
+├── _snapshot_signals.py
 ├── backtest_snapshot.py
 ├── execution_events.py
 ├── funding_adapter.py
@@ -76,6 +77,7 @@ backtest/
 
 - Configure tunable fixed TP/SL on the manifest; [Backtest](../../docs/Backtest.md#tunable-take-profit-and-stop-loss) defines exits, OHLC validation, and replay requirements.
 - `backtest_snapshot()` is the standard analysis path for vectorized experiment-sweep evaluation.
+- Explicit `class_mapping` or `label_index` interprets multiclass/multilabel snapshot inputs; [Backtest](../../docs/Backtest.md#explicit-multiclass-and-multilabel-inputs) defines the contract.
 - Snapshot return and cost outputs are basis-point scaled (`*_bps` columns), matching the basis-point fee and slippage inputs.
 
 ## Read next

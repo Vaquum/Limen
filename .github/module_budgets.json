@@ -442,6 +442,7 @@
   "limen/backtest/_explicit_exit_strategy.py": 160,
   "limen/backtest/_exit_evidence.py": 80,
   "limen/backtest/_rule_exit_state.py": 100,
+  "limen/backtest/_snapshot_signals.py": 70,
   "limen/experiment/_resolve_backtest_config.py": 120,
   "limen/yaml/_backtest_spec.py": 140,
   "limen/experiment/_prepare_backtest_data.py": 100,

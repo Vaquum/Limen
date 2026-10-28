@@ -45,6 +45,8 @@ def backtest_snapshot(columns: Mapping[str, Any],
                       take_profit_bps: float | None = None,
                       stop_loss_bps: float | None = None,
                       high_col: str = 'high', low_col: str = 'low',
+                      class_mapping: Mapping[int | str, int] | None = None,
+                      label_index: int | None = None,
                       exit_col: str | None = None) -> dict[str, float]:
 
     '''
@@ -99,11 +101,18 @@ def backtest_snapshot(columns: Mapping[str, Any],
         high_col (str): High price column required for enabled barriers.
         low_col (str): Low price column required for enabled barriers.
         exit_col (str | None): Boolean decisions selecting independent entry/hold/exit execution.
+        class_mapping (Mapping[int | str, int] | None): Explicit class-to-binary decisions.
+        label_index (int | None): Explicit column of a binary multilabel indicator matrix.
 
     Returns:
         dict[str, float]: One-row ledger keyed by BACKTEST_SNAPSHOT_COLUMNS
     '''
 
+    if class_mapping is not None or label_index is not None:
+        from limen.backtest._snapshot_signals import snapshot_signals
+        columns = {**columns, pred_col: snapshot_signals(
+            columns.get(pred_col), class_mapping=class_mapping, label_index=label_index,
+        )}
     return _snapshot_with_execution(
         columns, pred_col=pred_col, open_col=open_col, close_col=close_col,
         price_change_col=price_change_col, strategy=strategy,
