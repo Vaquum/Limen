@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T08:46:01.299979+00:00",
-  "execution_checkout_head": "801fa25d1d10e069ce38b71dfb68cfff16eb8c6a",
+  "observed_at": "2026-10-28T09:06:17.781943+00:00",
+  "execution_checkout_head": "b3ddd31134b3fe49039b1345d1bca71f690dcf69",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -18,7 +18,8 @@
     "backtest/_long_flat_tp_sl.py": "b2802f3940a11694c830f8320ccd3f56fff3f4aa1acfcbcab42d09c4612abee3",
     "backtest/_snapshot_execution.py": "0d64bfac719d5e47caefd0e9c6ff8892bc665f108faf0a889c7e6a9f57209737",
     "backtest/_snapshot_ledger.py": "11746e677bf32309311a00aaab656f2d4339619c16e4614e9ef8d3758701ffed",
-    "backtest/backtest_snapshot.py": "f2ffaf2b8ce78c109fa93d34dbb4c367f8095067561dde15f4cb76c13c91815c",
+    "backtest/_snapshot_signals.py": "74c405b0cadffcf58d703892ae1e2364a003d3d9b67b5abc2d99af358c7a7c18",
+    "backtest/backtest_snapshot.py": "19f07b0e7361dd9197a1bc1fd7b7111a633391f76528c79ccb9e2be494a91000",
     "backtest/execution_events.py": "2926ded6505a6ecb91dd2e300352d1d664d3217401be01120c0476a4a9aeb6fb",
     "backtest/funding_adapter.py": "db98751d05827fb2d1575ac0f659987564a7a1bec11e4bd601d0aebd5a1d9581",
     "backtest/funding_presets.py": "ace67a5d1450ad8d1da0f54a5cf0437a2f5f849cb5d6dae226b8d0f9a05c06c5",
@@ -429,7 +430,7 @@
     "inference/sensor.py": "6f1450020efe9737c7b5076257b8e006b6b0fd16868c16ae58051b3b37bcd0b7",
     "inference/trainer.py": "291b0657c7d63432e80772b2829b4096d13ad49907de5ad48654d343f6e455fe",
     "log/__init__.py": "ef53b21e7a5d3c5ebf6825418ab4aa6a0047743dc9764782f5844c6470630c11",
-    "log/_experiment_backtest_results.py": "5e5c20a6d253e1be8ec72e64bd64b5992587e4b39c6838930e8ec17817a7bb1b",
+    "log/_experiment_backtest_results.py": "f78dd42b776b23779bf1965bbf70cb46462db1e33966bd14c709801a94297742",
     "log/_experiment_confusion_metrics.py": "4b2c6d6b84b12f909603e73f6c3f019ae0eb855af645549322bda8a42574988e",
     "log/_experiment_parameter_correlation.py": "d2b5f0b39d1b6766d8c5fac495a41510a1eceba603397d0f99fa31f5b53d519d",
     "log/_experiment_parameter_importance.py": "d6185510d3aada8ddf11730c5ac8546eda2730471b483660c0d25bdc904eb459",
