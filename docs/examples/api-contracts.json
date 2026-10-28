@@ -619,6 +619,11 @@
     "symbol": "ExecutionResult",
     "role": "signature"
   },
+  "limen.backtest.short_flat_strategy.short_flat_strategy": {
+    "source": "limen/backtest/short_flat_strategy.py",
+    "symbol": "short_flat_strategy",
+    "role": "signature"
+  },
   "limen.backtest.long_flat_strategy.long_flat_strategy": {
     "source": "limen/backtest/long_flat_strategy.py",
     "symbol": "long_flat_strategy",

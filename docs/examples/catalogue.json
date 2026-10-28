@@ -476,6 +476,21 @@
         ],
         "reference": "docs/Backtest.md"
       },
+      "limen.backtest.short_flat_strategy": {
+        "interfaces": [
+          "python"
+        ],
+        "project_context": [
+          "python/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/short_flat_strategy.py",
+        "entry_point": "limen.backtest.short_flat_strategy",
+        "names": [
+          "short_flat_strategy"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
       "limen.backtest.trade_contract": {
         "interfaces": [
           "python",

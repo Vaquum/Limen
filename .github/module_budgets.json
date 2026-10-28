@@ -25,6 +25,7 @@
   "limen/backtest/__init__.py": 10,
   "limen/backtest/backtest_snapshot.py": 210,
   "limen/backtest/long_flat_strategy.py": 100,
+  "limen/backtest/short_flat_strategy.py": 100,
   "limen/calibration/__init__.py": 20,
   "limen/calibration/pipeline.py": 70,
   "limen/calibration/probability.py": 30,
