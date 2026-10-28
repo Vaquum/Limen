@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T12:42:54.116713+00:00",
-  "execution_checkout_head": "d0f4f1f9d1430f5b5d175be128fff922fd2e0dcc",
+  "observed_at": "2026-10-28T13:29:37.050977+00:00",
+  "execution_checkout_head": "6cfe761263244b07c2faaa318b5ac05fa20c8c52",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -59,10 +59,11 @@
     "cli/commands/validate.py": "8bd94801a0311e91321c6bfc98c190e1c0037651243ced7210e9f74c058c0408",
     "cli/git_utils.py": "e8fe61990930832ada420152afb06a31e1091c9dc1b834a88a981701d6b7884a",
     "cli/main.py": "6f5dbbb9d9887d1043dc1aba7ef21624dc4ffadd68aa8cd1441626954aebad78",
-    "cohort/__init__.py": "4998518bc4babb211f3bea2677c9d8eb01bc011097542a2a5a8f04d2a7c2d4ae",
+    "cohort/__init__.py": "1f8e06ba65866ecde1af7e6927fd7f7600363e4f083ef92f2f8f5a62284b43e3",
     "cohort/_fold_sources.py": "af7bb5f82cd2e4fad9577e8ff00e48d1416be0ae489687edc9f33131009f7ebb",
     "cohort/_python_cohort.py": "bb829ee456133a6026ab5ea79704f34db3707d7428cf3c6ae4b47b86c50491f5",
     "cohort/_round_sources.py": "13e8998924285a008c68b294c27ed150eb99bdaca8f2975ae8bcbd561d0fb3b8",
+    "cohort/bayesian.py": "8c6042415efbf0e222ca1fadf82124832fa29a310511917e7b85fc6547c0f5dc",
     "cohort/cohort.py": "0da2b13a11fd6b62bd22be9dee232531407f90c3d5251f21fe3b74050bb56e39",
     "cohort/sfc/__init__.py": "50e268d450d7f520621183de06f2da2f6478016868a3b3a8307e275e4fd62398",
     "cohort/sfc/all.py": "f5798a5518d1e9112d29ecae6384c9ec1baad69a5f3c20bdfa04e2859d02742a",

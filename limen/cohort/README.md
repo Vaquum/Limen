@@ -29,6 +29,7 @@ It does **not** own:
 | Entry point                       | Use case | Notes                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `Cohort`                        | Aggregate retained Python fits or compatible reconstructed native members at inference time | Supports probability-weighted and majority-vote fallback modes |
+| `bayesian_cohort` | Bind observed binary outcomes to live Python members | Fixed Beta–Bernoulli reliability-weighted voting; see the canonical Cohort documentation |
 | `BUILTIN_SELECTORS`             | Map selector names to built-in selector modules | Exported at the package root |
 | `limen.cohort.sfc.all.select`             | Default "use every round" selector | Preserves existing omitted-`permutation_ids` behavior          |
 | `limen.cohort.sfc.top_n.select`           | Results-column ranker | Requires `results.csv`                                         |
@@ -55,6 +56,7 @@ cohort/
 ├── _fold_sources.py
 ├── _python_cohort.py
 ├── _round_sources.py
+├── bayesian.py
 ├── cohort.py
 └── sfc/
 ```

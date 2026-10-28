@@ -4538,5 +4538,15 @@
     "source": "limen/experiment/_exit_rules.py",
     "symbol": "with_exit_rules",
     "role": "signature"
+  },
+  "limen.cohort.bayesian_cohort": {
+    "source": "limen/cohort/bayesian.py",
+    "symbol": "bayesian_cohort",
+    "role": "signature"
+  },
+  "limen.cohort.bayesian.bayesian_cohort": {
+    "source": "limen/cohort/bayesian.py",
+    "symbol": "bayesian_cohort",
+    "role": "signature"
   }
 }

@@ -89,6 +89,55 @@ required history context when trimming completed prefixes.
 | Exceptions | Existing catch-and-degrade policy | Callback errors propagate; unalignable compiled failures raise |
 | Identity | Bound artifact lineage | Caller-owned live state, no compiled identity |
 
+## Bayesian reliability voting
+
+<!-- reference: cohort-bayesian-api source=limen/cohort/bayesian.py region=signature:bayesian_cohort role=signature -->
+```python
+def bayesian_cohort(sensors: Sequence[Sensor], evidence: pl.DataFrame, *, alpha: float=1.0, beta: float=1.0, prepare: CohortPrepare[HistoryT] | None=None, state_id: str | None=None, selection_cutoff: datetime | None=None) -> PythonCohortBase[HistoryT]:
+    ...
+```
+
+`limen.cohort.bayesian_cohort(sensors, evidence, alpha=1.0, beta=1.0)` constructs
+the existing live Python Cohort with a fixed reliability-weighted binary vote.
+Supply compatible Python Sensors with explicit matching output IDs. The evidence
+is a Polars frame with these columns:
+
+| Column | Contract |
+|---|---|
+| `sensor_id` | Member's exact live `state_id` |
+| `datetime` | UTC prediction decision timestamp, outside that member's selection history |
+| `available_at` | UTC timestamp strictly after the decision when the actual outcome was observed |
+| `prediction`, `outcome` | Numeric 0 or 1: the original prediction and its observed target outcome |
+| `source` | Nonblank provenance identifying the observed outcome source |
+
+Keep one row per Sensor/decision, consistent observed outcomes across members,
+and retain the original evidence. Limen validates
+the frame and membership; the caller supplies trustworthy observed labels,
+availability and provenance. Model-generated labels are not observed outcomes.
+Nanosecond timestamps that Python would truncate reject. Extra columns are ignored.
+
+For member `i`, count correct outcomes `c_i` among `n_i` admitted observations.
+A Beta(`alpha`, `beta`) correctness prior gives posterior reliability weight
+`w_i = (alpha + c_i) / (alpha + beta + n_i)`. The priors must be positive and
+finite, including their sum. A member without evidence uses its prior mean;
+an empty frame with the declared schema gives equal weights. These are posterior
+means for historical correctness under a Bernoulli model. Correlated errors and
+changing regimes can invalidate its assumptions. This does not establish a joint
+posterior for market direction or a trading advantage.
+
+The aggregate returns 1 when the weight of positive votes exceeds half the total
+weight, otherwise 0; ties resolve to 0. Its `probability` is None because a weighted
+vote score is not a calibrated probability. Nonbinary live predictions raise
+ValueError. Evidence ordering does not change which member receives each weight.
+
+The Cohort cutoff includes the latest evidence `available_at`, every member's
+selection cutoff, and an optional later `selection_cutoff`. Earlier rows stay
+blocked. Optional `prepare` and `state_id` have their existing Python Cohort
+meaning. The evidence-derived weights are fixed: rebuild explicitly to admit new
+observations. Existing membership, alignment, availability and blocked-row rules
+apply. There is no Manager, trading loop, online mutation or artifact replay.
+The recorded fitted-Sensor proof is in `tests/test_bayesian_cohort.py`.
+
 ## Compiled Research through the CLI
 
 Declare validation ranking, selected count and prediction in YAML. `limen assess` reconstructs the selected Sensors, binds their Cohort and writes `assessment.json` and `predictions.parquet`. The complete Compiled project performs this handoff with the CLI:
