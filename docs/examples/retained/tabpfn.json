@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T10:12:35.291990+00:00",
-  "execution_checkout_head": "97117612f6b7877fdd0e337b022a9fe6fa4a3ece",
+  "observed_at": "2026-10-28T10:16:04.367784+00:00",
+  "execution_checkout_head": "2f0c774a363935ad22a27b8176b0c2caa600eae4",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -15,7 +15,7 @@
     "backtest/_cost_statistics.py": "68bc84acbf72ff375b48e53052eb45a7840bea86493f1dc3d7a27e2355216dba",
     "backtest/_event_clock.py": "4d0505b0b531763c930963b90a597eeae0226994a3c4d78f9acab5e653ce51fb",
     "backtest/_event_plan.py": "9c7076733624d9d2f1668f15ed60d12a6248c85a4df281a50c1b24f836571d6b",
-    "backtest/_exit_evidence.py": "4c8b1476039f78917ffce0e847b80ecc2d892bdf25b3369241e19bc9b82ba2f5",
+    "backtest/_exit_evidence.py": "2e35572105d0fd13ee2388227da274218f4b0fbe278d439d519dfc25dbdc0ae2",
     "backtest/_explicit_exit_strategy.py": "6e2adeec418a69b9650237eac8fe972da7ad65f3635ccc565613c485fc4d47d6",
     "backtest/_long_flat_tp_sl.py": "8c05a4ac215a6a25aad96a42d5ca113c349846d93da51aa7de1e9291dd57fef0",
     "backtest/_rule_exit_state.py": "b96c40eb6f6cdcc139a4b2c4fb8ea339f0e699cadc9c5db68582ba98db7613ef",
