@@ -804,7 +804,7 @@
   ],
   "sources": {
     "limen/_parameter_identity.py": "e20965624d19d949f3707fa22e1bb0bdce704e99d80d4e3c968ad11d1ced3283",
-    "limen/backtest/_exit_evidence.py": "4c8b1476039f78917ffce0e847b80ecc2d892bdf25b3369241e19bc9b82ba2f5",
+    "limen/backtest/_exit_evidence.py": "2e35572105d0fd13ee2388227da274218f4b0fbe278d439d519dfc25dbdc0ae2",
     "limen/backtest/_long_flat_tp_sl.py": "8c05a4ac215a6a25aad96a42d5ca113c349846d93da51aa7de1e9291dd57fef0",
     "limen/backtest/_rule_exit_state.py": "b96c40eb6f6cdcc139a4b2c4fb8ea339f0e699cadc9c5db68582ba98db7613ef",
     "limen/backtest/funding_adapter.py": "db98751d05827fb2d1575ac0f659987564a7a1bec11e4bd601d0aebd5a1d9581",
