@@ -180,6 +180,11 @@
       "interface": "compiled",
       "scope": "Real separately provisioned model; current package/source/version equality and numerical observation checked in ordinary CI."
     },
+    "rbf_svm_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_rbf_svm_binary.yaml"
+    },
     "gaussian_hmm_binary": {
       "interface": "compiled",
       "scenario": "search",
@@ -685,6 +690,24 @@
         ],
         "reference": "limen/data/bars/README.md"
       },
+      "limen.data.bars.adaptive_bars": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/bars/adaptive_bars.py",
+        "entry_point": "limen.data.bars.adaptive_bars",
+        "names": [
+          "imbalance_bars",
+          "run_bars"
+        ],
+        "reference": "limen/data/bars/README.md"
+      },
       "limen.data.utils": {
         "interfaces": [
           "python",
@@ -708,6 +731,40 @@
           "split_random",
           "split_sequential",
           "split_walk_forward"
+        ],
+        "reference": "limen/data/utils/README.md"
+      },
+      "limen.data.utils.lookback_window": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/lookback_window.py",
+        "entry_point": "limen.data.utils.lookback_window",
+        "names": [
+          "lookback_window"
+        ],
+        "reference": "limen/data/utils/README.md"
+      },
+      "limen.data.utils.sample_regime_blocks": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/sample_regime_blocks.py",
+        "entry_point": "limen.data.utils.sample_regime_blocks",
+        "names": [
+          "sample_regime_blocks"
         ],
         "reference": "limen/data/utils/README.md"
       },
@@ -1517,6 +1574,7 @@
           "lightgbm_binary",
           "logreg_binary",
           "random_binary",
+          "rbf_svm_binary",
           "ridge_regressor",
           "rule_based",
           "tabpfn_binary",
@@ -1534,6 +1592,38 @@
         "proof": "public-signature-inventory",
         "source": "limen/sfd/foundational_sfd/common_strategies.py",
         "entry_point": "limen.sfd.foundational_sfd.common_strategies",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.foundational_sfd.gaussian_hmm_binary": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
+        "entry_point": "limen.sfd.foundational_sfd.gaussian_hmm_binary",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.foundational_sfd.rbf_svm_binary": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
+        "entry_point": "limen.sfd.foundational_sfd.rbf_svm_binary",
         "names": [
           "manifest",
           "params"
@@ -1590,6 +1680,7 @@
           "GaussianHMMBinary",
           "LightGBMBinary",
           "LogRegBinary",
+          "RBFSVMBinary",
           "RandomBinary",
           "ReferenceModel",
           "RidgeRegressor",
@@ -1602,6 +1693,7 @@
           "lightgbm_binary",
           "logreg_binary",
           "random_binary",
+          "rbf_svm_binary",
           "ridge_regressor",
           "rule_based",
           "tabpfn_binary",
@@ -1637,6 +1729,24 @@
         ],
         "reference": "limen/sfd/reference_architecture/README.md"
       },
+      "limen.sfd.reference_architecture.gaussian_hmm_binary": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+        "entry_point": "limen.sfd.reference_architecture.gaussian_hmm_binary",
+        "names": [
+          "GaussianHMMBinary",
+          "gaussian_hmm_binary"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
       "limen.sfd.reference_architecture.meta_allocation": {
         "interfaces": [
           "compiled"
@@ -1650,6 +1760,24 @@
         "names": [
           "MetaAllocationModel",
           "meta_allocation"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.reference_architecture.rbf_svm_binary": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+        "entry_point": "limen.sfd.reference_architecture.rbf_svm_binary",
+        "names": [
+          "RBFSVMBinary",
+          "rbf_svm_binary"
         ],
         "reference": "limen/sfd/reference_architecture/README.md"
       },
@@ -1883,92 +2011,6 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
-      },
-      "limen.data.bars.adaptive_bars": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/bars",
-          "compiled/bars"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/data/bars/adaptive_bars.py",
-        "entry_point": "limen.data.bars.adaptive_bars",
-        "names": [
-          "imbalance_bars",
-          "run_bars"
-        ],
-        "reference": "limen/data/bars/README.md"
-      },
-      "limen.data.utils.lookback_window": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/bars",
-          "compiled/bars"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/data/utils/lookback_window.py",
-        "entry_point": "limen.data.utils.lookback_window",
-        "names": [
-          "lookback_window"
-        ],
-        "reference": "limen/data/utils/README.md"
-      },
-      "limen.data.utils.sample_regime_blocks": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/bars",
-          "compiled/bars"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/data/utils/sample_regime_blocks.py",
-        "entry_point": "limen.data.utils.sample_regime_blocks",
-        "names": [
-          "sample_regime_blocks"
-        ],
-        "reference": "limen/data/utils/README.md"
-      },
-      "limen.sfd.foundational_sfd.gaussian_hmm_binary": {
-        "interfaces": [
-          "compiled"
-        ],
-        "project_context": [
-          "compiled/search"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
-        "entry_point": "limen.sfd.foundational_sfd.gaussian_hmm_binary",
-        "names": [
-          "manifest",
-          "params"
-        ],
-        "reference": "limen/sfd/foundational_sfd/README.md"
-      },
-      "limen.sfd.reference_architecture.gaussian_hmm_binary": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/search",
-          "compiled/search"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
-        "entry_point": "limen.sfd.reference_architecture.gaussian_hmm_binary",
-        "names": [
-          "GaussianHMMBinary",
-          "gaussian_hmm_binary"
-        ],
-        "reference": "limen/sfd/reference_architecture/README.md"
       }
     },
     "registries": {

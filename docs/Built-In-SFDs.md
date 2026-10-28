@@ -155,6 +155,7 @@ limen run --no-progress-bar \
   compiled-research/family_xgboost_regressor.yaml \
   compiled-research/family_random_binary.yaml \
   compiled-research/family_direction_sizing.yaml \
+  compiled-research/family_rbf_svm_binary.yaml \
   compiled-research/family_gaussian_hmm_binary.yaml
 ```
 
@@ -244,3 +245,12 @@ bounded 2048-bar source. The YAML template bounds its input to 1024 hourly bars
 and eight random rounds over 16 combinations. Both use the observed next-close
 sign target. Native controls and probability semantics are documented in
 [Reference Architecture](Reference-Architecture.md#gaussianhmmbinary).
+
+## RBF SVM
+
+`rbf_svm_binary` pairs the [RBF architecture](Reference-Architecture.md#rbf-svm-binary-classifier)
+with the existing LogReg target, features and validation calibration pipeline.
+Its classifier controls replace LogReg's; native requests are bounded to 2048
+training-source and 512 independent test-source bars. The matching YAML template
+is `limen/yaml/templates/rbf_svm_binary.yaml`. Probability fitting is always enabled;
+large sweeps should account for the recorded kernel cost.

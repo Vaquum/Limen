@@ -331,6 +331,51 @@
         "numpy": "2.2.6",
         "scipy": "1.15.3"
       },
+      "domain_cardinality": 512,
+      "observation_checkout": "0ebc9541e9941ea3dcc2de525b38129301645e34",
+      "seed": 42,
+      "sequence_sha256": "bc019c769e1eb11254042f544d095e357e3b2f39ebcf5665cb9cea700f2edbe3",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/rbf_svm_binary.yaml",
+      "template_sha256": "121f4d3d2bed20ef8858c127851105fff2c49a0e51c084309b5952c9c5ca8868"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 512,
+      "observation_checkout": "0ebc9541e9941ea3dcc2de525b38129301645e34",
+      "seed": 42,
+      "sequence_sha256": "7bf4894fa9d3cf0ed57fd3df1416a307ed0a6eead3383475c0f43a1edb67a882",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/rbf_svm_binary.yaml",
+      "template_sha256": "121f4d3d2bed20ef8858c127851105fff2c49a0e51c084309b5952c9c5ca8868"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 512,
+      "observation_checkout": "0ebc9541e9941ea3dcc2de525b38129301645e34",
+      "seed": 42,
+      "sequence_sha256": "0f98992f8b1f905395bb3fa614fe9ce05205bca871eafec16062258f772ac8ee",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/rbf_svm_binary.yaml",
+      "template_sha256": "121f4d3d2bed20ef8858c127851105fff2c49a0e51c084309b5952c9c5ca8868"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
       "domain_cardinality": 16,
       "observation_checkout": "5aed5402d05b1c237de7e91a50afa55a502ae062",
       "seed": 42,
