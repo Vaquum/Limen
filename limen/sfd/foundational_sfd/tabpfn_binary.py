@@ -14,6 +14,7 @@ from limen.indicators import rolling_volatility
 from limen.indicators import wilder_rsi
 from limen.metrics.balanced_metric import balanced_metric
 from limen.sfd.reference_architecture.tabpfn_binary import tabpfn_binary
+from limen.sfd.foundational_sfd._tabpfn_params import _tabpfn_params
 from limen.targets import ForwardBreakoutTarget
 
 
@@ -30,8 +31,7 @@ def params() -> dict[str, list[Any]]:
         'threshold_pct': [0.005, 0.0075, 0.01, 0.0125, 0.015, 0.02, 0.025, 0.03],
 
         # Model params
-        'n_ensemble_configurations': [4, 8],
-        'device': ['cpu'],
+        **_tabpfn_params(),
 
         # Indicator params
         'rsi_period': [7, 14, 21],

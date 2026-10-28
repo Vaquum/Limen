@@ -18,11 +18,18 @@ def test_tabpfn(tmp_path):
         pytest.skip('Set LIMEN_RUN_TABPFN_MODEL_TEST=1 for the real TabPFN CPU test')
 
     from tabpfn import TabPFNClassifier
+    from inspect import signature
+
+    upstream = set(signature(TabPFNClassifier).parameters) - {'n_jobs', 'n_estimators'}
+    public = set(signature(tabpfn_binary.tabpfn_binary).parameters) - {'data', 'prediction_calibration_config'}
+    assert public == upstream | {'n_ensemble_configurations'}
 
     source = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
     bars = pl.read_parquet(source, n_rows=384)
     parameters = {name: [values[0]] for name, values in tabpfn_binary.params().items()}
     parameters['n_ensemble_configurations'] = [1]
+    parameters.update(softmax_temperature=[1.1], balance_probabilities=[True],
+                      average_before_softmax=[True])
     loop = UniversalExperimentLoop(data=bars, sfd=tabpfn_binary)
     loop.run(str(tmp_path / 'tabpfn'), n_permutations=1, prep_each_round=True,
              random_search=False, params=lambda: parameters, post_processing=True,
@@ -33,6 +40,8 @@ def test_tabpfn(tmp_path):
     model = loop.models[0]
     assert isinstance(model, TabPFNBinary)
     assert isinstance(model.model, TabPFNClassifier)
+    for name in ('softmax_temperature', 'balance_probabilities', 'average_before_softmax'):
+        assert model.model.get_params()[name] == parameters[name][0]
     prepared = loop.manifest.prepare_data(bars, loop.round_params[0])
     result = model.predict(prepared)
     truth = np.asarray(prepared['y_test'])

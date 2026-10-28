@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING, Any
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 from typing_extensions import override
@@ -35,16 +36,7 @@ class TabPFNBinary(ReferenceModel):
     @override
     def train(self, data: dict[str, Any], **params: Any) -> 'TabPFNBinary':
 
-        '''
-        Train TabPFN classifier on provided data.
-
-        Args:
-            data (dict): Data dictionary with x_train, y_train
-            **params: TabPFN hyperparameters including n_ensemble_configurations, device
-
-        Returns:
-            TabPFNBinary: Self with fitted model stored
-        '''
+        '''Fit the upstream classifier with the supplied TabPFN controls.'''
 
         prediction_calibration_config = params.pop('prediction_calibration_config', None)
         if prediction_calibration_config is not None:
@@ -52,6 +44,8 @@ class TabPFNBinary(ReferenceModel):
 
         n_ensemble_configurations = params.pop('n_ensemble_configurations', 4)
         device = params.pop('device', 'cpu')
+        model_path = params.pop('model_path', TABPFN_MODEL_PATH)
+        ignore_pretraining_limits = params.pop('ignore_pretraining_limits', True)
 
         arrays = data_dict_to_numpy(data, ['x_train', 'y_train'])
 
@@ -60,8 +54,8 @@ class TabPFNBinary(ReferenceModel):
         self.model = tabpfn.TabPFNClassifier(
             device=device,
             n_estimators=n_ensemble_configurations,
-            model_path=TABPFN_MODEL_PATH,
-            ignore_pretraining_limits=True,
+            model_path=model_path,
+            ignore_pretraining_limits=ignore_pretraining_limits,
             **params,
         )
 
@@ -76,20 +70,10 @@ class TabPFNBinary(ReferenceModel):
     @override
     def predict(self, data: dict[str, Any]) -> dict[str, Any]:
 
-        '''
-        Compute binary predictions with optional calibration and threshold tuning.
+        '''Predict binary outputs, fitting configured calibration once on validation.
 
-        On the first call with calibration configured, fits the calibrator on
-        validation data and stores it for reuse. Subsequent calls (including
-        inference without val data) use the stored calibrator directly.
-
-        Args:
-            data (dict): Data dictionary. Training call requires x_val, y_val, x_test;
-                inference call requires only x_test
-
-        Returns:
-            dict: Prediction results with '_preds' and '_probs' keys; calibrated path
-                also includes 'optimal_threshold' and 'val_score'
+        The first calibrated call needs x_val/y_val; later calls need only x_test.
+        Return _preds/_probs and calibrated optimal_threshold/val_score when configured.
         '''
 
         x_test = data_dict_to_numpy(data, ['x_test'])['x_test']
@@ -117,17 +101,7 @@ class TabPFNBinary(ReferenceModel):
     @override
     def evaluate(self, data: dict[str, Any], inline_metrics: bool = True) -> dict[str, Any]:
 
-        '''
-        Evaluate trained model on test data.
-
-        Args:
-            data (dict): Data dictionary with x_val, y_val, x_test, y_test,
-                         and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
-
-        Returns:
-            dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
-        '''
+        '''Return binary metrics and optional inline confusion/backtest metrics.'''
 
         pred_result = self.predict(data)
         preds = pred_result['_preds']
@@ -149,28 +123,45 @@ class TabPFNBinary(ReferenceModel):
 
 def tabpfn_binary(data: dict[str, Any],
                   n_ensemble_configurations: int = 4,
-                  device: str = 'cpu',
-                  prediction_calibration_config: 'CalibrationConfig | None' = None) -> dict[str, Any]:
+                  device: object = 'cpu',
+                  prediction_calibration_config: 'CalibrationConfig | None' = None, *,
+                  categorical_features_indices: Sequence[int] | None = None,
+                  softmax_temperature: float = 0.9,
+                  balance_probabilities: bool = False,
+                  average_before_softmax: bool = False,
+                  model_path: object = TABPFN_MODEL_PATH,
+                  ignore_pretraining_limits: bool = True,
+                  inference_precision: object = 'auto',
+                  fit_mode: Literal['low_memory', 'fit_preprocessors', 'fit_with_cache', 'batched'] = 'fit_preprocessors',
+                  memory_saving_mode: str | bool | float = 'auto',
+                  random_state: int | np.random.RandomState | np.random.Generator | None = 0,
+                  n_preprocessing_jobs: int = 1,
+                  inference_config: object = None,
+                  differentiable_input: bool = False,
+                  eval_metric: object = None,
+                  tuning_config: object = None) -> dict[str, Any]:
 
-    '''
-    Compute TabPFN binary classification with optional calibration and threshold tuning.
-
-    Args:
-        data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
-        n_ensemble_configurations (int): Number of ensemble configurations for TabPFN
-        device (str): Device to run on ('cpu' or 'cuda')
-        prediction_calibration_config (CalibrationConfig | None): Optional calibration config
-
-    Returns:
-        dict: Results with binary metrics, predictions, inline confusion metrics,
-            backtest metrics when price_data_for_backtest is in data,
-            and optionally 'optimal_threshold', 'val_score' when calibration is configured
-    '''
+    '''Fit TabPFN with Limen calibration; n_ensemble_configurations names n_estimators.'''
 
     model = TabPFNBinary(prediction_calibration_config=prediction_calibration_config).train(
         data,
         n_ensemble_configurations=n_ensemble_configurations,
         device=device,
+        categorical_features_indices=categorical_features_indices,
+        softmax_temperature=softmax_temperature,
+        balance_probabilities=balance_probabilities,
+        average_before_softmax=average_before_softmax,
+        model_path=model_path,
+        ignore_pretraining_limits=ignore_pretraining_limits,
+        inference_precision=inference_precision,
+        fit_mode=fit_mode,
+        memory_saving_mode=memory_saving_mode,
+        random_state=random_state,
+        n_preprocessing_jobs=n_preprocessing_jobs,
+        inference_config=inference_config,
+        differentiable_input=differentiable_input,
+        eval_metric=eval_metric,
+        tuning_config=tuning_config,
     )
 
     result = model.evaluate(data, inline_metrics=True)
