@@ -35,6 +35,8 @@ sfd:
         operator: '<'
         other_column: open
         persistence_n: '{exit_bars}'
+        params:
+          note: Recorded-data exit example
       exit: falling
     backtest:
       fee_bps: 5

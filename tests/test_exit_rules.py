@@ -152,7 +152,7 @@ def _exit_config(*, event=False):
         settings['backtest'].update(product={'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
                                             'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0}, source_interval_seconds=3600)
     settings['exit_rules'] = {'conditions': [{'id': 'entry', 'name': 'Close below open', 'type': 'relative',
-                                             'column': 'close', 'operator': '<', 'other_column': 'open'}], 'exit': 'entry'}
+                                             'column': 'close', 'operator': '<', 'other_column': 'open', 'params': {'note': 'exit metadata'}}], 'exit': 'entry'}
     return config
 
 

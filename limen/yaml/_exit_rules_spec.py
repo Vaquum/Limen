@@ -40,7 +40,9 @@ class ExitRulesSpec:
             errors.append(YAMLError(str(exc), path))
             return
         temporary: list[YAMLError] = []
-        ConditionsList().check({'sfd': {'manifest': {'strategy': {'conditions': definition['conditions'], 'entry': definition['exit']}}}}, temporary, warnings)
+        checker = ConditionsList()
+        checker.known.add('params')
+        checker.check({'sfd': {'manifest': {'strategy': {'conditions': definition['conditions'], 'entry': definition['exit']}}}}, temporary, warnings)
         errors.extend(YAMLError(error.message, error.path.replace('strategy', 'exit_rules')) for error in temporary)
         uel = document.get('uel')
         if isinstance(uel, Mapping) and cast(Mapping[str, object], uel).get('factorize'):

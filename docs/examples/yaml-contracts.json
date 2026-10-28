@@ -112,7 +112,7 @@
       "symbol": "ProductConfig"
     },
     "sfd.manifest.exit_rules": {
-      "sha256": "7a8493e7f9e15077b1faa496162ddbb271949c72f4a25e7569fafaded9001e46",
+      "sha256": "5c6ed0fe40f020dd58754b003621da76c30d18b862b10841644eb23c78cc3353",
       "source": "limen/yaml/_exit_rules_spec.py",
       "symbol": "ExitRulesSpec"
     },
@@ -625,7 +625,6 @@
         "operands",
         "operator",
         "other_column",
-        "params",
         "persistence_n",
         "recency_n",
         "type",
@@ -841,7 +840,7 @@
     "limen/yaml/_boolean_spec.py": "ceb327e05a67c9a413e499a6c8fe2a00af607e3a671f0cc757e8329d86e687ed",
     "limen/yaml/_callable_binding.py": "d40661369dd2b1551d642c5c146e403e49f3189305174369cec69c0e0e865ea7",
     "limen/yaml/_callback_spec.py": "2004a2788f706a9f27fdbb6a791ef2dfa402146f27eb533ab74624394c43be33",
-    "limen/yaml/_exit_rules_spec.py": "3bd394f2542049904a755610ec9cf44b2224fc9d37013ede96437623c41333f0",
+    "limen/yaml/_exit_rules_spec.py": "16c417c5e54748b0b42b277d4f716a8d6beea5cf758b5b69ae3df51e03169672",
     "limen/yaml/_feature_shim_spec.py": "bed2f7cf08d3f4587ce836b548d8c73540d3801699432519a57ee507ff8f2d07",
     "limen/yaml/_fitted_binding.py": "da69a7589195c064c41d288815f0efae7074e993ad5aa2486529c3f2752776b3",
     "limen/yaml/_metadata_spec.py": "6f5abbe96f437d458c8d2e96b35073231ab01c3e5a7f41d486b0dd79e866a342",
@@ -861,7 +860,7 @@
     "limen/yaml/profiler.py": "1e412c4ca48fc0d67fcf05ec6ec7811cdd37d256273af3833a56895a1931dd5d",
     "limen/yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
     "limen/yaml/rules.py": "59b49fc139484d1b7292de56cc66ed869c931c980a8c46c9d7b0eadf5406eb1d",
-    "limen/yaml/schema.py": "20f0281500143590216c8d3c8cc7681ad7039e143ad1908bb63ed6fedaf60e6a",
+    "limen/yaml/schema.py": "39a1b435d2f7ccc5b7204119aa2b072f1a71e02797f4823230335905d3150273",
     "limen/yaml/store.py": "53e4eb7724597f09c7bf71739996b5fb854d07950720868d6d93b125b6d3ac0c",
     "limen/yaml/validator.py": "226ab874d5e5f493574b6a755e14445fd0958b21201385bd6386ef303cb9ac9d"
   }
