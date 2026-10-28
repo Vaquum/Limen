@@ -7,7 +7,6 @@ import numpy as np
 import polars as pl
 import pytest
 from ruamel.yaml import YAML
-import torch
 
 from limen import Trainer, UniversalExperimentLoop
 from limen.experiment import _round_storage
@@ -16,6 +15,12 @@ from limen.sfd.reference_architecture import LSTMBinary, lstm_binary
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(scope='module')
+def torch():
+    import torch
+    return torch
 
 
 @pytest.fixture(scope='module')
@@ -28,7 +33,7 @@ def recorded():
 
 
 @pytest.mark.parametrize('bidirectional', [False, True])
-def test_recorded_lstm_trains_scales_and_reconstructs_probabilities(recorded, monkeypatch, bidirectional):
+def test_recorded_lstm_trains_scales_and_reconstructs_probabilities(recorded, monkeypatch, bidirectional, torch):
     _, params, manifest, original = recorded
     data = original | {'_record_model_outputs': True, '_alignment': deepcopy(original['_alignment'])}
     before = torch.get_rng_state().clone()
