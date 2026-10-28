@@ -41,7 +41,7 @@ def snapshot_backtest_round(
     alignment_rows = cast(list[dict[str, object]], getattr(log, '_alignment', []))
     if round_id < len(alignment_rows) and 'trade_contract' in alignment_rows[round_id]:
         from limen.backtest.execution_events import with_predictions
-        from limen.backtest.trade_contract import TradeInputs, TradePolicy, contract_digest, export_trade_contract
+        from limen.backtest.trade_contract import JsonValue, TradeInputs, TradePolicy, contract_digest, export_trade_contract
         from limen.backtest.trade_execution import trade_execution
 
         alignment = alignment_rows[round_id]
@@ -51,7 +51,7 @@ def snapshot_backtest_round(
         fresh = manifest.prepare_data(log.data, dict(log.round_params[round_id]))
         verify_replay(alignment, fresh)
         digest = contract_digest(export_trade_contract(policy, inputs))
-        if digest != alignment.get('trade_contract_digest') or digest != fresh.get('trade_contract_digest'):
+        if digest != alignment.get('trade_contract_digest') or digest != fresh.get('trade_contract_digest') or digest != contract_digest(cast(Mapping[str, JsonValue], alignment['trade_contract'])):
             raise ValueError('Trade rules or source identity changed during replay')
         return dict(trade_execution(with_predictions(inputs, log.preds[round_id]), policy).metrics)
     from limen.experiment._dynamic_barriers import dynamic_barriers
