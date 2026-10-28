@@ -3,8 +3,7 @@ metadata:
   name: lstm_binary_experiment
   limen_version: 5.46.2
   mode: development
-  description: CPU LSTM over completed return windows predicting the next 
-    positive return
+  description: CPU LSTM predicting the next positive return from completed windows
 sfd:
   manifest:
     type: ml
