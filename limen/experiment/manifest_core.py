@@ -1,3 +1,5 @@
+from limen.sfd.rule_based.config import RuleBasedConfig
+from limen.experiment._exit_rules import ExitPreparation, decorate as _decorate_exit_policy
 from limen.experiment._source_contract import DataOwner, source_frame, source_owner
 import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
@@ -29,10 +31,7 @@ from datetime import datetime
 from itertools import pairwise
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
-
-if TYPE_CHECKING:
-    from limen.sfd.rule_based.config import RuleBasedConfig
+from typing import Any, Literal, Protocol, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -261,6 +260,8 @@ class Manifest:
     metrics_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     backtest_config: BacktestConfig | None = None
     allocation_config: _allocation_stage.AllocationConfig | None = None
+    exit_rules_config: RuleBasedConfig | None = field(default=None, init=False, repr=False)
+    from limen.experiment._exit_rules import with_exit_rules
 
     def _add_transform(self,
                        func: Callable[..., Any],
@@ -758,7 +759,7 @@ class Manifest:
         return self
 
     def resolve_trade_policy(self, round_params: Mapping[str, object]) -> TradePolicy | None:
-        return _resolve_trade_policy(self.backtest_config, round_params)
+        return _decorate_exit_policy(_resolve_trade_policy(self.backtest_config, round_params), self, round_params)
 
     def resolve_backtest_config(self, round_params: Mapping[str, object]) -> dict[str, float | None]:
         """Resolve all backtest fields; an absent configuration returns an empty mapping."""
@@ -994,6 +995,7 @@ class MLManifest(Manifest):
 
         from limen.experiment._manifest_preparation import admit_dated_split
         split_data, all_datetimes, price_data_for_backtest, sources, trade = _run_prepare_setup(self, raw_data, round_params)
+        exits = ExitPreparation(self, round_params, trade)
         outcome_target = self.target_class_config is not None and bool(getattr(self.target_class_config.target_class, 'requires_trade_context', False))
         private_labels: list[OutcomeLabels] = []
         raw_features: pl.DataFrame | None = None
@@ -1027,6 +1029,7 @@ class MLManifest(Manifest):
             lazy = raw_input.lazy()
             lazy = _apply_feature_transforms(self, lazy, round_params)
             data = admit_dated_split(self.split_dates, lazy.collect(), i, stage='retained')
+            exits.capture(data)
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
@@ -1074,6 +1077,7 @@ class MLManifest(Manifest):
 
             cco_block = split.tail(n_raw_cco) if n_raw_cco > 0 else None
 
+        trade = exits.select(split_data)
         split_data, witness = _capture_backtest(sources, split_data, ml=True)
         if _configured_barriers(self.backtest_config) and self.resolve_trade_policy(round_params) is None:
             _ = _validate_witness(witness)
@@ -1097,6 +1101,7 @@ class MLManifest(Manifest):
             _validate_fold_splits(split_data, require_validation=_requires_fold_validation(self, round_params))
         _holdout.capture_schema(self, split_data[0], 'model')
         data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
+        exits.attach(data_dict)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
         if outcome_target:
@@ -1207,6 +1212,7 @@ class RuleBasedManifest(Manifest):
 
         from limen.experiment._manifest_preparation import admit_dated_split
         split_data, all_datetimes, _, sources, trade = _run_prepare_setup(self, raw_data, round_params)
+        exits = ExitPreparation(self, round_params, trade)
 
         all_fitted_params: dict[str, Any] = {}
 
@@ -1214,6 +1220,7 @@ class RuleBasedManifest(Manifest):
             lazy = split.lazy()
             lazy = _apply_feature_transforms(self, lazy, round_params)
             data = admit_dated_split(self.split_dates, lazy.collect(), i, stage='retained')
+            exits.capture(data)
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
@@ -1226,11 +1233,13 @@ class RuleBasedManifest(Manifest):
         if self.split_walk_forward is not None:
             _validate_fold_splits(split_data, require_validation=_requires_fold_validation(self, round_params))
 
+        trade = exits.select(split_data)
         split_data, witness = _capture_backtest(sources, split_data, ml=False)
         if _configured_barriers(self.backtest_config) and self.resolve_trade_policy(round_params) is None:
             _ = _validate_witness(witness)
         data_dict = _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         data_dict['_fitted_params'] = dict(all_fitted_params)
+        exits.attach(data_dict)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
         return _allocation_stage.attach(self, raw_data, round_params, data_dict)
@@ -1580,19 +1589,8 @@ def _apply_feature_ablation(
 
 def _apply_feature_transforms(manifest: Manifest, lazy_data: pl.LazyFrame, round_params: dict[str, Any]) -> pl.LazyFrame:
 
-    for entry in manifest.feature_transforms:
-        if not _should_include_transform(entry, round_params):
-            continue
-        resolved = _resolve_params(entry.params, round_params)
-        if _SOURCE_ROW not in lazy_data.collect_schema():
-            lazy_data = lazy_data.pipe(entry.func, **resolved)
-            continue
-        source_data = lazy_data.collect()
-        public_data = source_data.drop(_SOURCE_ROW) if _SOURCE_ROW in source_data.columns else source_data
-        transformed = public_data.lazy().pipe(entry.func, **resolved).collect()
-        lazy_data = _restore_source_rows(source_data, transformed).lazy()
-
-    return lazy_data
+    from limen.experiment._manifest_preparation import apply_features
+    return apply_features(manifest.feature_transforms, lazy_data, round_params, include=cast(Callable[[object, dict[str, object]], bool], _should_include_transform), resolve=cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], _resolve_params))
 
 
 def _apply_fitted_transforms(

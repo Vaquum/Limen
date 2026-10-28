@@ -1037,6 +1037,7 @@ class Manifest:
     metrics_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     backtest_config: BacktestConfig | None = None
     allocation_config: _allocation_stage.AllocationConfig | None = None
+    exit_rules_config: RuleBasedConfig | None = field(default=None, init=False, repr=False)
 ```
 
 Base manifest with shared data pipeline configuration for Loop experiments.

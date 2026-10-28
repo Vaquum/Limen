@@ -71,7 +71,10 @@ def evaluate_prices(
     columns = {col: prices[col].to_numpy() for col in ('open', 'high', 'low', 'close') if col in prices.columns}
     columns['predictions'] = np.asarray(predictions)
     columns['price_change'] = columns['close'] - columns['open']
-    return _snapshot_with_execution(columns, execution_lag_bars=1, **kwargs)
+    exits = options.get('_exit_values')
+    if exits is not None:
+        columns['exit'] = np.asarray(exits)
+    return _snapshot_with_execution(columns, execution_lag_bars=1, exit_col='exit' if exits is not None else None, **kwargs)
 
 
 def compute_backtest(predictions: npt.ArrayLike, data: Mapping[str, object]) -> dict[str, float]:
@@ -91,7 +94,12 @@ def compute_backtest(predictions: npt.ArrayLike, data: Mapping[str, object]) -> 
         return {f'backtest_{key}': value for key, value in ledger.metrics.items()}
 
     options = {key: data[f'backtest_{key}'] for key in BACKTEST_KEYS if f'backtest_{key}' in data}
+    if '_exit_rules' in data:
+        from limen.experiment._exit_rules import snapshot_exits
+        options['_exit_values'] = snapshot_exits(data)
     price = data.get('price_data_for_backtest')
+    if price is None and '_exit_rules' in data:
+        price = data.get('test')
     if price is not None and not isinstance(price, pl.DataFrame):
         raise ValueError('price_data_for_backtest must be a DataFrame')
     _preflight_backtest(data)

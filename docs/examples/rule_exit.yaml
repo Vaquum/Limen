@@ -1,0 +1,49 @@
+schema_version: '1.0'
+metadata:
+  name: independent_rule_exit
+  mode: development
+  description: Binary entries with independent causal rule exits on recorded BTC bars
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: tests/fixtures/spot_1h_20240101_20240116.parquet
+    split_dates:
+      train_start: '2024-01-02'
+      train_end: '2024-01-03'
+      val_start: '2024-01-04'
+      val_end: '2024-01-05'
+      test_start: '2024-01-05'
+      test_end: '2024-01-06'
+    strategy:
+      conditions:
+      - id: rising
+        name: Close above open
+        type: relative
+        column: close
+        operator: '>'
+        other_column: open
+      entry: rising
+    exit_rules:
+      conditions:
+      - id: falling
+        name: Close below open
+        type: relative
+        column: close
+        operator: '<'
+        other_column: open
+        persistence_n: '{exit_bars}'
+        params:
+          note: Recorded-data exit example
+      exit: falling
+    backtest:
+      fee_bps: 5
+      slip_bps: 5
+    reference_architecture: limen.sfd.reference_architecture.rule_based.rule_based
+  params:
+    exit_bars: [1, 2]
+uel:
+  n_permutations: 1
+  prep_each_round: true

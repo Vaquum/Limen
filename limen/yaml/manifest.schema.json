@@ -3,7 +3,7 @@
   "title": "Limen experiment manifest",
   "description": "Portable structure only. Native Limen admission owns executable references, parameter identity, data evidence and scientific compatibility.",
   "x-limen-package-version": "5.46.2",
-  "x-limen-contract-inventory-sha256": "87e4bd3156c785c7b746deaa3421809b04e06854adc3e171f9757fabc4992326",
+  "x-limen-contract-inventory-sha256": "69db9a044c8f07e4dfaeb7789bc36574e8950d4f065102aadda3e27967a0c018",
   "type": "object",
   "properties": {
     "schema_version": {
@@ -662,6 +662,9 @@
         },
         "strict_mode": {
           "type": "boolean"
+        },
+        "exit_rules": {
+          "$ref": "#/definitions/exitRules"
         }
       },
       "additionalProperties": false,
@@ -797,6 +800,9 @@
             "conditions",
             "entry"
           ]
+        },
+        "exit_rules": {
+          "$ref": "#/definitions/exitRules"
         }
       },
       "additionalProperties": false,
@@ -2054,6 +2060,114 @@
         "execution_lag_bars",
         "take_profit_bps",
         "stop_loss_bps"
+      ]
+    },
+    "exitRules": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/exitCondition"
+          }
+        },
+        "exit": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "conditions",
+        "exit"
+      ]
+    },
+    "exitCondition": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/condition/properties/id"
+        },
+        "name": {
+          "$ref": "#/definitions/condition/properties/name"
+        },
+        "persistence_n": {
+          "$ref": "#/definitions/condition/properties/persistence_n"
+        },
+        "recency_n": {
+          "$ref": "#/definitions/condition/properties/recency_n"
+        },
+        "operands": {
+          "$ref": "#/definitions/condition/properties/operands"
+        },
+        "operator": {
+          "$ref": "#/definitions/condition/properties/operator"
+        },
+        "direction": {
+          "$ref": "#/definitions/condition/properties/direction"
+        },
+        "lookback": {
+          "$ref": "#/definitions/condition/properties/lookback"
+        },
+        "value": {
+          "$ref": "#/definitions/condition/properties/value"
+        },
+        "other_column": {
+          "$ref": "#/definitions/condition/properties/other_column"
+        },
+        "expr": {
+          "$ref": "#/definitions/condition/properties/expr"
+        },
+        "column": {
+          "$ref": "#/definitions/condition/properties/column"
+        },
+        "type": {
+          "$ref": "#/definitions/condition/properties/type"
+        },
+        "params": {}
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "anyOf": [
+        {
+          "$ref": "#/definitions/condition/anyOf/0"
+        },
+        {
+          "$ref": "#/definitions/condition/anyOf/1"
+        }
+      ],
+      "allOf": [
+        {
+          "$ref": "#/definitions/condition/allOf/0"
+        },
+        {
+          "$ref": "#/definitions/condition/allOf/1"
+        },
+        {
+          "$ref": "#/definitions/condition/allOf/2"
+        },
+        {
+          "$ref": "#/definitions/condition/allOf/3"
+        },
+        {
+          "$ref": "#/definitions/condition/allOf/4"
+        },
+        {
+          "not": {
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "sql_expr"
+              }
+            }
+          }
+        }
       ]
     }
   }

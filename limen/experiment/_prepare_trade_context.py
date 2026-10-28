@@ -179,7 +179,8 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
             sources.append(source_binding(funding, f'funding:partition:{index}', start, end, 1, 'normalized_funding_support'))
         signals = mapping.drop('datetime', 'native_first', 'native_last').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
         partition = TradeInputs(initial, start, end, signals, observations, funding, tuple(sources))
-        _ = event_plan(partition, policy)
+        if policy.exit_rules is None:
+            _ = event_plan(partition, policy)
         inputs.append(partition)
         model_rows.append(mapping)
         native_support.append(native)
@@ -241,6 +242,9 @@ def persist_ledger(data: Mapping[str, object], ledger: TradeLedger) -> None:
 def finish_trade_result(data: Mapping[str, object], result: dict[str, object]) -> dict[str, object]:
     policy = data.get('_trade_policy')
     if not isinstance(policy, TradePolicy):
+        if '_exit_rules' in data:
+            finish = cast(Callable[[Mapping[str, object], dict[str, object]], dict[str, object]], vars(import_module('limen.experiment._exit_rules'))['finish_snapshot'])
+            return finish(data, result)
         return result
     mode = result.get('_prediction_mode', getattr(result.get('_model'), 'prediction_mode', 'binary'))
     if mode != policy.prediction_mode:

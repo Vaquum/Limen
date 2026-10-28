@@ -104,3 +104,5 @@ limen run --no-progress-bar --resume results/dev/compiled-parallel --workers 2
 A successful run establishes the behavior asserted for its recorded inputs and configuration. Selection, calibration, search adaptation and repeated research consume evidence; their best score is not an untouched estimate. Trading assumptions, source clocks, unavailable decisions and exposure history remain part of the result.
 
 Continue to [Log](Log.md), [Benchmark](Benchmark.md) and [Backtest](Backtest.md) for analysis. The Reference and Developer appendices supply API detail and maintenance procedures without changing who owns the research methodology.
+
+Binary rule and ML entries can use [independent manifest exit rules](Experiment-Manifest.md#independent-exit-rules). Keep the exit definition with the experiment; retain alignment evidence when replay is required.

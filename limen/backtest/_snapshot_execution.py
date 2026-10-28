@@ -41,11 +41,18 @@ def snapshot_execution(
     fee_bps: float, slip_bps: float, notional_rate: float,
     take_profit_bps: float | None, stop_loss_bps: float | None,
     high_col: str, low_col: str,
+    exit_col: str | None = None,
 ) -> ExecutionResult:
     enabled = take_profit_bps is not None or stop_loss_bps is not None
     take_profit_bps = _validate_barrier('take_profit_bps', take_profit_bps)
     stop_loss_bps = _validate_barrier('stop_loss_bps', stop_loss_bps)
     required_cols = (pred_col, open_col, close_col, price_change_col)
+    if exit_col is not None:
+        if type(exit_col) is not str or not exit_col:
+            raise ValueError('backtest_snapshot exit_col must be a nonempty column name')
+        if strategy is not long_flat_strategy:
+            raise ValueError('backtest_snapshot explicit exits require the default long-flat strategy')
+        required_cols += (exit_col,)
     if enabled:
         required_cols += (high_col, low_col)
         if strategy is not long_flat_strategy:
@@ -81,6 +88,9 @@ def snapshot_execution(
     except (TypeError, ValueError) as exc:
         raise ValueError('backtest_snapshot open, close, and price_change must be numeric') from exc
 
+    if exit_col is not None and (any(arr.ndim != 1 or not np.isfinite(arr).all() for arr in (open_px, close_px, dpx)) or any((arr <= 0).any() for arr in (open_px, close_px))):
+        raise ValueError('backtest_snapshot explicit exits require finite positive prices and finite price_change')
+
     high = low = None
     if enabled:
         try:
@@ -108,7 +118,14 @@ def snapshot_execution(
         raise ValueError('backtest_snapshot price_change must equal close - open')
 
     total_bars = open_px.shape[0]
-    if high is not None and low is not None:
+    if exit_col is not None:
+        from limen.backtest._explicit_exit_strategy import explicit_exit_strategy
+        result = explicit_exit_strategy(
+            cast(npt.ArrayLike, columns[pred_col]), cast(npt.ArrayLike, columns[exit_col]), open_px, close_px, dpx,
+            high_px=high, low_px=low, take_profit_bps=take_profit_bps,
+            stop_loss_bps=stop_loss_bps, execution_lag_bars=cast(int, execution_lag_bars), fee_bps=fee_bps, slip_bps=slip_bps,
+        )
+    elif high is not None and low is not None:
         result = _long_flat_tp_sl(
             cast(npt.ArrayLike, columns[pred_col]), open_px, close_px, dpx,
             high_px=high, low_px=low, take_profit_bps=take_profit_bps,
@@ -134,6 +151,7 @@ def snapshot_with_execution(
     slip_bps: float = 5.0, notional_rate: float = 1.0,
     take_profit_bps: float | None = None, stop_loss_bps: float | None = None,
     high_col: str = 'high', low_col: str = 'low',
+    exit_col: str | None = None,
 ) -> tuple[dict[str, float], ExecutionResult]:
     result = snapshot_execution(
         columns, pred_col=pred_col, open_col=open_col, close_col=close_col,
@@ -141,7 +159,7 @@ def snapshot_with_execution(
         execution_lag_bars=execution_lag_bars, fee_bps=fee_bps,
         slip_bps=slip_bps, notional_rate=notional_rate,
         take_profit_bps=take_profit_bps, stop_loss_bps=stop_loss_bps,
-        high_col=high_col, low_col=low_col,
+        high_col=high_col, low_col=low_col, exit_col=exit_col,
     )
     metrics = _snapshot_ledger(result, notional_rate)
     return metrics, result

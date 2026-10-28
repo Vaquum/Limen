@@ -97,7 +97,7 @@ def _fold_record(fold: int, data: Mapping[str, object], result: Mapping[str, obj
             'first_test_datetime': _iso_date(alignment['first_test_datetime']),
             'last_test_datetime': _iso_date(alignment['last_test_datetime']),
         },
-        **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout') if key in alignment},
+        **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout', 'exit_rules', 'exit_evidence_digest', 'exit_evidence') if key in alignment},
     }
     if record_execution:
         record.update(execution=alignment.get('execution'), market=alignment.get('market'))

@@ -11,6 +11,7 @@ from limen.yaml._objective_spec import check_objective_spec
 from limen.yaml._feature_shim_spec import FeatureShimSpec
 from limen.yaml._recording_spec import RecordingSpec
 from limen.yaml._temporal_spec import TemporalSpec
+from limen.yaml._exit_rules_spec import ExitRulesSpec
 from limen.yaml.rules import BacktestCostSpec
 from limen.yaml.rules import AcceptanceSpec
 from limen.yaml.rules import BlockSpec
@@ -19,8 +20,7 @@ from limen.yaml.rules import ConditionsList
 from limen.yaml.rules import DecoderLookbackSpec
 from limen.yaml.rules import DataSource
 from limen.yaml.rules import FuncList
-from limen.yaml.rules import NameSlug
-from limen.yaml.rules import NoUnknownKeys
+from limen.yaml.rules import NameSlug, NoUnknownKeys
 from limen.yaml.rules import OneOf
 from limen.yaml.rules import ParamCoverage, ParamKeyFields
 from limen.yaml.rules import PruningStrategiesSpec
@@ -107,7 +107,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
     SplitSpec(),
     AcceptanceSpec(),
-    FeatureShimSpec(),
+    FeatureShimSpec(), ExitRulesSpec(),
     RequiredColumnsSpec(),
     NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED | SPLIT_DATES_OPTIONAL, severity='error'),
 

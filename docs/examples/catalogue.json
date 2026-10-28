@@ -2049,6 +2049,7 @@
         "MANIFEST_OPTIONAL_SHARED": [
           "allocation",
           "backtest",
+          "exit_rules",
           "indicators",
           "objective",
           "required_columns",

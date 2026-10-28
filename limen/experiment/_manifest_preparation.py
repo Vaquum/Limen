@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import date, datetime, timezone
 from typing import Literal, Protocol, TypeVar, cast
 import polars as pl
@@ -117,7 +117,7 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
                 if inputs.partition_end_ns > held.cutoff_ns:
                     raise ValueError('Holdout event partition crosses the reserved cutoff')
         splits = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in splits]
-    prepared = prepare_backtest_data(splits, all_datetimes, configured=policy is None and configured_barriers(manifest.backtest_config))
+    prepared = prepare_backtest_data(splits, all_datetimes, configured=getattr(manifest, 'exit_rules_config', None) is not None or (policy is None and configured_barriers(manifest.backtest_config)))
     return (*prepared, trade)
 
 
@@ -152,9 +152,11 @@ def _assessment_schema(manifest: object, frame: pl.DataFrame, stage: str) -> pl.
 
 def apply_backtest_cost(manifest: SetupManifest, data: dict[str, object], round_params: Mapping[str, object]) -> None:
     from limen.experiment._backtest_provenance import preflight_backtest
+    from limen.experiment._exit_rules import validate_cache
     policy = manifest.resolve_trade_policy(round_params)
+    validate_cache(manifest, data, round_params)
     validate_cached_context(manifest.backtest_config, policy, data, round_params)
-    if configured_barriers(manifest.backtest_config) and policy is None:
+    if (configured_barriers(manifest.backtest_config) or getattr(manifest, 'exit_rules_config', None) is not None) and policy is None:
         data['_backtest_configured'] = True
     else:
         _ = data.pop('_backtest_configured', None)
@@ -195,3 +197,28 @@ def finish_rule_data(manifest: RulePreparation, splits: list[pl.DataFrame], date
     assert manifest.strategy is not None
     data['strategy'] = {'conditions': manifest.strategy.conditions, 'entry': manifest.strategy.entry}
     return retained(manifest, splits, data, feature_columns=names)
+
+
+class FeatureTransform(Protocol):
+    @property
+    def params(self) -> Mapping[str, object]: ...
+    @property
+    def func(self) -> Callable[..., pl.LazyFrame]: ...
+
+
+def apply_features(entries: Sequence[FeatureTransform], lazy: pl.LazyFrame, params: dict[str, object], *,
+                   include: Callable[[object, dict[str, object]], bool],
+                   resolve: Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]]) -> pl.LazyFrame:
+    from limen.experiment._backtest_provenance import SOURCE_ROW, restore_source_rows
+    for entry in entries:
+        if not include(entry, params):
+            continue
+        arguments = resolve(entry.params, params)
+        function = entry.func
+        if SOURCE_ROW not in lazy.collect_schema():
+            lazy = lazy.pipe(function, **arguments)
+            continue
+        source = lazy.collect()
+        transformed = source.drop(SOURCE_ROW).lazy().pipe(function, **arguments).collect()
+        lazy = restore_source_rows(source, transformed).lazy()
+    return lazy

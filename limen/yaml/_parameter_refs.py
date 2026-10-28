@@ -49,14 +49,14 @@ def native_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, objec
         for name in ('probability_calibration', 'threshold_function'):
             yield from arguments(_mapping(_mapping(manifest.get('calibration')).get(name)).get('params'), f'sfd.manifest.calibration.{name}.params')
         yield 'sfd.manifest.feature_shims', manifest.get('feature_shims'), False
-    else:
-        conditions = _mapping(manifest.get('strategy')).get('conditions')
+    for block in ('exit_rules',) if ml else ('strategy', 'exit_rules'):
+        conditions = _mapping(manifest.get(block)).get('conditions')
         if isinstance(conditions, list):
             for index, condition in enumerate(cast(list[object], conditions)):
-                for name in ('column', 'other_column', 'value', 'lookback', 'expr', 'persistence_n', 'recency_n'):
+                for name in ('column', 'other_column', 'value', 'lookback', 'persistence_n', 'recency_n', 'expr' if block == 'strategy' else 'direction'):
                     value = _mapping(condition).get(name)
                     if isinstance(value, str):
-                        yield f'sfd.manifest.strategy.conditions[{index}].{name}', value, False
+                        yield f'sfd.manifest.{block}.conditions[{index}].{name}', value, False
 
 
 def json_bindings(manifest: Mapping[str, object]) -> Iterator[tuple[str, object]]:

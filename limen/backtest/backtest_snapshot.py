@@ -46,7 +46,8 @@ def backtest_snapshot(columns: Mapping[str, Any],
                       stop_loss_bps: float | None = None,
                       high_col: str = 'high', low_col: str = 'low',
                       class_mapping: Mapping[int | str, int] | None = None,
-                      label_index: int | None = None) -> dict[str, float]:
+                      label_index: int | None = None,
+                      exit_col: str | None = None) -> dict[str, float]:
 
     '''
     Bar-based metric ledger over a strategy's per-bar returns.
@@ -99,6 +100,7 @@ def backtest_snapshot(columns: Mapping[str, Any],
         stop_loss_bps (float | None): Fixed gross entry-relative loss distance; None disables.
         high_col (str): High price column required for enabled barriers.
         low_col (str): Low price column required for enabled barriers.
+        exit_col (str | None): Boolean decisions selecting independent entry/hold/exit execution.
         class_mapping (Mapping[int | str, int] | None): Explicit class-to-binary decisions.
         label_index (int | None): Explicit column of a binary multilabel indicator matrix.
 
@@ -117,7 +119,7 @@ def backtest_snapshot(columns: Mapping[str, Any],
         execution_lag_bars=execution_lag_bars, fee_bps=fee_bps,
         slip_bps=slip_bps, notional_rate=notional_rate,
         take_profit_bps=take_profit_bps, stop_loss_bps=stop_loss_bps,
-        high_col=high_col, low_col=low_col,
+        high_col=high_col, low_col=low_col, exit_col=exit_col,
     )[0]
 
 
