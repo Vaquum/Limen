@@ -88,9 +88,8 @@ def snapshot_execution(
     except (TypeError, ValueError) as exc:
         raise ValueError('backtest_snapshot open, close, and price_change must be numeric') from exc
 
-    if exit_col is not None:
-        if any(arr.ndim != 1 or not np.isfinite(arr).all() for arr in (open_px, close_px, dpx)) or any((arr <= 0).any() for arr in (open_px, close_px)):
-            raise ValueError('backtest_snapshot explicit exits require finite positive prices and finite price_change')
+    if exit_col is not None and (any(arr.ndim != 1 or not np.isfinite(arr).all() for arr in (open_px, close_px, dpx)) or any((arr <= 0).any() for arr in (open_px, close_px))):
+        raise ValueError('backtest_snapshot explicit exits require finite positive prices and finite price_change')
 
     high = low = None
     if enabled:

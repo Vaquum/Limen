@@ -17,7 +17,7 @@ def market():
 def _execute(market, entries, exits, **options):
     columns = {**market.head(len(entries)).select('open', 'high', 'low', 'close').to_dict(as_series=False),
                'predictions': entries, 'exit': exits}
-    columns['price_change'] = np.asarray(columns['close']) - np.asarray(columns['open'])
+    columns['price_change'] = np.asarray(columns['close'], dtype=float) - np.asarray(columns['open'], dtype=float)
     return snapshot_with_execution(columns, exit_col='exit', fee_bps=0.0, slip_bps=0.0, **options)
 
 
@@ -53,7 +53,7 @@ def test_snapshot_explicit_exit_lag_refusals(market, lag):
 
 def test_snapshot_explicit_exit_evidence_and_price_refusals(market):
     for values in ([0, 1], [False, None], [False]):
-        with pytest.raises(ValueError, match='boolean|length'):
+        with pytest.raises(ValueError, match=r'boolean|length'):
             _execute(market, [1, 0], values)
     with pytest.raises(ValueError, match='finite positive prices'):
         _execute(market.with_columns(pl.when(pl.int_range(pl.len()) == 1).then(None).otherwise(pl.col('close')).alias('close')), [1, 0], [False, False])
