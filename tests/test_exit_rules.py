@@ -166,6 +166,7 @@ def test_native_yaml_exit_rule_parity(prepared_exits):
         assert native.with_exit_rules(definition['conditions'], definition['exit']) is native
         other = native.prepare_data(raw, {'risk_span': 6})
         assert other['_exit_evidence'] == data['_exit_evidence']
+        assert all(row['available_at_ns'] is None for row in data['_exit_evidence']['test']['rows']) == (data.get('_trade_policy') is None)
         assert native.resolve_trade_policy({'risk_span': 6}) == manifest.resolve_trade_policy({'risk_span': 6})
     config = _exit_config()
     config['sfd']['manifest']['exit_rules']['conditions'][0].update(type='sql_expr', expr='close > AVG(close)')

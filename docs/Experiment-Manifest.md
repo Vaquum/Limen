@@ -1105,7 +1105,7 @@ def with_exit_rules(self: _TManifest, conditions: Sequence[Mapping[str, object]]
 
 YAML places `conditions` and the `exit` root under `sfd.manifest.exit_rules` for either manifest type. [The runnable recorded-data example](examples/rule_exit.yaml) uses this shape. Run it from the repository root so its committed fixture path resolves.
 
-Exits evaluate privately immediately after declared features, before targets, shims, scaling and row trimming. They use existing split order and CCO history; retained decisions follow source identity after row selection. They add no features or context. Leaf nulls become false, so a NOT root can be true during warmup. Missing columns, targets used as exit inputs and ambiguous evidence fail.
+Exits evaluate privately immediately after declared features, before targets, shims, scaling and row trimming. They use existing split order and CCO history; retained decisions follow source identity after row selection. They add no features or context. Snapshot availability remains null unless the source declares it; a bar timestamp alone does not establish decision availability. Leaf nulls become false, so a NOT root can be true during warmup. Missing columns, targets used as exit inputs and ambiguous evidence fail.
 
 Configured binary entry=false holds inventory. The independent exit closes or cancels an entry; a strictly later false entry must rearm before another true entry can open. See [execution timing and priorities](Backtest.md#independent-binary-exits). Signed outputs, trade-outcome targets and factorization reject this combination. Custom manifest architectures must provide causal binary `_preds`; shared finalization applies the exits to their backtest results.
 

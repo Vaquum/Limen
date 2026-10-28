@@ -84,7 +84,8 @@ class ExitPreparation:
         leaves = legal.select([build_predicate(row, {}).fill_null(False).alias(cast(str, row['id'])) for row in conditions if 'type' in row])
         index = {cast(str, row['id']): row for row in conditions}
         bits = resolve_condition(index[cast(str, self.definition['exit'])], index, leaves)
-        self.frames.append(data.select(SOURCE_ROW, 'datetime').with_columns(bits.rename('exit')))
+        clock = pl.col('available_at_ns') if 'available_at_ns' in data.columns else pl.lit(None, dtype=pl.Int64).alias('available_at_ns')
+        self.frames.append(data.select(SOURCE_ROW, 'datetime', clock).with_columns(bits.rename('exit')))
 
     def select(self, splits: list[pl.DataFrame]) -> PreparedTradeContext | None:
         if self.definition is None:
@@ -98,12 +99,11 @@ class ExitPreparation:
                 raise ValueError('Explicit exit evidence does not match retained source rows')
             if self.trade is not None:
                 original = self.trade.partitions[index]
-                selected = selected.join(self.trade.model_rows[index].select('datetime', 'row_id', 'available_at_ns'), on='datetime', how='left', maintain_order='left')
+                selected = selected.drop('available_at_ns').join(self.trade.model_rows[index].select('datetime', 'row_id', 'available_at_ns'), on='datetime', how='left', maintain_order='left')
                 signals = selected.select('row_id', 'exit').join(original.signals, on='row_id', how='left', maintain_order='left')
                 partitions.append(replace(original, signals=signals))
             else:
-                clock = pl.col('datetime').dt.epoch('ns') if isinstance(selected['datetime'].dtype, pl.Datetime) else pl.lit(None, dtype=pl.Int64)
-                selected = selected.with_columns(pl.col(SOURCE_ROW).cast(pl.String).alias('row_id'), clock.alias('available_at_ns'))
+                selected = selected.with_columns(pl.col(SOURCE_ROW).cast(pl.String).alias('row_id'))
             self.selected.append(evidence(selected))
         return replace(self.trade, partitions=tuple(partitions)) if self.trade is not None else None
 

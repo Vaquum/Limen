@@ -36,6 +36,8 @@ def evidence(signals: pl.DataFrame) -> dict[str, JsonValue]:
     if signals['exit'].dtype != pl.Boolean or signals['exit'].null_count():
         raise ValueError('Exit evidence must contain nonmissing boolean decisions')
     selected = signals.select('row_id', 'available_at_ns', 'exit')
+    if selected['row_id'].dtype != pl.String or selected['available_at_ns'].dtype not in (pl.Int64, pl.Null):
+        raise ValueError('Exit evidence requires string identities and declared integer availability or null')
     if selected['row_id'].null_count() or selected['row_id'].is_duplicated().any():
         raise ValueError('Exit evidence requires unique nonmissing source identities')
     return {'version': 'limen-rule-exit-evidence-v1', 'rows': cast('list[JsonValue]', selected.to_dicts())}
