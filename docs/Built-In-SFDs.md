@@ -186,6 +186,21 @@ It uses `CalibrationBuilder` with the same probability calibration and threshold
 
 That optional status matters at execution time: discovery and template listing work in the base environment, while a TabPFN run fails until the extra is installed.
 
+The opt-in foundational-SFD test runs one CPU ensemble on 384 recorded hourly
+Bitcoin bars, checks the actual fitted classifier and verifies its predictions,
+probabilities, accuracy and AUC. From a checkout with the `test,data,tabpfn`
+extras installed, run
+`LIMEN_RUN_TABPFN_MODEL_TEST=1 python -m pytest tests/test_tabpfn.py -q`.
+
+The provisioned baseline is Python 3.12 on macOS ARM64 with TabPFN 6.4.1;
+the [real-model campaign](examples/compiled-research/README.md#optional-model-campaign)
+records the dependency environment and immutable v2 checkpoint download with
+its SHA-256. Put that checkpoint in the TabPFN model cache, selected with
+`TABPFN_MODEL_CACHE_DIR`, or run from its directory. A missing checkpoint requires
+upstream network access; market observations come from the repository fixture.
+An explicit opt-in fails if the dependency, checkpoint or execution is unavailable.
+Ordinary CI skips this model test and validates the separate retained campaign.
+
 ## Running one immediately
 
 The Compiled selection entry point validates the YAML, runs its declared search and assesses the selected recorded rounds:
