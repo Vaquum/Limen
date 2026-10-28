@@ -8,13 +8,11 @@ from typing import Any
 _LAZY_EXPORTS = {
     'common_strategies': ('limen.sfd.foundational_sfd.common_strategies', None),
     'dlinear_regressor': ('limen.sfd.foundational_sfd.dlinear_regressor', None),
-    'dollar_bar_crash_reversal': (
-        'limen.sfd.foundational_sfd.dollar_bar_crash_reversal',
-        None,
-    ),
+    'dollar_bar_crash_reversal': ('limen.sfd.foundational_sfd.dollar_bar_crash_reversal', None),
     'gaussian_hmm_binary': ('limen.sfd.foundational_sfd.gaussian_hmm_binary', None),
     'lightgbm_binary': ('limen.sfd.foundational_sfd.lightgbm_binary', None),
     'logreg_binary': ('limen.sfd.foundational_sfd.logreg_binary', None),
+    'lstm_binary': ('limen.sfd.foundational_sfd.lstm_binary', None),
     'random_binary': ('limen.sfd.foundational_sfd.random_binary', None),
     'rbf_svm_binary': ('limen.sfd.foundational_sfd.rbf_svm_binary', None),
     'ridge_regressor': ('limen.sfd.foundational_sfd.ridge_regressor', None),
@@ -27,10 +25,9 @@ _LAZY_EXPORTS = {
 if TYPE_CHECKING:
     from limen.sfd.foundational_sfd import common_strategies, dlinear_regressor, dollar_bar_crash_reversal
     from limen.sfd.foundational_sfd import gaussian_hmm_binary, lightgbm_binary, logreg_binary
-    from limen.sfd.foundational_sfd import random_binary, rbf_svm_binary
+    from limen.sfd.foundational_sfd import lstm_binary, random_binary, rbf_svm_binary
     from limen.sfd.foundational_sfd import ridge_regressor, rule_based
-    from limen.sfd.foundational_sfd import tabpfn_binary
-    from limen.sfd.foundational_sfd import xgboost_regressor
+    from limen.sfd.foundational_sfd import tabpfn_binary, xgboost_regressor
 
 
 __all__ = [
@@ -40,6 +37,7 @@ __all__ = [
     'gaussian_hmm_binary',
     'lightgbm_binary',
     'logreg_binary',
+    'lstm_binary',
     'random_binary',
     'rbf_svm_binary',
     'ridge_regressor',

@@ -4,21 +4,20 @@ from limen.sfd.reference_architecture.dlinear_regressor import DLinearRegressor,
 from limen.sfd.reference_architecture.gaussian_hmm_binary import GaussianHMMBinary, gaussian_hmm_binary
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary, lightgbm_binary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary, logreg_binary
+from limen.sfd.reference_architecture.lstm_binary import LSTMBinary, lstm_binary
 from limen.sfd.reference_architecture.random_binary import RandomBinary, random_binary
 from limen.sfd.reference_architecture.rbf_svm_binary import RBFSVMBinary, rbf_svm_binary
 from limen.sfd.reference_architecture.ridge_regressor import RidgeRegressor, ridge_regressor
-from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
-from limen.sfd.reference_architecture.rule_based import rule_based
-from limen.sfd.reference_architecture.tabpfn_binary import TabPFNBinary
-from limen.sfd.reference_architecture.tabpfn_binary import tabpfn_binary
-from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor
-from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_based
+from limen.sfd.reference_architecture.tabpfn_binary import TabPFNBinary, tabpfn_binary
+from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor, xgboost_regressor
 
 
 __all__ = [
     'DLinearRegressor',
     'DirectionSizingModel',
     'GaussianHMMBinary',
+    'LSTMBinary',
     'LightGBMBinary',
     'LogRegBinary',
     'RBFSVMBinary',
@@ -33,6 +32,7 @@ __all__ = [
     'gaussian_hmm_binary',
     'lightgbm_binary',
     'logreg_binary',
+    'lstm_binary',
     'random_binary',
     'rbf_svm_binary',
     'ridge_regressor',

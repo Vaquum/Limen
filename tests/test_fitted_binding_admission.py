@@ -327,7 +327,7 @@ def test_actual_shipped_fitted_binding_corpus(monkeypatch):
             for kind in ('probability_calibration', 'threshold_function'):
                 counts[kind] += (manifest.get('calibration') or {}).get(kind) is not None
             assert not binding.fitted_errors(document), path
-    assert counts == {'files': 81, 'target': 68, 'scaler': 65, 'probability_calibration': 11, 'threshold_function': 13}
+    assert counts == {'files': 83, 'target': 70, 'scaler': 65, 'probability_calibration': 11, 'threshold_function': 13}
     assert len(outcomes) >= 220 and all(outcome == {} for outcome in outcomes)
 
 

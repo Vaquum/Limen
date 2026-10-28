@@ -928,6 +928,21 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.predict`](Public-API.md#limensfdreference_architecturegaussianhmmbinarypredict) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
 | [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.evaluate`](Public-API.md#limensfdreference_architecturegaussianhmmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
 | [`limen.sfd.reference_architecture.gaussian_hmm_binary.gaussian_hmm_binary`](Public-API.md#limensfdreference_architecturegaussian_hmm_binary) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| `limen.sfd.foundational_sfd.lstm_binary` | `module` | `limen/sfd/foundational_sfd/lstm_binary.py` |
+| [`limen.sfd.foundational_sfd.lstm_binary.manifest`](Public-API.md#limensfdfoundational_sfdlstm_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/lstm_binary.py` |
+| [`limen.sfd.foundational_sfd.lstm_binary.params`](Public-API.md#limensfdfoundational_sfdlstm_binaryparams) | `signature` | `limen/sfd/foundational_sfd/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.LSTMBinary`](Public-API.md#limensfdreference_architecturelstmbinary) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.LSTMBinary.__init__`](Public-API.md#limensfdreference_architecturelstmbinary__init__) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.LSTMBinary.train`](Public-API.md#limensfdreference_architecturelstmbinarytrain) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.LSTMBinary.predict`](Public-API.md#limensfdreference_architecturelstmbinarypredict) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.LSTMBinary.evaluate`](Public-API.md#limensfdreference_architecturelstmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.lstm_binary`](Public-API.md#limensfdreference_architecturelstm_binary) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.lstm_binary.LSTMBinary`](Public-API.md#limensfdreference_architecturelstmbinary) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.lstm_binary.LSTMBinary.__init__`](Public-API.md#limensfdreference_architecturelstmbinary__init__) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.lstm_binary.LSTMBinary.train`](Public-API.md#limensfdreference_architecturelstmbinarytrain) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.lstm_binary.LSTMBinary.predict`](Public-API.md#limensfdreference_architecturelstmbinarypredict) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.lstm_binary.LSTMBinary.evaluate`](Public-API.md#limensfdreference_architecturelstmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| [`limen.sfd.reference_architecture.lstm_binary.lstm_binary`](Public-API.md#limensfdreference_architecturelstm_binary) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
 
 ## Additional component contracts
 
@@ -4860,5 +4875,72 @@ def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[s
 <!-- reference: public-limen-sfd-reference-architecture-gaussian-hmm-binary source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:gaussian_hmm_binary role=signature -->
 ```python
 def gaussian_hmm_binary(data: dict[str, object], n_components: int=2, covariance_type: str='diag', min_covar: float=0.001, startprob_prior: float=1.0, transmat_prior: float=1.0, means_prior: float=0.0, means_weight: float=0.0, covars_prior: float=0.01, covars_weight: float=1.0, random_state: int | None=42, n_iter: int=30, tol: float=0.01, verbose: bool=False, implementation: str='scaling') -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.lstm_binary.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-lstm-binary-manifest source=limen/sfd/foundational_sfd/lstm_binary.py region=signature:manifest role=signature -->
+```python
+def manifest() -> Manifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.lstm_binary.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-lstm-binary-params source=limen/sfd/foundational_sfd/lstm_binary.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.LSTMBinary`
+
+<!-- reference: public-limen-sfd-reference-architecture-lstmbinary source=limen/sfd/reference_architecture/lstm_binary.py region=signature:LSTMBinary role=signature -->
+```python
+class LSTMBinary(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.LSTMBinary.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-lstmbinary---init-- source=limen/sfd/reference_architecture/lstm_binary.py region=signature:LSTMBinary.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.LSTMBinary.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-lstmbinary-train source=limen/sfd/reference_architecture/lstm_binary.py region=signature:LSTMBinary.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], *, epochs: int=10, batch_size: int=64, learning_rate: float=0.01, weight_decay: float=0.0, betas: tuple[float, float]=(0.9, 0.999), eps: float=1e-08, random_state: int=42, **params: object) -> 'LSTMBinary':
+    ...
+```
+
+### `limen.sfd.reference_architecture.LSTMBinary.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-lstmbinary-predict source=limen/sfd/reference_architecture/lstm_binary.py region=signature:LSTMBinary.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.LSTMBinary.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-lstmbinary-evaluate source=limen/sfd/reference_architecture/lstm_binary.py region=signature:LSTMBinary.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.lstm_binary`
+
+<!-- reference: public-limen-sfd-reference-architecture-lstm-binary source=limen/sfd/reference_architecture/lstm_binary.py region=signature:lstm_binary role=signature -->
+```python
+def lstm_binary(data: dict[str, object], hidden_size: int=16, num_layers: int=1, bias: bool=True, dropout: float=0.0, bidirectional: bool=False, proj_size: int=0, epochs: int=10, batch_size: int=64, learning_rate: float=0.01, weight_decay: float=0.0, betas: tuple[float, float]=(0.9, 0.999), eps: float=1e-08, random_state: int=42) -> dict[str, object]:
     ...
 ```

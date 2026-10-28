@@ -4698,5 +4698,80 @@
     "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
     "symbol": "gaussian_hmm_binary",
     "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.lstm_binary": {
+    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
+    "symbol": "lstm_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.lstm_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.lstm_binary.params": {
+    "source": "limen/sfd/foundational_sfd/lstm_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.train": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.LSTMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "lstm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.train": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.LSTMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "LSTMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.lstm_binary.lstm_binary": {
+    "source": "limen/sfd/reference_architecture/lstm_binary.py",
+    "symbol": "lstm_binary",
+    "role": "signature"
   }
 }
