@@ -4,8 +4,11 @@ from typing import cast
 
 import numpy as np
 import numpy.typing as npt
+import polars as pl
 
-__all__ = ['snapshot_signals']
+__all__ = ['mapped_snapshot_frame', 'snapshot_signals']
+
+_MATRIX_DIMENSIONS = 2
 
 
 def snapshot_signals(
@@ -21,7 +24,7 @@ def snapshot_signals(
     if label_index is not None:
         if isinstance(label_index, bool) or not isinstance(label_index, numbers.Integral) or label_index < 0:
             raise ValueError('snapshot label_index must be a nonnegative integer')
-        if values.ndim != 2 or not values.size:
+        if values.ndim != _MATRIX_DIMENSIONS or not values.size:
             raise ValueError('snapshot label_index requires a nonempty 2D binary indicator matrix')
         if label_index >= values.shape[1]:
             raise ValueError('snapshot label_index is outside the indicator matrix')
@@ -45,3 +48,17 @@ def snapshot_signals(
             raise ValueError(f'snapshot class_mapping has no decision for class {key!r}')
         decisions.append(class_mapping[key])
     return np.asarray(decisions, dtype=np.int64)
+
+
+def mapped_snapshot_frame(
+    frame: pl.DataFrame, kind: str, mapping: Mapping[int | str, int] | None,
+    label: int | None,
+) -> pl.DataFrame:
+    if kind != 'binary':
+        raise ValueError('snapshot class_mapping/label_index cannot use directional interpretation')
+    if 'predictions' not in frame.columns:
+        raise ValueError('snapshot requires a predictions column')
+    return frame.with_columns([
+        pl.Series(name, snapshot_signals(frame[name].to_list(), class_mapping=mapping, label_index=label))
+        for name in ('predictions', 'actuals') if name in frame.columns
+    ])
