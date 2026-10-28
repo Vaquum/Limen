@@ -40,25 +40,25 @@ class _Optimizer(Protocol):
     def step(self) -> None: ...
 
 
-class _Network(Protocol):
+class Network(Protocol):
     def __call__(self, inputs: 'Tensor') -> 'Tensor': ...
     def parameters(self) -> Iterator['Tensor']: ...
     def eval(self) -> object: ...
 
 
-class _WindowBinary(ReferenceModel):
+class WindowBinary(ReferenceModel):
     '''Shared CPU fitting for the LSTM and temporal-convolution binary models.'''
     deterministic, inference_output = False, ('binary', True)
 
     def __init__(self) -> None:
         super().__init__()
-        self.model: _Network | None = None
+        self.model: Network | None = None
         self._columns: list[str] = []
         self._indices: list[int] = []
         self._width = 0
         self._mean, self._scale = 0.0, 1.0
 
-    def _build_network(self, params: dict[str, object]) -> _Network:
+    def _build_network(self, params: dict[str, object]) -> Network:
         raise NotImplementedError('A temporal model must supply its fixed network')
 
     def _windows(self, inputs: object) -> _FloatArray:
@@ -78,7 +78,7 @@ class _WindowBinary(ReferenceModel):
     def train(self, data: dict[str, object], *, epochs: int = 10, batch_size: int = 64,
               learning_rate: float = 0.01, weight_decay: float = 0.0,
               betas: tuple[float, float] = (0.9, 0.999), eps: float = 1e-8,
-              random_state: int = 42, **params: object) -> '_WindowBinary':
+              random_state: int = 42, **params: object) -> 'WindowBinary':
         _ = require_optional('torch', 'PyTorch', 'neural')
         import torch
         if type(epochs) is not int or epochs < 1 or type(batch_size) is not int or batch_size < 1:

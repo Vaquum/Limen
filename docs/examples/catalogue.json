@@ -194,6 +194,11 @@
       "interface": "compiled",
       "scenario": "search",
       "configuration": "docs/examples/compiled-research/family_lstm_binary.yaml"
+    },
+    "cnn1d_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_cnn1d_binary.yaml"
     }
   },
   "recorded_inputs": {
@@ -1572,6 +1577,7 @@
         "source": "limen/sfd/foundational_sfd/__init__.py",
         "entry_point": "limen.sfd.foundational_sfd",
         "names": [
+          "cnn1d_binary",
           "common_strategies",
           "dlinear_regressor",
           "dollar_bar_crash_reversal",
@@ -1697,6 +1703,7 @@
         "source": "limen/sfd/reference_architecture/__init__.py",
         "entry_point": "limen.sfd.reference_architecture",
         "names": [
+          "CNN1DBinary",
           "DLinearRegressor",
           "DirectionSizingModel",
           "GaussianHMMBinary",
@@ -1710,6 +1717,7 @@
           "RuleBasedStrategy",
           "TabPFNBinary",
           "XGBoostRegressor",
+          "cnn1d_binary",
           "direction_sizing",
           "dlinear_regressor",
           "gaussian_hmm_binary",
@@ -2053,6 +2061,40 @@
           "validate"
         ],
         "reference": "limen/yaml/README.md"
+      },
+      "limen.sfd.foundational_sfd.cnn1d_binary": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+        "entry_point": "limen.sfd.foundational_sfd.cnn1d_binary",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture.cnn1d_binary": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+        "entry_point": "limen.sfd.reference_architecture.cnn1d_binary",
+        "names": [
+          "CNN1DBinary",
+          "cnn1d_binary"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
       }
     },
     "registries": {

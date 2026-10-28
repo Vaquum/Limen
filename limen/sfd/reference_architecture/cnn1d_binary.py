@@ -4,14 +4,14 @@ from typing import cast
 from typing_extensions import override
 
 from limen._optional import require_optional
-from limen.sfd.reference_architecture._sequence_binary import _Network, _WindowBinary
+from limen.sfd.reference_architecture._sequence_binary import Network as NetworkProtocol, WindowBinary
 
 __all__ = ['CNN1DBinary', 'cnn1d_binary']
 
 
 def _network(out_channels: int = 8, conv_layers: int = 1, kernel_size: int = 3,
              stride: int = 1, dilation: int = 1, bias: bool = True,
-             activation: str = 'relu', pooling: str = 'mean', dropout: float = 0.0) -> _Network:
+             activation: str = 'relu', pooling: str = 'mean', dropout: float = 0.0) -> NetworkProtocol:
     _ = require_optional('torch', 'PyTorch', 'neural')
     import torch
     from torch import Tensor, nn
@@ -41,18 +41,18 @@ def _network(out_channels: int = 8, conv_layers: int = 1, kernel_size: int = 3,
             pooled = temporal.mean(dim=2) if pooling == 'mean' else temporal.amax(dim=2)
             return cast(Tensor, self.head(self.dropout(pooled))).reshape(-1)
 
-    return cast(_Network, Network())
+    return cast(NetworkProtocol, Network())
 
 
-class CNN1DBinary(_WindowBinary):
+class CNN1DBinary(WindowBinary):
     '''CPU Conv1d over the time axis of completed raw return windows.'''
 
     def __init__(self) -> None:
         super().__init__()
 
     @override
-    def _build_network(self, params: dict[str, object]) -> _Network:
-        return cast(Callable[..., _Network], _network)(**params)
+    def _build_network(self, params: dict[str, object]) -> NetworkProtocol:
+        return cast(Callable[..., NetworkProtocol], _network)(**params)
 
     @override
     def train(self, data: dict[str, object], *, epochs: int = 10, batch_size: int = 64,

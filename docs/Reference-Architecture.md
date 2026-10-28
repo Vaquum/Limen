@@ -16,6 +16,7 @@ The current public reference-architecture exports are:
 - `ReferenceModel`
 - `DLinearRegressor`
 - `DirectionSizingModel`
+- `CNN1DBinary`
 - `LSTMBinary`
 - `GaussianHMMBinary`
 - `LightGBMBinary`
@@ -29,7 +30,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -596,3 +597,25 @@ establishes application relevance, without demonstrating efficacy for this
 specific return-window configuration. The bundled Apple Silicon research lock
 requires macOS 14 or later for its pinned PyTorch wheel. The [native LSTM contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.LSTM.html)
 defines the sequence and final-state semantics.
+
+
+## `CNN1DBinary`
+
+Install `vaquum-limen[neural]`. `cnn1d_binary` applies CPU PyTorch Conv1d blocks
+to the time axis of completed raw `ret_1_lag_0..N` windows, oldest first. Each
+block uses the selected ReLU, tanh or GELU activation, followed by global
+mean/max pooling, dropout and a scalar logit head. Kernel size, stride and
+dilation describe time; no padding or future observations are added.
+
+The model shares the LSTM's train-only scalar normalization, binary
+cross-entropy/Adam fitting, scoped CPU RNG and target-free sigmoid inference.
+Decisions use probability >0.5. Its 16 controls cover convolution structure,
+pooling, dropout, optimizer and bounded training. The matching SFD/template
+exposes every control and a 16-combination search domain. The compiled recorded
+example is `compiled-research/family_cnn1d_binary.yaml`.
+
+The [Bitcoin CNN study](https://air.unipr.it/handle/11381/2886665) uses richer
+market, sentiment and blockchain inputs; this raw-return variant does not
+replicate its accuracy. The [native Conv1d contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.Conv1d.html)
+defines temporal kernel, stride and dilation semantics. Recorded-data tests
+verify gradients and an independent NumPy convolution/pooling/probability oracle.

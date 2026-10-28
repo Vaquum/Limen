@@ -4,13 +4,13 @@ from typing import cast
 from typing_extensions import override
 
 from limen._optional import require_optional
-from limen.sfd.reference_architecture._sequence_binary import _Network, _WindowBinary
+from limen.sfd.reference_architecture._sequence_binary import Network as NetworkProtocol, WindowBinary
 
 __all__ = ['LSTMBinary', 'lstm_binary']
 _BIDIRECTIONAL = 2
 
 
-def _network(params: dict[str, object]) -> _Network:
+def _network(params: dict[str, object]) -> NetworkProtocol:
     _ = require_optional('torch', 'PyTorch', 'neural')
     import torch
     from torch import Tensor, nn
@@ -30,17 +30,17 @@ def _network(params: dict[str, object]) -> _Network:
             final = hidden[-self.directions:].transpose(0, 1).flatten(1)
             return cast(Tensor, self.head(final)).reshape(-1)
 
-    return cast(_Network, Network())
+    return cast(NetworkProtocol, Network())
 
 
-class LSTMBinary(_WindowBinary):
+class LSTMBinary(WindowBinary):
     '''CPU LSTM over completed return windows, with train-only scalar normalization.'''
 
     def __init__(self) -> None:
         super().__init__()
 
     @override
-    def _build_network(self, params: dict[str, object]) -> _Network:
+    def _build_network(self, params: dict[str, object]) -> NetworkProtocol:
         return _network(params)
 
     @override

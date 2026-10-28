@@ -21,6 +21,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `logreg_binary` | binary classification | canonical manifest-driven logistic-regression reference flow |
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
 | `gaussian_hmm_binary` | binary next-return sign | causal window-local homogeneous Gaussian return model; requires `hmm` |
+| `cnn1d_binary` | binary next-return sign | bounded CPU temporal convolution; requires `neural` |
 | `lstm_binary` | binary next-return sign | bounded CPU temporal classifier; requires `neural` |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
@@ -158,7 +159,8 @@ limen run --no-progress-bar \
   compiled-research/family_direction_sizing.yaml \
   compiled-research/family_rbf_svm_binary.yaml \
   compiled-research/family_gaussian_hmm_binary.yaml \
-  compiled-research/family_lstm_binary.yaml
+  compiled-research/family_lstm_binary.yaml \
+  compiled-research/family_cnn1d_binary.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
@@ -255,3 +257,12 @@ Its classifier controls replace LogReg's; native requests are bounded to 2048
 training-source and 512 independent test-source bars. The matching YAML template
 is `limen/yaml/templates/rbf_svm_binary.yaml`. Probability fitting is always enabled;
 large sweeps should account for the recorded kernel cost.
+
+
+## `cnn1d_binary`
+
+The native SFD uses hourly completed return windows with 24/48-bar lookbacks
+and a bounded 1024-bar source. The dated YAML template supplies all 16 controls
+and eight sampled rounds from 16 combinations. Both use observed next-close
+sign labels. See [Reference Architecture](Reference-Architecture.md#cnn1dbinary)
+for normalization, temporal convolution and probability semantics.
