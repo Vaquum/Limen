@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T18:19:57.467428+00:00",
-  "execution_checkout_head": "abae957d8923d9de063e2a75f2fc37bd582d0c74",
+  "observed_at": "2026-10-28T18:24:00.164797+00:00",
+  "execution_checkout_head": "435e6f473d9c2ca20cec304b351047fdf8998e4c",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -483,7 +483,7 @@
     "sfd/foundational_sfd/xgboost_regressor.py": "1ddb24a4ffe205a19dd56f8f49e3d3e041306c8479715264afcb65b1c5f7874b",
     "sfd/reference_architecture/__init__.py": "31069cef3c834b22179466dbc350b373bb360d983edccbbe9a7a8690161c2da9",
     "sfd/reference_architecture/_backtest_evaluation.py": "55796d345de4c87d42d36de8cfb6ebe8b863b324f58d8cdee5e0c3cc6edb40ef",
-    "sfd/reference_architecture/_pseudo_pool.py": "ebb3a083de7b562026526f0dad76ad4367e62fa9c6093fbcf0b697e994003f52",
+    "sfd/reference_architecture/_pseudo_pool.py": "cfee0b607b3b2fa45a1949ed71965a781dbeb76f20f0a325c0e8adb6c31b336e",
     "sfd/reference_architecture/_sequence_binary.py": "18080e77368d8de4c825da88ebf1231c0cac187baa46938128ec000e1452eade",
     "sfd/reference_architecture/base.py": "a233996110cbe7faa56b3557d3afb39fa2079e098648c5abbf8181b3e8c8d91e",
     "sfd/reference_architecture/cnn1d_binary.py": "705a19c3a2e91ffa1b87608fd40de7a3e79b08404a7d911b5e99ed59e37103f5",
