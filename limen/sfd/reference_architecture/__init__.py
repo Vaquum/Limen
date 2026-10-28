@@ -1,3 +1,4 @@
+from limen.sfd.reference_architecture.pseudo_label_binary import PseudoLabelBinary, pseudo_label_binary
 from limen.sfd.reference_architecture.cnn1d_binary import CNN1DBinary, cnn1d_binary
 from limen.sfd.reference_architecture.residual_regressor import ResidualRegressor, residual_regressor
 from limen.sfd.reference_architecture.direction_sizing import DirectionSizingModel, direction_sizing
@@ -17,26 +18,11 @@ from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor,
 
 __all__ = [
     'CNN1DBinary', 'DLinearRegressor', 'DirectionSizingModel', 'GaussianHMMBinary',
-    'LSTMBinary', 'LightGBMBinary', 'LogRegBinary', 'RBFSVMBinary',
-    'RandomBinary',
-    'ReferenceModel',
-    'ResidualRegressor',
-    'RidgeRegressor',
-    'RuleBasedStrategy',
-    'TabPFNBinary',
-    'XGBoostRegressor',
-    'cnn1d_binary',
-    'direction_sizing',
-    'dlinear_regressor',
-    'gaussian_hmm_binary',
-    'lightgbm_binary',
-    'logreg_binary',
-    'lstm_binary',
-    'random_binary',
-    'rbf_svm_binary',
-    'residual_regressor',
-    'ridge_regressor',
-    'rule_based',
-    'tabpfn_binary',
-    'xgboost_regressor',
+    'LSTMBinary', 'LightGBMBinary', 'LogRegBinary', 'PseudoLabelBinary',
+    'RBFSVMBinary', 'RandomBinary', 'ReferenceModel', 'ResidualRegressor',
+    'RidgeRegressor', 'RuleBasedStrategy', 'TabPFNBinary', 'XGBoostRegressor',
+    'cnn1d_binary', 'direction_sizing', 'dlinear_regressor', 'gaussian_hmm_binary',
+    'lightgbm_binary', 'logreg_binary', 'lstm_binary', 'pseudo_label_binary',
+    'random_binary', 'rbf_svm_binary', 'residual_regressor', 'ridge_regressor',
+    'rule_based', 'tabpfn_binary', 'xgboost_regressor',
 ]
