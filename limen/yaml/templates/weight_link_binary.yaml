@@ -35,7 +35,7 @@ sfd:
     strict_mode: true
     reference_architecture: limen.sfd.reference_architecture.weight_link_binary
     data_dict_extension:
-      func: limen.sfd.foundational_sfd.weight_link_binary._rows
+      func: limen.sfd.reference_architecture.weight_link_binary.recorded_rows
   params:
     lookback_end:
     - 11

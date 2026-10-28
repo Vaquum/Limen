@@ -1,22 +1,14 @@
 from typing import cast
 
-import polars as pl
-
 from limen.data import HistoricalData
 from limen.experiment import MLManifest
 from limen.features.lagged_features import lag_range
 from limen.indicators.window_return import window_return
-from limen.sfd.reference_architecture.weight_link_binary import weight_link_binary
+from limen.sfd.reference_architecture.weight_link_binary import recorded_rows, weight_link_binary
 from limen.targets import NextBarUpTarget
 
 __all__ = ['manifest', 'params']
 
-
-def _rows(data_dict: dict[str, object], split_data: list[pl.DataFrame],
-          round_params: dict[str, object], fitted_params: dict[str, object]) -> dict[str, object]:
-    del round_params, fitted_params
-    return data_dict | {'_linkage_rows': {name: frame.select('datetime')
-                        for name, frame in zip(('train', 'val', 'test'), split_data, strict=True)}}
 
 
 def params() -> dict[str, list[object]]:
@@ -31,5 +23,5 @@ def manifest() -> MLManifest:
             .set_split_config(8, 1, 2).add_indicator(window_return, period=1)
             .add_feature(lag_range, col='ret_1', start=0, end='lookback_end')
             .with_target_label('next_close_up', NextBarUpTarget))
-    return (cast(MLManifest, base).add_to_data_dict(_rows).set_strict_mode(True)
+    return (cast(MLManifest, base).add_to_data_dict(recorded_rows).set_strict_mode(True)
             .with_reference_architecture(weight_link_binary))

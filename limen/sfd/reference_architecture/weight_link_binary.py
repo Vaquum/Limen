@@ -1,7 +1,8 @@
 import hashlib
 import json
 import re
-from typing import cast
+from collections.abc import Iterator
+from typing import Protocol, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -12,9 +13,21 @@ from typing_extensions import override
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 
-__all__ = ['WeightLinkedBinary', 'weight_link_binary']
+__all__ = ['WeightLinkedBinary', 'recorded_rows', 'weight_link_binary']
 _FloatArray = npt.NDArray[np.float64]
+_IndexArray = npt.NDArray[np.int64]
 _MATRIX_DIMENSIONS = 2
+
+
+class _ChronologicalSplits(Protocol):
+    def split(self, inputs: _FloatArray) -> Iterator[tuple[_IndexArray, _IndexArray]]: ...
+
+
+def recorded_rows(data_dict: dict[str, object], split_data: list[pl.DataFrame],
+                  round_params: dict[str, object], fitted_params: dict[str, object]) -> dict[str, object]:
+    del round_params, fitted_params
+    return data_dict | {'_linkage_rows': {name: frame.select('datetime')
+                        for name, frame in zip(('train', 'val', 'test'), split_data, strict=True)}}
 
 
 def _digest(value: object, dtype: str = '<f8') -> str:
@@ -63,7 +76,7 @@ class WeightLinkedBinary(ReferenceModel):
         if any(config.get('prediction_calibration_config') is not None for config in configurations):
             raise ValueError('WeightLinkedBinary does not configure calibration')
         inputs, rows = data['x_train'], data.get('_linkage_rows')
-        if not isinstance(inputs, pl.DataFrame) or not isinstance(rows, dict) or not isinstance(rows.get('train'), pl.DataFrame):
+        if not isinstance(inputs, pl.DataFrame) or not isinstance(rows, dict) or not isinstance(cast(dict[str, object], rows).get('train'), pl.DataFrame):
             raise ValueError('WeightLinkedBinary requires named returns and recorded training row times')
         matches = sorted((int(match[1]), column) for column in inputs.columns
                          if (match := re.fullmatch(r'ret_1_lag_(\d+)', column)))
@@ -80,10 +93,10 @@ class WeightLinkedBinary(ReferenceModel):
             raise ValueError('WeightLinkedBinary row times must follow the declared observation interval')
         self.downstream = None
         out_of_sample = np.full(len(truth), np.nan, dtype=np.float64)
-        folds = []
-        for train, predict in TimeSeriesSplit(n_splits=n_splits).split(features):
+        folds: list[dict[str, int]] = []
+        for prefix, predict in cast(_ChronologicalSplits, TimeSeriesSplit(n_splits=n_splits)).split(features):
             cutoff = times[predict[0]] + interval
-            train = train[times[train] + 2 * interval <= cutoff]
+            train = prefix[times[prefix] + 2 * interval <= cutoff]
             if not np.array_equal(np.unique(truth[train]), [0, 1]):
                 raise ValueError('WeightLinkedBinary requires both observed classes in each available fit prefix')
             upstream = LogRegBinary().train({'x_train': features[train], 'y_train': truth[train]}, **configurations[0])

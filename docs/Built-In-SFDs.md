@@ -22,6 +22,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
 | `gaussian_hmm_binary` | binary next-return sign | causal window-local homogeneous Gaussian return model; requires `hmm` |
 | `lstm_binary` | binary next-return sign | bounded CPU temporal classifier; requires `neural` |
+| `weight_link_binary` | binary next-return sign | chronological observed difficulty consumed as downstream row weights |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
@@ -158,7 +159,8 @@ limen run --no-progress-bar \
   compiled-research/family_direction_sizing.yaml \
   compiled-research/family_rbf_svm_binary.yaml \
   compiled-research/family_gaussian_hmm_binary.yaml \
-  compiled-research/family_lstm_binary.yaml
+  compiled-research/family_lstm_binary.yaml \
+  compiled-research/family_weight_link_binary.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
@@ -255,3 +257,11 @@ Its classifier controls replace LogReg's; native requests are bounded to 2048
 training-source and 512 independent test-source bars. The matching YAML template
 is `limen/yaml/templates/rbf_svm_binary.yaml`. Probability fitting is always enabled;
 large sweeps should account for the recorded kernel cost.
+
+## `weight_link_binary`
+
+The native manifest supplies bounded hourly observations and 12/24-bar raw
+return windows with recorded row timestamps. The dated YAML template exposes
+eight combinations of lookback, upstream regularization and weight floor.
+See [Reference Architecture](Reference-Architecture.md#weightlinkedbinary)
+for causal fit boundaries, actual row-weight fitting and provenance.

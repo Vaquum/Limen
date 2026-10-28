@@ -4773,5 +4773,85 @@
     "source": "limen/sfd/reference_architecture/lstm_binary.py",
     "symbol": "lstm_binary",
     "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.weight_link_binary": {
+    "source": "limen/sfd/foundational_sfd/weight_link_binary.py",
+    "symbol": "weight_link_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.weight_link_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/weight_link_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.weight_link_binary.params": {
+    "source": "limen/sfd/foundational_sfd/weight_link_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.WeightLinkedBinary": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.WeightLinkedBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.WeightLinkedBinary.train": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.WeightLinkedBinary.predict": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.WeightLinkedBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "weight_link_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.train": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.predict": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "WeightLinkedBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary.recorded_rows": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "recorded_rows",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.weight_link_binary.weight_link_binary": {
+    "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+    "symbol": "weight_link_binary",
+    "role": "signature"
   }
 }
