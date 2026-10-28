@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import polars as pl
@@ -9,6 +10,7 @@ from limen.features.lagged_features import lag_range
 from limen.indicators.window_return import window_return
 
 __all__: list[str] = []
+_MINIMUM_HISTORY = 2
 
 
 def utc(value: str) -> datetime:
@@ -32,11 +34,11 @@ def load_pool(path: str, sha256: str, start: str, end: str, cutoff: str,
     if max(train_times) + 2 * step > first + step:
         raise ValueError('PseudoLabelBinary pool must follow the observed upstream fitting boundary')
     raw = pl.read_parquet(source).select('datetime', 'close')
-    if not isinstance(raw.schema['datetime'], pl.Datetime) or raw.schema['datetime'].time_zone is None:
+    if not isinstance(raw.schema['datetime'], pl.Datetime) or cast(pl.Datetime, raw.schema['datetime']).time_zone is None:
         raise ValueError('PseudoLabelBinary pool requires timezone-aware recorded row times')
     raw = raw.filter(pl.col('datetime') + step <= training_cutoff)
     times = raw['datetime'].dt.epoch('ns').to_numpy()
-    if raw['datetime'].null_count() or len(times) < 2 or not np.all(np.diff(times) == interval * 1_000_000_000):
+    if raw['datetime'].null_count() or len(times) < _MINIMUM_HISTORY or not np.all(np.diff(times) == interval * 1_000_000_000):
         raise ValueError('PseudoLabelBinary pool rows must be unique, chronological and follow the declared interval')
     prices = raw['close'].to_numpy()
     if not np.isfinite(prices).all() or np.any(prices <= 0):

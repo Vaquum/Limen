@@ -549,6 +549,51 @@
       "strategy": "sobol",
       "template": "limen/yaml/templates/cnn1d_binary.yaml",
       "template_sha256": "2f1d6e0fa7cbda0b93ff2a331c9f3a87834a28e694aac3f37baf9add5d3f5a44"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "92ad54f3024d7cb13c84ea97f91cdfdd096227ed",
+      "seed": 42,
+      "sequence_sha256": "68303c0aed4ea4aa8337cf024aff7b932380ba754db927a47e98a58b45310891",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/pseudo_label_binary.yaml",
+      "template_sha256": "75af86ad4f22ba544f4d66a8055a3688557dcb5abe278ed9716c59a101788f24"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "92ad54f3024d7cb13c84ea97f91cdfdd096227ed",
+      "seed": 42,
+      "sequence_sha256": "8576d33cebc01600e405793bba90f125e7ae97bf136c62ba4bc51b247ca3920a",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/pseudo_label_binary.yaml",
+      "template_sha256": "75af86ad4f22ba544f4d66a8055a3688557dcb5abe278ed9716c59a101788f24"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "92ad54f3024d7cb13c84ea97f91cdfdd096227ed",
+      "seed": 42,
+      "sequence_sha256": "ba9a6404389aabbcd06efb3f37b5799991a7a4db1debf1db03f847cdd06d9c97",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/pseudo_label_binary.yaml",
+      "template_sha256": "75af86ad4f22ba544f4d66a8055a3688557dcb5abe278ed9716c59a101788f24"
     }
   ]
 }

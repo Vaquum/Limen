@@ -51,6 +51,7 @@ reference_architecture/
 ├── __init__.py
 ├── _backtest_evaluation.py
 ├── _sequence_binary.py
+├── _pseudo_pool.py
 ├── base.py
 ├── cnn1d_binary.py
 ├── direction_sizing.py
@@ -60,6 +61,7 @@ reference_architecture/
 ├── logreg_binary.py
 ├── lstm_binary.py
 ├── meta_allocation.py
+├── pseudo_label_binary.py
 ├── random_binary.py
 ├── rbf_svm_binary.py
 ├── residual_regressor.py

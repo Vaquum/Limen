@@ -54,9 +54,9 @@ sfd:
     - 0.7
     - 0.8
     upstream_params:
-    - C: 500.0
-      max_iter: 500
     - C: 1000.0
+      max_iter: 500
+    - C: 2000.0
       max_iter: 500
     downstream_params:
     - C: 0.5

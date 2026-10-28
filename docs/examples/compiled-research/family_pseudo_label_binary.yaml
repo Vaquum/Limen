@@ -1,0 +1,73 @@
+# region declaration
+schema_version: '1.0'
+metadata:
+  name: book_pseudo_label_binary
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-10'
+      val_start: '2025-01-18'
+      val_end: '2025-01-20'
+      test_start: '2025-01-20'
+      test_end: '2025-01-25'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    target:
+      name: next_close_up
+      class: limen.targets.NextBarUpTarget
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    reference_architecture: limen.sfd.reference_architecture.pseudo_label_binary
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: 23
+    data_dict_extension:
+      func: limen.sfd.reference_architecture.pseudo_label_binary.recorded_rows
+  params:
+    pool_path:
+    - inputs/spot_15m_20250101_20250531.parquet
+    pool_sha256:
+    - eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a
+    pool_start:
+    - '2025-01-10T00:00:00+00:00'
+    pool_end:
+    - '2025-01-15T00:00:00+00:00'
+    training_cutoff:
+    - '2025-01-15T00:00:00+00:00'
+    observation_interval_seconds:
+    - 900
+    confidence_threshold:
+    - 0.8
+    upstream_params:
+    - C: 1000.0
+      max_iter: 500
+      tol: 1e-10
+    downstream_params:
+    - C: 1.0
+uel:
+  output_path: compiled-family_pseudo_label_binary
+  n_permutations: 1
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+# endregion declaration

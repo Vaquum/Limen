@@ -25,6 +25,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `residual_regressor` | regression | Ridge plus an XGBoost correction trained on observed errors; requires `boosting` |
 | `cnn1d_binary` | binary next-return sign | bounded CPU temporal convolution; requires `neural` |
+| `pseudo_label_binary` | binary next-return sign | explicit recorded pool and recoverable generated-training-label provenance |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
@@ -162,7 +163,8 @@ limen run --no-progress-bar \
   compiled-research/family_gaussian_hmm_binary.yaml \
   compiled-research/family_lstm_binary.yaml \
   compiled-research/family_residual_regressor.yaml \
-  compiled-research/family_cnn1d_binary.yaml
+  compiled-research/family_cnn1d_binary.yaml \
+  compiled-research/family_pseudo_label_binary.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
@@ -275,3 +277,12 @@ and a bounded 1024-bar source. The dated YAML template supplies all 16 controls
 and eight sampled rounds from 16 combinations. Both use observed next-close
 sign labels. See [Reference Architecture](Reference-Architecture.md#cnn1dbinary)
 for normalization, temporal convolution and probability semantics.
+
+## `pseudo_label_binary`
+
+The SFD/YAML requires the explicitly provisioned recorded pool, source digest,
+pool bounds, training cutoff and observation interval. Eight combinations vary
+confidence and upstream/downstream regularization. The data-dictionary extension
+carries real split row times; generated labels and their provenance remain
+visible in the experiment log. See [Reference Architecture](Reference-Architecture.md#pseudolabelbinary)
+for selection, disjointness, replay and the protected-holdout restriction.

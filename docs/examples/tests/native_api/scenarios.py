@@ -37,6 +37,8 @@ def configuration(name, data_dir):
     if hashlib.sha256(source.read_bytes()).hexdigest() != INPUTS[source.name]:
         raise ValueError('Recorded input digest differs: ' + source.name)
     params['file_path_or_url'] = str(source.resolve())
+    if name == 'family_pseudo_label_binary':
+        config['sfd']['params']['pool_path'] = [str(source.resolve())]
     return config
 
 
@@ -216,7 +218,7 @@ def recorded_predictions(directory: Path, record):
 # region model_comparisons
 def model_comparisons(data_dir, output):
     families = {}
-    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary'):
+    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary', 'pseudo_label_binary'):
         config = configuration('family_' + family, data_dir)
         # This diagnostic baseline uses NumPy's caller-owned process RNG.
         if family == 'random_binary':
@@ -226,7 +228,7 @@ def model_comparisons(data_dir, output):
         log = research_project.completed_log(loop)
         with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
             records = [json.loads(line) for line in stream]
-        metric = 'direction_accuracy' if family == 'direction_sizing' else 'accuracy' if family in ('random_binary', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary') else 'rmse'
+        metric = 'direction_accuracy' if family == 'direction_sizing' else 'accuracy' if family in ('random_binary', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary', 'pseudo_label_binary') else 'rmse'
         selected = log['id'].head(1).to_list()
         sensors = [] if family == 'random_binary' else Trainer(directory).train(selected)
         predictions = {record['round_id']: recorded_predictions(directory, record) for record in records}

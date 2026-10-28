@@ -10,12 +10,13 @@ import numpy.typing as npt
 import polars as pl
 from typing_extensions import override
 
-from limen.sfd.reference_architecture import _pseudo_pool
+from limen.sfd.reference_architecture._pseudo_pool import load_pool
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 
 __all__ = ['PseudoLabelBinary', 'pseudo_label_binary', 'recorded_rows']
 _FloatArray = npt.NDArray[np.float64]
+_MATRIX_DIMENSIONS, _THRESHOLD = 2, .5
 
 
 def recorded_rows(data_dict: dict[str, object], split_data: list[pl.DataFrame],
@@ -50,7 +51,7 @@ class PseudoLabelBinary(ReferenceModel):
             values = inputs.select(self._columns).to_numpy()
         else:
             matrix = np.asarray(inputs, dtype=np.float64)
-            if matrix.ndim != 2 or matrix.shape[1] != self._width:
+            if matrix.ndim != _MATRIX_DIMENSIONS or matrix.shape[1] != self._width:
                 raise ValueError('PseudoLabelBinary requires fitted feature order and width')
             values = matrix[:, self._indices]
         features = np.asarray(values, dtype=np.float64)
@@ -69,7 +70,7 @@ class PseudoLabelBinary(ReferenceModel):
             raise ValueError('PseudoLabelBinary requires unscaled raw windows outside protected holdout research')
         if type(observation_interval_seconds) is not int or observation_interval_seconds <= 0:
             raise ValueError('PseudoLabelBinary requires a positive integer observation interval')
-        if not .5 < confidence_threshold <= 1:
+        if not _THRESHOLD < confidence_threshold <= 1:
             raise ValueError('PseudoLabelBinary confidence_threshold must be above 0.5 and at most 1')
         configurations = [{'max_iter': 200, 'random_state': 42} | (values or {}) for values in (upstream_params, downstream_params)]
         if any(config.get('prediction_calibration_config') is not None for config in configurations):
@@ -78,6 +79,10 @@ class PseudoLabelBinary(ReferenceModel):
         if not isinstance(inputs, pl.DataFrame) or not isinstance(carriers, dict):
             raise ValueError('PseudoLabelBinary requires named raw returns and recorded split row times')
         rows = cast(dict[str, pl.DataFrame], carriers)
+        if any(not isinstance(rows.get(name), pl.DataFrame) for name in ('train', 'val', 'test')):
+            raise ValueError('PseudoLabelBinary requires all recorded split row carriers')
+        if any(not isinstance(frame.schema.get('datetime'), pl.Datetime) or cast(pl.Datetime, frame.schema['datetime']).time_zone is None for frame in rows.values()):
+            raise ValueError('PseudoLabelBinary requires timezone-aware recorded split row times')
         matches = sorted((int(match[1]), column) for column in inputs.columns
                          if (match := re.fullmatch(r'ret_1_lag_(\d+)', column)))
         if not matches or [lag for lag, _ in matches] != list(range(len(matches))):
@@ -91,16 +96,16 @@ class PseudoLabelBinary(ReferenceModel):
             raise ValueError('PseudoLabelBinary requires aligned observed training classes 0 and 1')
         if not np.all(np.diff(times) == interval):
             raise ValueError('PseudoLabelBinary training rows must follow the declared interval')
-        pool, cutoff = _pseudo_pool.load_pool(pool_path, pool_sha256, pool_start, pool_end, training_cutoff,
+        pool, cutoff = load_pool(pool_path, pool_sha256, pool_start, pool_end, training_cutoff,
                                              observation_interval_seconds, self._columns, rows)
         upstream = LogRegBinary().train({'x_train': features, 'y_train': truth}, **configurations[0])
-        pool_features = np.asarray(pool.select(self._columns).to_numpy(), dtype=np.float64)
+        pool_features = self._features(pool)
         probability = np.asarray(upstream.predict({'x_test': pool_features})['_probs'], dtype=np.float64)
         confidence = np.maximum(probability, 1 - probability)
         selected = confidence >= confidence_threshold
         if not selected.any():
             raise ValueError('PseudoLabelBinary selected no pool rows at the declared confidence threshold')
-        generated = (probability[selected] > .5).astype(np.int8)
+        generated = (probability[selected] > _THRESHOLD).astype(np.int8)
         augmented, labels = np.vstack((features, pool_features[selected])), np.concatenate((truth, generated))
         self.downstream = LogRegBinary().train({'x_train': augmented, 'y_train': labels}, **configurations[1])
         step = timedelta(seconds=observation_interval_seconds)

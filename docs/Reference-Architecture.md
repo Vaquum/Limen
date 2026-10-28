@@ -14,6 +14,7 @@ This page covers:
 The current public reference-architecture exports are:
 
 - `ReferenceModel`
+- `PseudoLabelBinary`
 - `CNN1DBinary`
 - `DLinearRegressor`
 - `DirectionSizingModel`
@@ -31,7 +32,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `pseudo_label_binary`, `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -647,3 +648,39 @@ market, sentiment and blockchain inputs; this raw-return variant does not
 replicate its accuracy. The [native Conv1d contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.Conv1d.html)
 defines temporal kernel, stride and dilation semantics. Recorded-data tests
 verify gradients and an independent NumPy convolution/pooling/probability oracle.
+
+## `PseudoLabelBinary`
+
+`pseudo_label_binary` fits an upstream logistic classifier only on observed
+training labels. It predicts a supplied pool of real recorded observations,
+selects confidence `max(p, 1-p) >= confidence_threshold`, and fits the downstream
+classifier on observed rows plus those selected generated labels (`p > 0.5`).
+Target-free inference uses only the downstream classifier. Validation and test
+outcomes remain observed and never enter either fit.
+
+The pool requires a local Parquet path, exact SHA-256, timezone-aware start/end
+bounds and an explicit downstream training cutoff. Its completed raw return
+windows must follow the declared observation interval, fall after the observed
+upstream fitting boundary, and be disjoint from observed training/evaluation
+rows. Features use only source bars available by the cutoff, before evaluation
+decisions. Initial history must cover every requested pool window. External
+fitted preprocessing, calibration and protected holdout research are rejected.
+Missing/changed files and an empty confidence selection fail explicitly.
+
+The matching SFD/YAML supplies 24 hourly return lags, the recorded hourly pool
+identity and eight combinations of confidence and logistic regularization.
+Provision `inputs/spot_1h_20240101_20241231.parquet` with that declared digest,
+or explicitly replace its path/hash and dates with your own recorded source.
+Nested upstream/downstream controls retain native logistic semantics. The
+compiled recorded example uses the provided 15-minute source and a tighter
+native upstream solver tolerance for its smaller raw return magnitudes.
+
+Ordinary `linkage_*` log columns preserve observed/generated counts, source
+path/hash, feature/label/row fingerprints, upstream configuration and fit cutoff,
+downstream cutoff, and recoverable selected-row JSON. Each generated row records
+its timestamp, availability, label, probability, confidence and `origin: pseudo`.
+SHA-256 covers the exact selected JSON; matrix fingerprints use compact JSON
+`[shape, dtype]` plus C-order little-endian float64/int64 bytes. Trainer validates
+the same pool identity and reconstructs identical provenance. Generated labels
+remain distinct from observed labels. Model confidence does not establish label
+correctness or predictive/trading benefit.

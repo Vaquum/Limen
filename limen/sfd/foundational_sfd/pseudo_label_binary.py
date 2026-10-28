@@ -16,7 +16,7 @@ def params() -> dict[str, list[object]]:
             'pool_sha256': ['a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72'],
             'pool_start': ['2024-01-10T00:00:00+00:00'], 'pool_end': ['2024-01-15T00:00:00+00:00'],
             'training_cutoff': ['2024-01-15T00:00:00+00:00'], 'observation_interval_seconds': [3600],
-            'confidence_threshold': [.7, .8], 'upstream_params': [{'C': 500., 'max_iter': 500}, {'C': 1000., 'max_iter': 500}],
+            'confidence_threshold': [.7, .8], 'upstream_params': [{'C': 1000., 'max_iter': 500}, {'C': 2000., 'max_iter': 500}],
             'downstream_params': [{'C': .5}, {'C': 1.}]}
 
 
