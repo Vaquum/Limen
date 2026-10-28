@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 __all__ = ['RBFSVMBinary', 'rbf_svm_binary']
 _FloatArray = npt.NDArray[np.float64]
 _BinaryArray = npt.NDArray[np.int8]
+_DEFAULT_THRESHOLD = 0.5
 
 
 class _ProbabilityModel(Protocol):
@@ -40,7 +41,7 @@ class RBFSVMBinary(ReferenceModel):
         self.model = _svc({})
         self.prediction_calibration_config = prediction_calibration_config
         self._calibrator: _ProbabilityModel | None = None
-        self._threshold = 0.5
+        self._threshold = _DEFAULT_THRESHOLD
         self._val_score: float | None = None
 
     @override
@@ -53,7 +54,7 @@ class RBFSVMBinary(ReferenceModel):
         calibrated = self.prediction_calibration_config is not None and self.prediction_calibration_config.calibration_func is not None
         self.model = _svc(params)
         _ = self.model.fit(data['x_train'] if calibrated else np.asarray(data['x_train']), y)
-        self._calibrator, self._threshold, self._val_score = None, 0.5, None
+        self._calibrator, self._threshold, self._val_score = None, _DEFAULT_THRESHOLD, None
         return self
 
     @override
@@ -71,7 +72,7 @@ class RBFSVMBinary(ReferenceModel):
                     'optimal_threshold': self._threshold, 'val_score': self._val_score}
         frame = np.asarray(data['x_test'])
         probability = self.model.predict_proba(frame)[:, 1]
-        return {'_preds': (probability > 0.5).astype(np.int8), '_probs': probability}
+        return {'_preds': (probability > _DEFAULT_THRESHOLD).astype(np.int8), '_probs': probability}
 
     @override
     def evaluate(self, data: dict[str, object], inline_metrics: bool = True) -> dict[str, object]:
