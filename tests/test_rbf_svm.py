@@ -1,5 +1,6 @@
 import inspect
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +31,7 @@ def recorded():
 @pytest.mark.parametrize('calibrated', [False, True])
 def test_recorded_svc_fit_metrics_and_calibration(recorded, calibrated):
     _, manifest, parameters, data = recorded
+    data = data | {'_record_model_outputs': True, '_alignment': deepcopy(data['_alignment'])}
     selected = parameters | {'use_calibration': calibrated, 'use_threshold': calibrated}
     result = manifest.run_model(data, selected)
     model = result['_model']
@@ -48,6 +50,11 @@ def test_recorded_svc_fit_metrics_and_calibration(recorded, calibrated):
     assert result['accuracy'] == float(np.mean(truth == prediction['_preds']))
     differences = probabilities[truth == 1, None] - probabilities[truth == 0]
     np.testing.assert_allclose(result['auc'], np.mean((differences > 0) + 0.5 * (differences == 0)), atol=1e-12)
+    recorded_output = data['_alignment']['model_outputs']
+    recorded_probabilities = np.asarray(recorded_output['probs'])
+    replay = (recorded_probabilities >= recorded_output['optimal_threshold'] if recorded_output['threshold_rule'] == '>='
+              else recorded_probabilities > recorded_output['optimal_threshold'])
+    np.testing.assert_array_equal(prediction['_preds'], replay)
     if calibrated:
         np.testing.assert_array_equal(prediction['_preds'], probabilities >= result['optimal_threshold'])
         assert result['optimal_threshold'] is not None and result['val_score'] is not None

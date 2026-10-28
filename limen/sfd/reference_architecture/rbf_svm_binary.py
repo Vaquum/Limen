@@ -25,7 +25,6 @@ class _ProbabilityModel(Protocol):
 
 class _SVCModel(_ProbabilityModel, Protocol):
     def fit(self, X: object, y: object) -> object: ...
-    def predict(self, X: object) -> _BinaryArray: ...
 
 
 def _svc(params: dict[str, object]) -> _SVCModel:
@@ -71,7 +70,8 @@ class RBFSVMBinary(ReferenceModel):
             return {'_preds': (probability >= self._threshold).astype(np.int8), '_probs': probability,
                     'optimal_threshold': self._threshold, 'val_score': self._val_score}
         frame = np.asarray(data['x_test'])
-        return {'_preds': self.model.predict(frame).astype(np.int8), '_probs': self.model.predict_proba(frame)[:, 1]}
+        probability = self.model.predict_proba(frame)[:, 1]
+        return {'_preds': (probability > 0.5).astype(np.int8), '_probs': probability}
 
     @override
     def evaluate(self, data: dict[str, object], inline_metrics: bool = True) -> dict[str, object]:

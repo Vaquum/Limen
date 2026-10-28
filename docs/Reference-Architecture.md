@@ -523,8 +523,10 @@ The public controls keep sklearn meanings: `C=1.0`, `gamma='scale'`,
 `shrinking=True`, `tol=0.001`, `cache_size=200` MiB, `class_weight=None`,
 `verbose=False`, `max_iter=-1` and `random_state=42`. Gamma also accepts `'auto'`
 or a nonnegative float. C is positive; max_iter=-1 removes the iteration limit.
-Backend validation and convergence warnings remain visible. Without Limen
-thresholding, SVC's class prediction need not equal a 0.5 probability threshold.
+Backend validation and convergence warnings remain visible. Limen predicts 1
+above a class-1 probability of 0.5 unless validation calibration/thresholding is
+configured. SVC's native margin-based class prediction can differ; this adapter
+uses the probability decision rule so recorded probabilities reconstruct its decisions.
 
 The [official SVC contract](https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html)
 describes at-least-quadratic fit scaling and extra probability-fit cost. A local
