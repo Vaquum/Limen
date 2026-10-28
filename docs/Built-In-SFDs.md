@@ -258,7 +258,6 @@ training-source and 512 independent test-source bars. The matching YAML template
 is `limen/yaml/templates/rbf_svm_binary.yaml`. Probability fitting is always enabled;
 large sweeps should account for the recorded kernel cost.
 
-
 ## `cnn1d_binary`
 
 The native SFD uses hourly completed return windows with 24/48-bar lookbacks
