@@ -155,7 +155,8 @@ limen run --no-progress-bar \
   compiled-research/family_xgboost_regressor.yaml \
   compiled-research/family_random_binary.yaml \
   compiled-research/family_direction_sizing.yaml \
-  compiled-research/family_rbf_svm_binary.yaml
+  compiled-research/family_rbf_svm_binary.yaml \
+  compiled-research/family_lstm_binary.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.

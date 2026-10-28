@@ -16,6 +16,7 @@ The current public reference-architecture exports are:
 - `ReferenceModel`
 - `DLinearRegressor`
 - `DirectionSizingModel`
+- `LSTMBinary`
 - `LightGBMBinary`
 - `LogRegBinary`
 - `RandomBinary`
@@ -26,7 +27,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `direction_sizing`, `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `direction_sizing`, `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 

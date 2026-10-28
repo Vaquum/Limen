@@ -71,7 +71,8 @@ limen run --no-progress-bar \
   compiled-research/family_xgboost_regressor.yaml \
   compiled-research/family_random_binary.yaml \
   compiled-research/family_direction_sizing.yaml \
-  compiled-research/family_rbf_svm_binary.yaml
+  compiled-research/family_rbf_svm_binary.yaml \
+  compiled-research/family_lstm_binary.yaml
 # endregion models
 }
 diagnostics &
