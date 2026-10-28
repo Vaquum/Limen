@@ -355,4 +355,4 @@ def test_unconfigured_results_are_unchanged():
     # Captured from unchanged main f91e4bc8, before exit policy serialization changed.
     assert contract_digest(contract) == 'ea7a58000e444cf5a495215551bf5e6498bea7114a84b4e5657ffe99c257b654'
     from limen.experiment._prepare_trade_context import validate_inference_contract
-    validate_inference_contract(policy, policy.prediction_mode, contract, None)
+    validate_inference_contract(policy, policy.prediction_mode, contract, {'trade_contract_digest': contract_digest(contract)})
