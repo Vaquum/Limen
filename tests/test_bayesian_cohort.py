@@ -107,6 +107,8 @@ def test_bayesian_invalid_priors(recorded, alpha, beta):
     (lambda frame: frame.with_columns(pl.lit(1).alias('sensor_id')), 'nonblank'),
     (lambda frame: frame.with_columns((pl.col('sensor_id') + '-unknown').alias('sensor_id')), 'unknown Sensor'),
     (lambda frame: pl.concat([frame, frame.head(1)]), 'repeats'),
+    (lambda frame: frame.with_columns(pl.when(pl.col('sensor_id') == frame['sensor_id'][0])
+                                     .then(1 - pl.col('outcome')).otherwise(pl.col('outcome')).alias('outcome')), 'conflicting'),
     (lambda frame: frame.with_columns(pl.col('datetime').alias('available_at')), 'after'),
     (lambda frame: frame.with_columns(pl.col('available_at').dt.replace_time_zone(None)), 'UTC Datetime'),
     (lambda frame: frame.with_columns(pl.col('datetime').dt.epoch('ns')), 'UTC Datetime'),

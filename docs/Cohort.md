@@ -104,7 +104,8 @@ is a Polars frame with these columns:
 | `prediction`, `outcome` | Numeric 0 or 1: the original prediction and its observed target outcome |
 | `source` | Nonblank provenance identifying the observed outcome source |
 
-Keep one row per Sensor/decision and retain the original evidence. Limen validates
+Keep one row per Sensor/decision, consistent observed outcomes across members,
+and retain the original evidence. Limen validates
 the frame and membership; the caller supplies trustworthy observed labels,
 availability and provenance. Model-generated labels are not observed outcomes.
 Nanosecond timestamps that Python would truncate reject. Extra columns are ignored.

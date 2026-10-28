@@ -48,6 +48,8 @@ def bayesian_cohort(sensors: Sequence[Sensor], evidence: pl.DataFrame, *,
             raise ValueError(f'Bayesian evidence {name} must contain numeric binary values')
     if admitted.select('sensor_id', 'datetime').n_unique() != admitted.height:
         raise ValueError('Bayesian evidence repeats a Sensor decision')
+    if admitted.group_by('datetime').agg(pl.col('outcome').n_unique()).filter(pl.col('outcome') > 1).height:
+        raise ValueError('Bayesian evidence gives conflicting observed outcomes for one decision')
     if admitted.select((pl.col('available_at') <= pl.col('datetime')).any()).item():
         raise ValueError('Bayesian evidence outcomes must become available after their prediction decision')
     identities = [cast(PythonSensorBase[object, object, object], member).state_id for member in members]
