@@ -4548,5 +4548,80 @@
     "source": "limen/cohort/bayesian.py",
     "symbol": "bayesian_cohort",
     "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.gaussian_hmm_binary": {
+    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
+    "symbol": "gaussian_hmm_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.gaussian_hmm_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.gaussian_hmm_binary.params": {
+    "source": "limen/sfd/foundational_sfd/gaussian_hmm_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.train": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.GaussianHMMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "gaussian_hmm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.train": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "GaussianHMMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.gaussian_hmm_binary.gaussian_hmm_binary": {
+    "source": "limen/sfd/reference_architecture/gaussian_hmm_binary.py",
+    "symbol": "gaussian_hmm_binary",
+    "role": "signature"
   }
 }
