@@ -56,7 +56,7 @@ Both paths use the same installation:
 python -m pip install "vaquum-limen[data]"
 ```
 
-Requires Python `>=3.10,<3.14` (3.10–3.13) on macOS or Linux. Optional extras: `boosting` for LightGBM/XGBoost, `tabpfn` for TabPFN, `neural` for LSTM, `hmm` for GaussianHMM, `indicators` for TA-Lib comparison tooling, `stats` for statistical helpers, or `vaquum-limen[all]` for the full stack.
+Requires Python `>=3.10,<3.14` (3.10–3.13) on macOS or Linux. Optional extras: `boosting` for LightGBM/XGBoost, `tabpfn` for TabPFN, `neural` for LSTM/1D CNN, `hmm` for GaussianHMM, `indicators` for TA-Lib comparison tooling, `stats` for statistical helpers, or `vaquum-limen[all]` for the full stack.
 
 ## Python Research
 
