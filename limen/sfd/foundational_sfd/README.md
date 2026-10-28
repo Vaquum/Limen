@@ -48,6 +48,7 @@ Does **not** own model training logic (owned by the matching `limen.sfd.referenc
 foundational_sfd/
 ├── README.md
 ├── __init__.py
+├── _tabpfn_params.py
 ├── _xgboost_features.py
 ├── common_strategies.py
 ├── dlinear_regressor.py

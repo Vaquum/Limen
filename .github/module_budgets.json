@@ -376,6 +376,7 @@
   "limen/sfd/foundational_sfd/ridge_regressor.py": 50,
   "limen/sfd/foundational_sfd/rule_based.py": 60,
   "limen/sfd/foundational_sfd/tabpfn_binary.py": 70,
+  "limen/sfd/foundational_sfd/_tabpfn_params.py": 30,
   "limen/sfd/foundational_sfd/xgboost_regressor.py": 90,
   "limen/sfd/reference_architecture/__init__.py": 40,
   "limen/sfd/reference_architecture/base.py": 120,

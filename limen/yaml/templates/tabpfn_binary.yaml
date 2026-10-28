@@ -116,6 +116,21 @@ sfd:
     # model
     n_ensemble_configurations: [4, 8]
     device: [cpu]
+    categorical_features_indices: [null]
+    softmax_temperature: [0.9]
+    balance_probabilities: [false]
+    average_before_softmax: [false]
+    model_path: [tabpfn-v2-classifier-v2_default.ckpt]
+    ignore_pretraining_limits: [true]
+    inference_precision: [auto]
+    fit_mode: [fit_preprocessors]
+    memory_saving_mode: [auto]
+    random_state: [0]
+    n_preprocessing_jobs: [1]
+    inference_config: [null]
+    differentiable_input: [false]
+    eval_metric: [null]
+    tuning_config: [null]
 
 uel:
   n_permutations: 12
