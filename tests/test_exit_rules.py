@@ -228,6 +228,18 @@ def test_barriers_timeout_lag_and_costs(market):
     _, charged = snapshot_with_execution(columns, exit_col='exit', fee_bps=10, slip_bps=5)
     assert np.all(charged.net <= free.net)
     assert charged.net.sum() < free.net.sum()
+    anchor = float(market['close'][0])
+    stop = anchor * (1 - 1 / 10000)
+    take = anchor * (1 + 1 / 10000)
+    assert float(market['low'][1]) < stop < take < float(market['high'][1])
+    _, stopped = _execute(market, [1] * 4, [False, True, False, False], take_profit_bps=1, stop_loss_bps=1)
+    assert stopped.pos.tolist() == [0, 1, 0, 0]
+    assert stopped.gross[1] == pytest.approx(min(float(market['open'][1]), stop) / anchor - 1)
+    inputs, policy = _event_case([1] * 12, [False] * 2 + [True] + [False] * 9)
+    forced = trade_execution(inputs, replace(policy, take_profit_bps=1, stop_loss_bps=1))
+    assert forced.episodes.height == 1
+    assert forced.episodes['exit_reason'][0] == 'stop_loss'
+    assert forced.fills.height == 2
 
 
 def test_exit_evidence_is_causal_and_private(prepared_exits):
