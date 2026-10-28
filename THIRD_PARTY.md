@@ -14,6 +14,7 @@ Dependency license review is required before release when dependencies are added
 
 - Reader and publisher audits inspect their complete locked dependency graphs and permit no advisory exceptions.
 - Optional `tabpfn` support is not installed by default; install it only when the TabPFN workflow is required.
+- Optional `hmmlearn` support is installed through the `hmm` extra for GaussianHMM return models.
 - The `tabpfn` extra must be reviewed as a separate optional license surface before release because its upstream package metadata can include attribution terms beyond a plain Apache-2.0-only summary.
 - `typing_extensions` (PSF-2.0, pure Python, no transitive dependencies) is a runtime dependency for `@override` on Python 3.10; when the Python floor reaches 3.12 the import moves to `typing` and the dependency is removed.
 
@@ -30,5 +31,3 @@ The deployment toolchain pins Cloudflare Wrangler 4.151.2 (MIT OR Apache-2.0) in
 Chainticks Perp Data, derived from public chain/archive state. https://chainticks.com
 
 Modified: normalized/hashed, selected recorded populations and separately labelled diagnostics. Deterministic hashes normalize account identity; they do not anonymize public addresses. The full publisher notice, source pins, attribution and reproduction instructions are retained in the fixture's `license.json`, `provenance.json` and `reproduce.py`. This data license is separate from the package MIT license.
-
-- Optional `hmmlearn` support is installed through the `hmm` extra for GaussianHMM return models.

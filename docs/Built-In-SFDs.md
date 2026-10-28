@@ -237,7 +237,6 @@ The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template 
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.
 
-
 ## `gaussian_hmm_binary`
 
 The native manifest supplies hourly returns with 12/24-bar lookbacks and a

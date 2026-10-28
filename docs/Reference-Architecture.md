@@ -20,6 +20,7 @@ The current public reference-architecture exports are:
 - `LightGBMBinary`
 - `LogRegBinary`
 - `RandomBinary`
+- `RBFSVMBinary`
 - `RidgeRegressor`
 - `RuleBasedStrategy`
 - `XGBoostRegressor`
@@ -27,7 +28,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `rbf_svm_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -512,7 +513,6 @@ The compiled manifest's `with_allocation(method, params)` adds a research alloca
 
 Prepared data exposes `_allocation_batches['val']` and `['test']`. The fitted model accepts `model.predict({'allocation_batch': batch})` without targets or outcomes. `AllocationBatch` binds full partition bounds, original ordered source IDs and availability, target-free primary inputs, named numeric meta features and decision-time stop/readiness values. Reordered, changed or truncated batches reject. This is not an incremental future-window inference protocol.
 
-
 ## `GaussianHMMBinary`
 
 Install `vaquum-limen[hmm]`. The matching `gaussian_hmm_binary` function fits
@@ -543,7 +543,8 @@ and one thread measured median complete-cycle costs of 0.103/0.087s for
 HMM/LogReg at 384 bars, 0.095/0.082s at 2048 and 0.264/0.098s at 8192.
 Three alternating repeats included fresh preparation, fit and test prediction.
 The larger HMM runs hit the iteration cap. These are configuration-specific
-cost observations, with no efficacy or profitability claim.
+cost observations on macOS/Python 3.12.12, NumPy 2.2.6, sklearn 1.7.2,
+Polars 1.42.1 and hmmlearn 0.3.3, with no efficacy or profitability claim.
 
 ## RBF SVM binary classifier
 
