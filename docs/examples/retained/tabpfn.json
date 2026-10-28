@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T18:03:26.217432+00:00",
-  "execution_checkout_head": "9bb369dd27896443b552958317f6ce2bfa8c614b",
+  "observed_at": "2026-10-28T18:07:54.697224+00:00",
+  "execution_checkout_head": "76371951a1e1664b4ccfef489385ec8cf1d9fce4",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -488,7 +488,7 @@
     "sfd/reference_architecture/cnn1d_binary.py": "705a19c3a2e91ffa1b87608fd40de7a3e79b08404a7d911b5e99ed59e37103f5",
     "sfd/reference_architecture/direction_sizing.py": "a7b438631842b08fa58c1018285b3720c77db2a5a74f251a2cba7ac518ad36dc",
     "sfd/reference_architecture/dlinear_regressor.py": "6570f17463ac4fea896afc96d9292613843473ef3d0699aa696dd644ab5ec13e",
-    "sfd/reference_architecture/feature_link_binary.py": "ddbaa28d716160e50e99a4a71922e6a12a15af011de45774478fbd5b7b3dbcc7",
+    "sfd/reference_architecture/feature_link_binary.py": "24930caeb44706cbe46b66647f2565ec4a9fa663de7e7aa8fa91bdd79d26bbc2",
     "sfd/reference_architecture/gaussian_hmm_binary.py": "ace3db2171c0748b65a7195d2b06209368fd52506c7cf7305bc074cf84033c1b",
     "sfd/reference_architecture/lightgbm_binary.py": "0ded2811421adbb240d9ca2ac311f20c5be33d3a2f1310e2dcb597701fdb0bdb",
     "sfd/reference_architecture/logreg_binary.py": "80788eba5856aa65f385b223af4d4ea247459a79e95dbe2ec8444a027ab75621",
