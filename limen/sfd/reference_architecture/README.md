@@ -50,7 +50,9 @@ reference_architecture/
 ├── README.md
 ├── __init__.py
 ├── _backtest_evaluation.py
+├── _sequence_binary.py
 ├── base.py
+├── cnn1d_binary.py
 ├── direction_sizing.py
 ├── dlinear_regressor.py
 ├── feature_link_binary.py

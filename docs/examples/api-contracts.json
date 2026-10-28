@@ -4849,6 +4849,81 @@
     "symbol": "residual_regressor",
     "role": "signature"
   },
+  "limen.sfd.foundational_sfd.cnn1d_binary": {
+    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+    "symbol": "cnn1d_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.cnn1d_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.cnn1d_binary.params": {
+    "source": "limen/sfd/foundational_sfd/cnn1d_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.train": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.predict": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.CNN1DBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "cnn1d_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.train": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.predict": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.CNN1DBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "CNN1DBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.cnn1d_binary.cnn1d_binary": {
+    "source": "limen/sfd/reference_architecture/cnn1d_binary.py",
+    "symbol": "cnn1d_binary",
+    "role": "signature"
+  },
   "limen.sfd.foundational_sfd.feature_link_binary": {
     "source": "limen/sfd/foundational_sfd/feature_link_binary.py",
     "symbol": "feature_link_binary",
