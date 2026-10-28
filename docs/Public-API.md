@@ -896,6 +896,8 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.yaml.resolve`](Public-API.md#limenyamlresolve) | `signature` | `limen/yaml/resolver.py` |
 | [`limen.yaml.resolve_manifest_uri`](Public-API.md#limenyamlresolve_manifest_uri) | `signature` | `limen/yaml/store.py` |
 | [`limen.yaml.validate`](Public-API.md#limenyamlvalidate) | `signature` | `limen/yaml/validator.py` |
+| [`limen.cohort.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
+| [`limen.cohort.bayesian.bayesian_cohort`](Cohort.md#bayesian-reliability-voting) | `signature` | `limen/cohort/bayesian.py` |
 
 ## Additional component contracts
 
