@@ -13,7 +13,7 @@ from scenario_oracles import execution_clocks, verify_acceptance, verify_common_
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-parallel', 'compiled-rule-contracts', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-parallel', 'compiled-rule-contracts', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
     'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment', 'compiled-calibration-isotonic'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
@@ -207,6 +207,16 @@ def verify_project(project):
               'test_start': '2024-11-01T00:00:00+00:00', 'test_end': '2025-01-01T00:00:00+00:00', 'test_rows': 1464}
     verify_common_baselines('compiled', common, base / 'compiled-common_strategies', project / 'inputs')
     checked_log(base / 'compiled-family_random_binary', 1)
+    svm_directory = base / 'compiled-family_rbf_svm_binary'
+    svm_log = checked_log(svm_directory, 1)
+    svm_record = records(svm_directory)[0]
+    svm_predictions = predictions(svm_directory, svm_record)
+    raw = pl.read_parquet(project / 'inputs/spot_15m_20250101_20250531.parquet')
+    labeled = raw.with_columns((pl.col('close').shift(-1) > pl.col('close')).cast(pl.Int8).alias('next_close_up'))
+    alignment = svm_record['alignment']
+    aligned = labeled.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))
+    assert aligned.height == svm_predictions.size and set(svm_predictions) <= {0, 1}
+    assert svm_log['accuracy'][0] == pytest.approx(np.mean(svm_predictions == aligned['next_close_up'].to_numpy()))
     signed = checked_log(base / 'compiled-family_direction_sizing', 2)
     assert signed.height == 2
     summaries['search'] = {'rounds': main.height, 'selected_members': selected['members'], 'traversals': len(domains), 'budget_rounds': adaptive.height, 'families': verify_regressors(project)}

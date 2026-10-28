@@ -4538,5 +4538,80 @@
     "source": "limen/experiment/_exit_rules.py",
     "symbol": "with_exit_rules",
     "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.rbf_svm_binary": {
+    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
+    "symbol": "rbf_svm_binary",
+    "role": "module"
+  },
+  "limen.sfd.foundational_sfd.rbf_svm_binary.manifest": {
+    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
+    "symbol": "manifest",
+    "role": "signature"
+  },
+  "limen.sfd.foundational_sfd.rbf_svm_binary.params": {
+    "source": "limen/sfd/foundational_sfd/rbf_svm_binary.py",
+    "symbol": "params",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.train": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.RBFSVMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "rbf_svm_binary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.__init__": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.__init__",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.train": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.train",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.predict": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.predict",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.RBFSVMBinary.evaluate": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "RBFSVMBinary.evaluate",
+    "role": "signature"
+  },
+  "limen.sfd.reference_architecture.rbf_svm_binary.rbf_svm_binary": {
+    "source": "limen/sfd/reference_architecture/rbf_svm_binary.py",
+    "symbol": "rbf_svm_binary",
+    "role": "signature"
   }
 }
