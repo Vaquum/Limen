@@ -15,7 +15,6 @@ sfd:
       params:
         kline_size: 3600
         row_count_limit: 1024
-        start_date_limit: "2024-01-01"
 
     split_dates:
       train_start: "2024-01-01"

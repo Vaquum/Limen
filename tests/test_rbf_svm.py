@@ -31,7 +31,7 @@ def recorded():
 def test_recorded_svc_fit_metrics_and_calibration(recorded, calibrated):
     _, manifest, parameters, data = recorded
     selected = parameters | {'use_calibration': calibrated, 'use_threshold': calibrated}
-    result = rbf_svm_binary(data, **manifest.resolve_model_kwargs(selected))
+    result = manifest.run_model(data, selected)
     model = result['_model']
     assert isinstance(model, RBFSVMBinary) and isinstance(model.model, SVC)
     assert model.model.kernel == 'rbf' and model.model.probability is True
@@ -56,7 +56,7 @@ def test_recorded_svc_fit_metrics_and_calibration(recorded, calibrated):
 
 def test_svc_refit_resets_calibration_and_requires_binary_labels(recorded):
     _, manifest, parameters, data = recorded
-    model = rbf_svm_binary(data, **manifest.resolve_model_kwargs(parameters))['_model']
+    model = manifest.run_model(data, parameters)['_model']
     model.train(data, C=0.5, gamma='scale', prediction_calibration_config=None)
     assert set(model.predict({'x_test': data['x_test']})) == {'_preds', '_probs'}
     truth = np.asarray(data['y_train'])
@@ -74,7 +74,7 @@ def test_compiled_svc_and_trainer_use_recorded_parameters(tmp_path):
     directory = tmp_path / 'compiled-svc'
     loop = UniversalExperimentLoop(sfd=CompiledSFD(config), search_strategy=build_search_strategy(config),
                                    experiment_dir=directory, yaml_reference=config)
-    loop.run('recorded-svc', n_permutations=1, prep_each_round=True, post_processing=False, progress_bar=False)
+    loop.run('recorded-svc', n_permutations=1, prep_each_round=True, post_processing=True, progress_bar=False)
     assert loop.experiment_log.height == len(loop.models) == 1
     assert loop.experiment_log['strict_mode_error'].null_count() == 1
     model = loop.models[0]

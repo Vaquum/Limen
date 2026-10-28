@@ -24,11 +24,8 @@ _LAZY_EXPORTS = {
 
 
 if TYPE_CHECKING:
-    from limen.sfd.foundational_sfd import common_strategies
-    from limen.sfd.foundational_sfd import dlinear_regressor
-    from limen.sfd.foundational_sfd import dollar_bar_crash_reversal
-    from limen.sfd.foundational_sfd import lightgbm_binary
-    from limen.sfd.foundational_sfd import logreg_binary
+    from limen.sfd.foundational_sfd import common_strategies, dlinear_regressor, dollar_bar_crash_reversal
+    from limen.sfd.foundational_sfd import lightgbm_binary, logreg_binary
     from limen.sfd.foundational_sfd import random_binary
     from limen.sfd.foundational_sfd import rbf_svm_binary
     from limen.sfd.foundational_sfd import ridge_regressor
