@@ -1,51 +1,49 @@
-import logging
 import os
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
+import numpy as np
+import polars as pl
 import pytest
 
-import limen
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import RandomStrategy
-
-logger = logging.getLogger(__name__)
+from limen import UniversalExperimentLoop
+from limen.sfd.foundational_sfd import tabpfn_binary
+from limen.sfd.reference_architecture import TabPFNBinary
 
 
 pytestmark = pytest.mark.tabpfn_model
 
 
-def test_tabpfn():
-    '''Test TabPFN SFD via MSQ path with RandomStrategy.'''
-
+def test_tabpfn(tmp_path):
     if os.getenv('LIMEN_RUN_TABPFN_MODEL_TEST') != '1':
-        pytest.skip('Real TabPFN model-download validation is split to #628')
-    pytest.importorskip('tabpfn')
+        pytest.skip('Set LIMEN_RUN_TABPFN_MODEL_TEST=1 for the real TabPFN CPU test')
 
-    tabpfn_sfds = [
-        limen.sfd.foundational_sfd.tabpfn_binary,
-    ]
+    from tabpfn import TabPFNClassifier
 
-    for sfd_module in tabpfn_sfds:
+    source = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
+    bars = pl.read_parquet(source, n_rows=384)
+    parameters = {name: [values[0]] for name, values in tabpfn_binary.params().items()}
+    parameters['n_ensemble_configurations'] = [1]
+    loop = UniversalExperimentLoop(data=bars, sfd=tabpfn_binary)
+    loop.run(str(tmp_path / 'tabpfn'), n_permutations=1, prep_each_round=True,
+             random_search=False, params=lambda: parameters, post_processing=True,
+             progress_bar=False)
 
-        with TemporaryDirectory() as tmpdir:
-            experiment_dir = Path(tmpdir) / 'experiment'
-            domain = ParamDomain(sfd_module.params())
-            strategy = RandomStrategy(domain, seed=42)
-
-            uel = limen.UniversalExperimentLoop(
-                sfd=sfd_module,
-                search_strategy=strategy,
-                experiment_dir=experiment_dir,
-            )
-
-            uel.run(
-                experiment_name=str(experiment_dir / 'test'),
-                n_permutations=2,
-            )
-
-        logger.info('%s: PASSED', sfd_module.__name__)
-
-
-if __name__ == '__main__':
-    test_tabpfn()
+    assert loop.experiment_log.height == len(loop.models) == len(loop.preds) == 1
+    assert loop.experiment_log['strict_mode_error'].null_count() == 1
+    model = loop.models[0]
+    assert isinstance(model, TabPFNBinary)
+    assert isinstance(model.model, TabPFNClassifier)
+    prepared = loop.manifest.prepare_data(bars, loop.round_params[0])
+    result = model.predict(prepared)
+    truth = np.asarray(prepared['y_test'])
+    predictions, probabilities = result['_preds'], result['_probs']
+    assert truth.size > 0 and set(truth) == {0, 1}
+    assert predictions.shape == probabilities.shape == truth.shape
+    assert np.isfinite(probabilities).all()
+    assert ((probabilities >= 0) & (probabilities <= 1)).all()
+    np.testing.assert_array_equal(predictions, probabilities >= result['optimal_threshold'])
+    np.testing.assert_array_equal(loop.preds[0], predictions)
+    assert loop.experiment_log['accuracy'][0] == float(np.mean(truth == predictions))
+    differences = probabilities[truth == 1, None] - probabilities[truth == 0]
+    auc = np.mean((differences > 0) + 0.5 * (differences == 0))
+    np.testing.assert_allclose(loop.experiment_log['auc'][0], auc, atol=1e-12)
