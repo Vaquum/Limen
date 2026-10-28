@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager
 import re
 from typing import TYPE_CHECKING, Protocol, cast
 
@@ -16,9 +17,28 @@ if TYPE_CHECKING:
 
 __all__ = ['LSTMBinary', 'lstm_binary']
 _FloatArray = npt.NDArray[np.float64]
+_Float32Array = npt.NDArray[np.float32]
 _THRESHOLD = 0.5
 _MATRIX_DIMENSIONS = 2
 _BIDIRECTIONAL = 2
+
+
+class _ArrayFactory(Protocol):
+    def from_numpy(self, values: _Float32Array) -> 'Tensor': ...
+
+
+class _Random(Protocol):
+    def fork_rng(self, devices: list[int]) -> AbstractContextManager[None]: ...
+
+
+class _TensorOperations(Protocol):
+    def backward(self) -> None: ...
+    def numpy(self) -> _Float32Array: ...
+
+
+class _Optimizer(Protocol):
+    def zero_grad(self) -> None: ...
+    def step(self) -> None: ...
 
 
 class _Network(Protocol):
@@ -101,24 +121,24 @@ class LSTMBinary(ReferenceModel):
         self._mean, self._scale = float(windows.mean()), float(windows.std())
         if self._scale == 0:
             raise ValueError('LSTMBinary training returns have zero variance')
-        features = torch.from_numpy(np.asarray((windows - self._mean) / self._scale, dtype=np.float32)[:, :, None])
-        labels = torch.from_numpy(np.asarray(target, dtype=np.float32))
+        features = cast(_ArrayFactory, torch).from_numpy(np.asarray((windows - self._mean) / self._scale, dtype=np.float32)[:, :, None])
+        labels = cast(_ArrayFactory, torch).from_numpy(np.asarray(target, dtype=np.float32))
         generator = np.random.default_rng(random_state)
-        with torch.random.fork_rng(devices=[]):
+        with cast(_Random, torch.random).fork_rng(devices=[]):
             seeded = torch.Generator(device='cpu')
             _ = seeded.manual_seed(random_state)
             torch.set_rng_state(seeded.get_state())
             self.model = _network(params)
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate,
-                                         weight_decay=weight_decay, betas=betas, eps=eps)
+            optimizer = cast(_Optimizer, torch.optim.Adam(self.model.parameters(), lr=learning_rate,
+                                         weight_decay=weight_decay, betas=betas, eps=eps))
             for _epoch in range(epochs):
                 order = generator.permutation(len(target))
                 for start in range(0, len(order), batch_size):
                     indices = order[start:start + batch_size]
                     optimizer.zero_grad()
                     loss = torch.nn.functional.binary_cross_entropy_with_logits(self.model(features[indices]), labels[indices])
-                    loss.backward()
-                    _ = optimizer.step()
+                    cast(_TensorOperations, loss).backward()
+                    optimizer.step()
         _ = self.model.eval()
         return self
 
@@ -129,8 +149,8 @@ class LSTMBinary(ReferenceModel):
         import torch
         windows = (self._windows(data['x_test']) - self._mean) / self._scale
         with torch.no_grad():
-            logits = self.model(torch.from_numpy(np.asarray(windows, dtype=np.float32)[:, :, None]))
-            probability = np.asarray(torch.sigmoid(logits).numpy(), dtype=np.float64)
+            logits = self.model(cast(_ArrayFactory, torch).from_numpy(np.asarray(windows, dtype=np.float32)[:, :, None]))
+            probability = np.asarray(cast(_TensorOperations, torch.sigmoid(logits)).numpy(), dtype=np.float64)
         return {'_preds': (probability > _THRESHOLD).astype(np.int8), '_probs': probability}
 
     @override

@@ -10,8 +10,7 @@ from limen.sfd.reference_architecture.random_binary import RandomBinary, random_
 from limen.sfd.reference_architecture.rbf_svm_binary import RBFSVMBinary, rbf_svm_binary
 from limen.sfd.reference_architecture.ridge_regressor import RidgeRegressor, ridge_regressor
 from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_based
-from limen.sfd.reference_architecture.tabpfn_binary import TabPFNBinary
-from limen.sfd.reference_architecture.tabpfn_binary import tabpfn_binary
+from limen.sfd.reference_architecture.tabpfn_binary import TabPFNBinary, tabpfn_binary
 from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor
 from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 
