@@ -205,7 +205,7 @@ def verify(interface, name, result, output, inputs):
                 assert row['id'] == original['id'] and row['accuracy'] == pytest.approx(original['accuracy'])
         verify_feedback(interface, result['feedback'], inputs)
         if interface == 'compiled':
-            assert set(result['families']) == {'direction_sizing', 'dlinear_regressor', 'gaussian_hmm_binary', 'lstm_binary', 'random_binary', 'rbf_svm_binary', 'residual_regressor', 'ridge_regressor', 'xgboost_regressor', 'cnn1d_binary', 'entropy_var_regressor', 'pseudo_label_binary'}
+            assert set(result['families']) == {'direction_sizing', 'dlinear_regressor', 'gaussian_hmm_binary', 'lstm_binary', 'random_binary', 'rbf_svm_binary', 'residual_regressor', 'ridge_regressor', 'xgboost_regressor', 'cnn1d_binary', 'entropy_var_regressor', 'feature_link_binary', 'pseudo_label_binary'}
             raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')
             labels = raw.with_columns(((pl.col('close').shift(-1)/pl.col('close')-1)*100).alias('next_return'))
             for family, observed in result['families'].items():
@@ -232,7 +232,7 @@ def verify(interface, name, result, output, inputs):
                             assert metric['violation_rate'] == pytest.approx(np.mean(residual < 0))
                     elif family == 'random_binary':
                         assert set(predictions) == {0, 1} and 0 <= metric['accuracy'] <= 1
-                    elif family in ('rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary', 'pseudo_label_binary'):
+                    elif family in ('rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary', 'feature_link_binary', 'pseudo_label_binary'):
                         alignment = record['alignment']
                         rows = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))
                         assert rows.height == predictions.size and set(predictions) <= {0, 1}

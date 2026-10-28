@@ -55,6 +55,7 @@ foundational_sfd/
 ├── dlinear_regressor.py
 ├── dollar_bar_crash_reversal.py
 ├── entropy_var_regressor.py
+├── feature_link_binary.py
 ├── gaussian_hmm_binary.py
 ├── lightgbm_binary.py
 ├── logreg_binary.py

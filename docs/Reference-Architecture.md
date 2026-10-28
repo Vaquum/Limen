@@ -15,6 +15,7 @@ The current public reference-architecture exports are:
 
 - `ReferenceModel`
 - `PseudoLabelBinary`
+- `FeatureLinkedBinary`
 - `EntropyVaRRegressor`
 - `CNN1DBinary`
 - `DLinearRegressor`
@@ -33,7 +34,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `pseudo_label_binary`, `entropy_var_regressor`, `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `pseudo_label_binary`, `feature_link_binary`, `entropy_var_regressor`, `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -674,6 +675,41 @@ motivates the sign-entropy predictor. This rolling-window, simple-return,
 frozen-fit variant does not replicate its calendar-day log-return and rolling
 coefficient protocol. Overlapping horizons imply dependent observations;
 violation rate alone establishes neither calibrated tails nor GARCH superiority.
+
+## `FeatureLinkedBinary`
+
+`feature_link_binary` appends an upstream logistic probability as the final
+downstream feature, after the completed raw `ret_1_lag_0..N` inputs. Training
+uses chronological out-of-sample probabilities from expanding prefixes; initial
+rows without such a prediction are excluded. A separately retained upstream
+fit on all observed training rows supplies the same feature at inference.
+The downstream classifier then returns target-free probabilities and decisions.
+
+Nested `upstream_params`/`downstream_params` retain native logistic controls
+(default max_iter 200, seed 42). `n_splits` and the explicit
+`observation_interval_seconds` define the chronology. The matching SFD's
+`recorded_rows` extension carries real split timestamps through the existing
+data-dictionary extension. Raw windows must be contiguous, finite and equally
+spaced. External scaling/PCA and calibration are rejected. No validation/test
+labels enter either fit.
+
+Features from a completed bar are available at open plus one interval; its
+next-close label at plus two. Each fit prefix excludes labels unavailable by
+its first prediction decision and requires both observed classes. The final
+full-training upstream never generates downstream training features. These
+features are explicitly out of sample, without globally fitted preprocessing.
+
+Ordinary `linkage_*` log columns retain ordered augmented feature names,
+component identity, observed/covered row counts, actual row/availability and
+fold cutoffs, and fingerprints of raw/augmented inputs, observed labels,
+covered indices and out-of-sample probabilities. SHA-256 fingerprints cover a
+compact JSON `[shape, dtype]` header and C-order little-endian float64 or int64
+bytes. Existing round parameters and Trainer reconstruct the same composition
+and provenance. The compiled example is `compiled-research/family_feature_link_binary.yaml`.
+
+A full-training upstream may have a different output distribution than the
+chronological prefixes. Recorded assertions establish feature meaning, fit
+boundaries and reconstruction; they do not establish predictive or trading benefit.
 
 ## `PseudoLabelBinary`
 
