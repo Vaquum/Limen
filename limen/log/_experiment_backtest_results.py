@@ -1,4 +1,5 @@
 from typing import Any, Literal
+from collections.abc import Mapping
 import polars as pl
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
@@ -25,17 +26,16 @@ def captured_metrics(source: object, names: list[str], prefix: str) -> pl.DataFr
     return frame.select(columns).with_columns(pl.col(pl.String, pl.Null).cast(pl.Float64)).rename(dict(zip(columns, names, strict=True)))
 
 
-def _prepare_snapshot_backtest_input(df: pl.DataFrame, *, prediction_kind: Literal['binary', 'directional'] = 'binary') -> pl.DataFrame:
-    '''Require binary predictions unless directional interpretation is explicit.'''
+def _prepare_snapshot_backtest_input(df: pl.DataFrame, *, prediction_kind: Literal['binary', 'directional'] = 'binary', class_mapping: Mapping[int | str, int] | None = None, label_index: int | None = None) -> pl.DataFrame:
+    '''Apply an explicit output interpretation or preserve legacy normalization.'''
     if prediction_kind not in ('binary', 'directional'):
         raise ValueError("prediction_kind must be 'binary' or 'directional'")
+    if class_mapping is not None or label_index is not None:
+        from limen.backtest._snapshot_signals import mapped_snapshot_frame
+        return mapped_snapshot_frame(df, prediction_kind, class_mapping, label_index)
 
     def _valid(series: pl.Series) -> pl.Series:
         return series.drop_nulls().filter(series.drop_nulls().is_not_nan())
-
-    def _is_binary(series: pl.Series) -> bool:
-        valid = _valid(series)
-        return bool(valid.is_in([0, 1]).all())
 
     def _to_numeric_strict(series: pl.Series, name: str) -> pl.Series:
         numeric = series.cast(pl.Float64, strict=False)
@@ -56,7 +56,7 @@ def _prepare_snapshot_backtest_input(df: pl.DataFrame, *, prediction_kind: Liter
         actual = _to_numeric_strict(df['actuals'], 'actual')
         if _is_unsupported_multiclass(actual):
             raise ValueError("snapshot backtest does not support multiclass actuals; use binary predictions or supported directional scores with prediction_kind='directional'")
-    if _is_binary(pred):
+    if _valid(pred).is_in([0, 1]).all():
         return df.clone()
     if _is_unsupported_multiclass(pred):
         raise ValueError("snapshot backtest does not support multiclass predictions; use binary predictions or supported directional scores with prediction_kind='directional'")

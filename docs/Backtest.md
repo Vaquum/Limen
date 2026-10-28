@@ -177,7 +177,15 @@ This contract makes each round comparable because every output column is compute
 
 `_prepare_snapshot_backtest_input` in `limen.log._experiment_backtest_results` is an internal helper for explicit legacy snapshot replay; its repository callers are tests. The default `prediction_kind='binary'` accepts `0`/`1` predictions. Other supported numeric values require the explicit keyword `prediction_kind='directional'`: positive scores become `1`, zero and negative scores become `0`, even when every score lies within `(0, 1)`. Threshold probabilities upstream; the helper neither infers their meaning from their range nor chooses a threshold.
 
-Existing nonnumeric and multiclass exclusions apply in both modes: three or more distinct nonnegative exact-integer predictions or actuals remain unsupported. Binary detection ignores existing nulls and passes through the copied values; on the nonbinary directional path, a null comparison becomes flat. Downstream direct-snapshot validation remains authoritative and rejects missing predictions.
+Without an explicit class mapping or label selection, existing nonnumeric and multiclass exclusions apply in both modes: three or more distinct nonnegative exact-integer predictions or actuals remain unsupported. Binary detection ignores existing nulls and passes through the copied values; on the nonbinary directional path, a null comparison becomes flat. Downstream direct-snapshot validation remains authoritative and rejects missing predictions.
+
+### Explicit multiclass and multilabel inputs
+
+Pass `class_mapping={0: 0, 1: 1, 2: 0}` to `backtest_snapshot()` to declare which class identities activate a position. Every observed identity must have a binary decision. Keys are integer or string identities; values are literal integer `0` or `1`. Missing, boolean and floating class identities reject, as do unknown classes. String labels stay strings. No class number implies long or short direction; the selected strategy owns direction.
+
+For a rectangular two-dimensional binary indicator matrix, pass `label_index=0` (or another explicit column index). All indicators must be binary and present. The index must be a nonnegative integer within the matrix; bools reject. There is no implicit flattening, probability threshold, argmax or any/all reduction. Evaluate each desired class/label with a separate call and its explicit interpretation.
+
+`class_mapping` and `label_index` are mutually exclusive. They transform only the prediction input before execution, leaving caller arrays, prices, lag, costs, population and all 20 ledger fields unchanged. Existing binary calls need no option. The internal Log-input helper accepts the same options and applies them to retained predictions and actuals; either option conflicts with `prediction_kind='directional'`.
 
 Signed `trade_contract` replay bypasses this helper and preserves exposure. Aggregate `Log` readers consume captured metrics without invoking it.
 
@@ -313,7 +321,7 @@ A strategy receives `predictions`, `open_px`, `close_px`, `price_change`, `execu
 
 <!-- reference: backtest-snapshot source=limen/backtest/backtest_snapshot.py region=signature:backtest_snapshot role=signature -->
 ```python
-def backtest_snapshot(columns: Mapping[str, Any], *, pred_col: str='predictions', open_col: str='open', close_col: str='close', price_change_col: str='price_change', strategy: Callable[..., ExecutionResult]=long_flat_strategy, execution_lag_bars: int=1, fee_bps: float=5.0, slip_bps: float=5.0, notional_rate: float=1.0, take_profit_bps: float | None=None, stop_loss_bps: float | None=None, high_col: str='high', low_col: str='low') -> dict[str, float]:
+def backtest_snapshot(columns: Mapping[str, Any], *, pred_col: str='predictions', open_col: str='open', close_col: str='close', price_change_col: str='price_change', strategy: Callable[..., ExecutionResult]=long_flat_strategy, execution_lag_bars: int=1, fee_bps: float=5.0, slip_bps: float=5.0, notional_rate: float=1.0, take_profit_bps: float | None=None, stop_loss_bps: float | None=None, high_col: str='high', low_col: str='low', class_mapping: Mapping[int | str, int] | None=None, label_index: int | None=None) -> dict[str, float]:
     ...
 ```
 
