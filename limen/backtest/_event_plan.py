@@ -30,6 +30,7 @@ def _plan_key(inputs: TradeInputs, policy: TradePolicy) -> str:
     projected = json_value(policy)
     if isinstance(projected, dict):
         _ = projected.pop('barrier_spec', None)
+        _ = projected.pop('exit_rules', None)
     return contract_digest({
         'policy': projected, 'sources': json_value(inputs.sources),
         'initial_equity': str(inputs.initial_equity),
@@ -42,6 +43,8 @@ def _plan_key(inputs: TradeInputs, policy: TradePolicy) -> str:
 
 
 def event_plan(inputs: TradeInputs, policy: TradePolicy, *, cache: bool = True) -> EventPlan:
+    from limen.backtest._exit_evidence import validate_exits
+    validate_exits(inputs, policy)
     validate_initial(inputs)
     validate_signal_barriers(inputs, policy)
     if set(OBSERVATION_COLUMNS) - set(inputs.observations.columns) or set(SIGNAL_COLUMNS) - set(inputs.signals.columns):
@@ -52,7 +55,7 @@ def event_plan(inputs: TradeInputs, policy: TradePolicy, *, cache: bool = True) 
             existing = _PLANS.get(key)
             if existing is not None:
                 _PLANS.move_to_end(key)
-                return replace(existing, binding=contract_digest(export_trade_contract(policy, inputs))) if policy.take_profit_bps_column or policy.stop_loss_bps_column else existing
+                return replace(existing, binding=contract_digest(export_trade_contract(policy, inputs))) if (policy.take_profit_bps_column or policy.stop_loss_bps_column) and policy.exit_rules is None else existing
     events = source_execution_events(inputs, policy, include_timers=False)
     observation_ids = {event.source_row_id for event in events if event.kind == 'observation'}
     funding_ids = {event.source_row_id for event in events if event.kind == 'funding'}
@@ -62,7 +65,7 @@ def event_plan(inputs: TradeInputs, policy: TradePolicy, *, cache: bool = True) 
         {str(row['event_id']): cast(dict[str, object], row) for row in inputs.funding_events.iter_rows(named=True) if str(row['event_id']) in funding_ids} if inputs.funding_events is not None else {},
         {str(identity): index for index, identity in enumerate(inputs.observations['row_id']) if str(identity) in observation_ids},
         {str(identity): index for index, identity in enumerate(inputs.signals['row_id'])},
-        contract_digest(export_trade_contract(policy, inputs)),
+        _binding(policy, inputs),
     )
     if key is not None and len(events) <= _MAX_EVENTS:
         with _PLAN_LOCK:
@@ -70,6 +73,12 @@ def event_plan(inputs: TradeInputs, policy: TradePolicy, *, cache: bool = True) 
             while len(_PLANS) > _MAX_PLANS or sum(len(item.events) for item in _PLANS.values()) > _MAX_EVENTS:
                 _ = _PLANS.popitem(last=False)
     return plan
+
+
+def _binding(policy: TradePolicy, inputs: TradeInputs) -> str:
+    if policy.exit_rules is not None:
+        policy, inputs = replace(policy, exit_rules=None), replace(inputs, signals=inputs.signals.drop('exit'))
+    return contract_digest(export_trade_contract(policy, inputs))
 
 
 __all__: list[str] = []

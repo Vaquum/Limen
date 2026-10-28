@@ -108,8 +108,14 @@ class TradePolicy:
     barrier_spec: Mapping[str, JsonValue] | None = None
     source_interval_seconds: float | None = None
     source_timestamp_role: Literal['start', 'end'] | None = None
+    exit_rules: Mapping[str, JsonValue] | None = None
 
     def __post_init__(self) -> None:
+        if self.exit_rules is not None:
+            from limen.backtest._exit_evidence import EXIT_SEMANTICS, RULE_EXIT_VERSION, validate_definition
+            if self.prediction_mode != 'binary' or self.exit_rules.get('version') != RULE_EXIT_VERSION or self.exit_rules.get('signal_semantics') != EXIT_SEMANTICS:
+                raise ValueError('Explicit exits require a resolved binary entry_until_exit rule definition')
+            validate_definition(self.exit_rules)
         if self.rule_version != RULE_VERSION or self.prediction_mode not in ('binary', 'target_exposure'):
             raise ValueError('Unsupported trade rule version or prediction mode')
         for name in ('fee_bps', 'slip_bps', 'signal_change_bps', 'flat_threshold', 'execution_lag_seconds'):
@@ -181,7 +187,7 @@ def json_value(value: object) -> JsonValue:
             raise ValueError('Nonfinite contract value')
         return value
     if is_dataclass(value) and not isinstance(value, type):
-        omitted: set[str] = {'take_profit_bps_column', 'stop_loss_bps_column', 'barrier_spec', 'source_interval_seconds', 'source_timestamp_role'} if isinstance(value, TradePolicy) else set()
+        omitted: set[str] = {'take_profit_bps_column', 'stop_loss_bps_column', 'barrier_spec', 'source_interval_seconds', 'source_timestamp_role', 'exit_rules'} if isinstance(value, TradePolicy) else set()
         return {field.name: json_value(getattr(value, field.name)) for field in fields(value) if field.name not in omitted or getattr(value, field.name) is not None}
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)
@@ -260,6 +266,9 @@ def export_trade_contract(policy: TradePolicy, inputs: TradeInputs) -> dict[str,
 
     if columns:
         result['barrier_distances'] = json_value(source_binding(inputs.signals.select(selected), 'entry_barrier_distances', inputs.partition_start_ns, inputs.partition_end_ns, 1, 'decision_time_bps_and_declared_readiness'))
+    if policy.exit_rules is not None:
+        from limen.backtest._exit_evidence import evidence
+        result['exit_evidence_digest'] = contract_digest(evidence(inputs.signals))
     return result
 
 

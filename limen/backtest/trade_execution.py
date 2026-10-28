@@ -10,7 +10,7 @@ import polars as pl
 from limen.backtest._event_clock import clock_batches
 from limen.backtest._event_plan import EventPlan, event_plan
 from limen.backtest.funding_adapter import FundingAdapter, FundingContext, resolve_adapter
-from limen.backtest.trade_contract import BPS, NANOSECONDS, ExecutionEvent, JsonValue, TradeInputs, TradeLedger, TradePolicy, finite_number
+from limen.backtest.trade_contract import BPS, NANOSECONDS, ExecutionEvent, JsonValue, TradeInputs, TradeLedger, TradePolicy, contract_digest, export_trade_contract, finite_number
 
 _STATE_SCHEMA = {'event_id': pl.String, 'time_ns': pl.Int64, 'cash': pl.Float64, 'accrued_funding': pl.Float64, 'quantity': pl.Float64, 'basis': pl.Float64, 'equity': pl.Float64, 'last_signal': pl.Float64, 'pending_intent_id': pl.String, 'episode_id': pl.String, 'forced_exit_latched': pl.Boolean, 'signal_sample': pl.Boolean}
 _INTENT_SCHEMA = {'intent_id': pl.String, 'episode_id': pl.String, 'requested_at_ns': pl.Int64, 'target': pl.Float64, 'reason': pl.String, 'status': pl.String}
@@ -72,6 +72,8 @@ class Account:
     fills: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
     episodes: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
     funding: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
+    exit_armed: bool = True
+    exit_closed_at_ns: int | None = None
 
     def equity(self, price: float) -> float:
         marked = self.quantity * price if self.policy.product.kind == 'cash_spot' else self.quantity * (price - self.basis)
@@ -82,6 +84,10 @@ class Account:
         return equity
 
     def intent(self, target: float, time_ns: int, reason: str, distances: Mapping[str, JsonValue] | None = None) -> None:
+        if self.policy.exit_rules is not None:
+            from limen.backtest._rule_exit_state import replace_pending
+            if not replace_pending(self, reason):
+                return
         item: dict[str, JsonValue] = {'intent_id': f'{self.prefix}:intent:{len(self.intents)}', 'episode_id': None if self.episode is None else self.episode['episode_id'], 'requested_at_ns': time_ns, 'target': target, 'reason': reason, 'status': 'pending'}
         if distances is not None:
             item.update(distances)
@@ -94,14 +100,19 @@ class Account:
         if self.pending is not None:
             self.pending['status'] = 'replaced' if reason == 'signal' else 'cancelled'
         self.pending = item
-        self.ready_at_ns = time_ns + (round(self.policy.execution_lag_seconds * NANOSECONDS) if reason == 'signal' else 0)
+        self.ready_at_ns = time_ns + (round(self.policy.execution_lag_seconds * NANOSECONDS) if reason in ('signal', 'rule_exit') else 0)
 
     def accept_signal(self, value: object, time_ns: int) -> None:
         row: Mapping[str, object] = cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
         signal = _canonical_signal(row['target'] if isinstance(value, Mapping) else value, self.policy)
+        explicit = self.policy.exit_rules is not None
+        if explicit:
+            from limen.backtest._rule_exit_state import accept
+            if not accept(self, signal, row, time_ns):
+                return
         if signal is None:
             return
-        changed = abs(signal - self.last_signal) > self.policy.signal_change_bps / BPS
+        changed = explicit or abs(signal - self.last_signal) > self.policy.signal_change_bps / BPS
         changed = changed or (signal == 0 and self.last_signal != 0) or signal * self.last_signal < 0
         if signal == 0:
             self.latched = False
@@ -125,9 +136,10 @@ class Account:
                 self.intent(fraction, time_ns, 'signal', distances or None)
 
     def force_exit(self, time_ns: int, reason: str) -> None:
-        if self.quantity != 0 and (self.pending is None or self.pending['reason'] == 'signal'):
+        if self.quantity != 0 and (self.policy.exit_rules is not None or self.pending is None or self.pending['reason'] == 'signal'):
             self.intent(0.0, time_ns, reason)
             self.latched = True
+            self.exit_armed = False
 
     def fill(self, new_quantity: float, price: float, event: ExecutionEvent) -> None:
         if self.pending is None:
@@ -175,6 +187,8 @@ class Account:
                     self.episode['exit_reason'] = self.pending['reason']
                     self.episode = None
                     self.basis = 0.0
+        if self.policy.exit_rules is not None and self.quantity == 0:
+            self.exit_armed, self.exit_closed_at_ns = False, event.time_ns
 
     def reconcile(self, price: float, event: ExecutionEvent, *, exits_only: bool = False) -> None:
         while self.pending is not None and event.time_ns >= self.ready_at_ns:
@@ -363,15 +377,16 @@ def trade_execution(inputs: TradeInputs, policy: TradePolicy) -> TradeLedger:
     if (adapter is not None) != (inputs.funding_events is not None):
         raise ValueError('Funding policy and normalized events must be supplied together')
     plan = event_plan(inputs, policy)
-    account = Account(policy, inputs.initial_equity, plan.binding[:16])
-    signals = {str(row['row_id']): row if policy.take_profit_bps_column or policy.stop_loss_bps_column else row['target'] for row in inputs.signals.iter_rows(named=True)}
+    binding = contract_digest(export_trade_contract(policy, inputs)) if policy.exit_rules is not None else plan.binding
+    account = Account(policy, inputs.initial_equity, binding[:16])
+    signals = {str(row['row_id']): row if policy.take_profit_bps_column or policy.stop_loss_bps_column or policy.exit_rules is not None else row['target'] for row in inputs.signals.iter_rows(named=True)}
     execute_event_plan(account, plan, signals, inputs.partition_start_ns, inputs.partition_end_ns, adapter)
     schema = {**_STATE_SCHEMA, 'absolute_exposure': pl.Float64}
     states = pl.concat([*account.state_blocks, _frame(account.states, schema)]) if account.state_blocks else _frame(account.states, schema)
     prior = pl.col('equity').shift(1).fill_null(inputs.initial_equity)
     states = states.with_columns((pl.col('equity') / prior - 1).alias('net_return'))
     extras = {'take_profit_bps': pl.Float64, 'stop_loss_bps': pl.Float64} if policy.take_profit_bps_column or policy.stop_loss_bps_column else {}
-    return TradeLedger(states, _frame(account.intents, {**_INTENT_SCHEMA, **extras}), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, {**_EPISODE_SCHEMA, **extras}), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), plan.binding)
+    return TradeLedger(states, _frame(account.intents, {**_INTENT_SCHEMA, **extras}), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, {**_EPISODE_SCHEMA, **extras}), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), binding)
 
 
 __all__ = ['trade_execution']
