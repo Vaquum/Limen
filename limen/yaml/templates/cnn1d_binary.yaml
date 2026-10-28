@@ -1,0 +1,81 @@
+schema_version: '1.0'
+metadata:
+  name: cnn1d_binary_experiment
+  limen_version: 5.46.2
+  mode: development
+  description: CPU convolution over chronological return windows
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: '{lookback_end}'
+    target:
+      name: next_close_up
+      class: limen.targets.NextBarUpTarget
+    strict_mode: true
+    reference_architecture: limen.sfd.reference_architecture.cnn1d_binary
+  params:
+    lookback_end:
+    - 23
+    - 47
+    out_channels:
+    - 8
+    - 16
+    conv_layers:
+    - 1
+    - 2
+    kernel_size:
+    - 3
+    stride:
+    - 1
+    dilation:
+    - 1
+    bias:
+    - true
+    activation:
+    - relu
+    pooling:
+    - mean
+    dropout:
+    - 0.0
+    epochs:
+    - 10
+    batch_size:
+    - 64
+    learning_rate:
+    - 0.001
+    - 0.01
+    weight_decay:
+    - 0.0
+    betas:
+    - - 0.9
+      - 0.999
+    eps:
+    - 1e-08
+    random_state:
+    - 42
+uel:
+  n_permutations: 8
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv
