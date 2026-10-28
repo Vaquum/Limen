@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T08:36:08.830777+00:00",
-  "execution_checkout_head": "1eda5334b6a68c3615c5d35c6cd6b17d78d78913",
+  "observed_at": "2026-10-28T08:46:01.299979+00:00",
+  "execution_checkout_head": "801fa25d1d10e069ce38b71dfb68cfff16eb8c6a",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -24,7 +24,7 @@
     "backtest/funding_presets.py": "ace67a5d1450ad8d1da0f54a5cf0437a2f5f849cb5d6dae226b8d0f9a05c06c5",
     "backtest/long_flat_strategy.py": "4d0fdbbe0672179c1cc93582042b8682a24aa1ca1b720a00ba9c56d802b0e893",
     "backtest/observed_costs.py": "1a22cf83ca5d4580442338c91e4c3fee3017702ae5312f7fc0acefebc69d2c5a",
-    "backtest/short_flat_strategy.py": "c8b731409decf9aea49e25f605b3f6fb9ae9a3671e8ed5708a935dfaa635de53",
+    "backtest/short_flat_strategy.py": "25a0f4f61a6520a90c34db2e4cc2f545f69d0b0240f8fa4e11dd06a2e6826c73",
     "backtest/trade_contract.py": "6fbfb5cdcc890ade303470c2dd60954e63beadfb2be2952a77e6fc9d8a7cc26c",
     "backtest/trade_execution.py": "7e14333d6c19f653f12f11053beed827ef8f8110ee81b3ee2a19d84f7fc7cbd9",
     "calibration/__init__.py": "dc6ed39b6ef60ef78cf7ebe4810f73f1f3bfe6ea88b62b70d04d3daf9e6125f7",

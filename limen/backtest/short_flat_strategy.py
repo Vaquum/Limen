@@ -23,7 +23,7 @@ def short_flat_strategy(
     '''Evaluate binary short/flat signals with constant-notional -1x returns.
 
     Entries use the execution-row open; continuations use the preceding close.
-    Entry-sell and exit-cover costs multiply the respective bar's growth.
+    Entry-sell and exit-cover costs debit positive fill notionals.
     Missing prices flatten the position; a later valid signal starts a new trade.
     This approximation excludes borrowing, margin, liquidation and funding.
     '''
@@ -64,10 +64,11 @@ def short_flat_strategy(
     previous_close = np.concatenate(([np.nan], close_a[:-1]))
     gross[continuation] = 1.0 - close_a[continuation] / previous_close[continuation]
     net = gross.copy()
-    growth = 1.0 + net
-    growth[entry] *= (1.0 - fee_bps / _BPS) * (1.0 - slip_bps / _BPS)
-    growth[exit_mask] *= (1.0 - fee_bps / _BPS) / (1.0 + slip_bps / _BPS)
-    net[pos] = growth[pos] - 1.0
+    entry_sell = (1.0 - fee_bps / _BPS) * (1.0 - slip_bps / _BPS)
+    exit_cover = (1.0 - fee_bps / _BPS) / (1.0 + slip_bps / _BPS)
+    net[entry] -= 1.0 - entry_sell
+    cover_notional = (1.0 - gross[exit_mask]) * np.where(entry[exit_mask], entry_sell, 1.0)
+    net[exit_mask] -= cover_notional * (1.0 - exit_cover)
     if not np.isfinite(gross).all() or not np.isfinite(net).all():
         raise ValueError('short_flat_strategy returns must be finite')
     return ExecutionResult(pos.astype(float), gross, net)

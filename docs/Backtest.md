@@ -323,9 +323,15 @@ The strategy owns its signal contract and fill mechanics. `backtest_snapshot()` 
 
 Import `short_flat_strategy` from `limen.backtest.short_flat_strategy`, then call `backtest_snapshot(perf, strategy=short_flat_strategy)` with retained prediction and price rows.
 
+<!-- reference: backtest-short-flat source=limen/backtest/short_flat_strategy.py region=signature:short_flat_strategy role=signature -->
+```python
+def short_flat_strategy(predictions: npt.ArrayLike, open_px: npt.ArrayLike, close_px: npt.ArrayLike, price_change: npt.ArrayLike, *, execution_lag_bars: int=1, fee_bps: float=5.0, slip_bps: float=5.0) -> ExecutionResult:
+    ...
+```
+
 Here binary `1` activates a short and `0` is flat. `pos` remains a non-negative exposure magnitude, preserving the 20-column ledger and its trade/inventory counts. After the declared lag, entries use the execution-row open: gross return is `-(close - open) / open`. Continuations use `-(close_t / close_previous - 1)`. Missing price rows flatten the position; a later active valid row starts a new trade at its open. Zero lag can trade the first row and is a same-row research diagnostic.
 
-Per-bar growth is `1 + gross`, multiplied at entry by `(1 - fee) * (1 - slip)` and at exit by `(1 - fee) / (1 + slip)`, where fee/slip are basis points divided by 10000. A one-bar trade pays both. At flat prices, 50 bps each of fee and slippage produces 198.3 bps of round-trip drag. Continuation bars pay no fill costs.
+Let `E = (1 - fee) * (1 - slip)` and `X = (1 - fee) / (1 + slip)`, where fee/slip are basis points divided by 10000. Entry debits `1 - E` from the gross return. Exit debits `(1 - gross) * (1 - X)`, multiplied by `E` when entry and exit share a bar. These bases are positive underlying fill notionals, so fees worsen losses even when the short loses more than its starting capital. A one-bar trade pays both; at flat prices, 50 bps each of fee and slippage produces 198.3 bps of round-trip drag. Continuation bars pay no fill costs.
 
 This is a constant-notional `-1×` return approximation. It does not model fixed-quantity short-sale accounting, borrowing, margin, liquidation or funding. It is explicit-call only; Manifest/Log execution and default long fills keep their contracts. Snapshot TP/SL cannot be combined with this strategy.
 

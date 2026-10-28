@@ -720,8 +720,8 @@ def test_short_flat_strategy_applies_entry_and_cover_costs(short_prices) -> None
     exit_cover = (1 - 0.005) / (1 + 0.005)
     assert result.gross == pytest.approx(expected_gross)
     assert result.net == pytest.approx([
-        (1 + expected_gross[0]) * entry_sell - 1,
-        (1 + expected_gross[1]) * exit_cover - 1,
+        expected_gross[0] - (1 - entry_sell),
+        expected_gross[1] - (1 - expected_gross[1]) * (1 - exit_cover),
         0,
     ])
     assert round((1 - entry_sell * exit_cover) * 10000, 1) == 198.3
@@ -729,7 +729,24 @@ def test_short_flat_strategy_applies_entry_and_cover_costs(short_prices) -> None
         [1], open_px[:1], close_px[:1], change[:1],
         execution_lag_bars=0, fee_bps=50.0, slip_bps=50.0,
     )
-    assert single.net[0] == pytest.approx((1 + single.gross[0]) * entry_sell * exit_cover - 1)
+    assert single.net[0] == pytest.approx(
+        single.gross[0] - (1 - entry_sell) - (close_px[0] / open_px[0]) * entry_sell * (1 - exit_cover)
+    )
+
+
+def test_short_flat_strategy_costs_worsen_loss_beyond_initial_capital() -> None:
+    year = pl.read_parquet(
+        Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet',
+        columns=['open', 'close'],
+    )
+    open_px, close_px = float(year['open'][0]), float(year['close'][-1])
+    assert close_px > 2 * open_px
+    columns = {'predictions': [1], 'open': [open_px], 'close': [close_px], 'price_change': [close_px - open_px]}
+    before = backtest_snapshot(columns, strategy=short_flat_strategy, execution_lag_bars=0, fee_bps=0.0, slip_bps=0.0)
+    after = backtest_snapshot(columns, strategy=short_flat_strategy, execution_lag_bars=0, fee_bps=50.0, slip_bps=50.0)
+    assert after['pnl_per_bar_bps'] < before['pnl_per_bar_bps'] < -10000
+    assert after['cost_per_bar_bps'] > 0
+    assert after['edge_bps_p50'] == before['edge_bps_p50']
 
 
 def test_backtest_snapshot_short_strategy_preserves_ledger_columns(short_prices) -> None:
