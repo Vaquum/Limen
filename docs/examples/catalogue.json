@@ -219,6 +219,11 @@
       "interface": "compiled",
       "scenario": "search",
       "configuration": "docs/examples/compiled-research/family_pseudo_label_binary.yaml"
+    },
+    "weight_link_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_weight_link_binary.yaml"
     }
   },
   "recorded_inputs": {
@@ -1614,6 +1619,7 @@
           "ridge_regressor",
           "rule_based",
           "tabpfn_binary",
+          "weight_link_binary",
           "xgboost_regressor"
         ],
         "reference": "limen/sfd/foundational_sfd/README.md"
@@ -1744,6 +1750,7 @@
           "RidgeRegressor",
           "RuleBasedStrategy",
           "TabPFNBinary",
+          "WeightLinkedBinary",
           "XGBoostRegressor",
           "cnn1d_binary",
           "direction_sizing",
@@ -1761,6 +1768,7 @@
           "ridge_regressor",
           "rule_based",
           "tabpfn_binary",
+          "weight_link_binary",
           "xgboost_regressor"
         ],
         "reference": "limen/sfd/reference_architecture/README.md",
@@ -2263,6 +2271,41 @@
           "PseudoLabelBinary",
           "pseudo_label_binary",
           "recorded_rows"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.foundational_sfd.weight_link_binary": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/weight_link_binary.py",
+        "entry_point": "limen.sfd.foundational_sfd.weight_link_binary",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture.weight_link_binary": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/weight_link_binary.py",
+        "entry_point": "limen.sfd.reference_architecture.weight_link_binary",
+        "names": [
+          "WeightLinkedBinary",
+          "recorded_rows",
+          "weight_link_binary"
         ],
         "reference": "limen/sfd/reference_architecture/README.md"
       }

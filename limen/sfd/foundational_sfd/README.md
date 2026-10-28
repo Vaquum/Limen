@@ -67,6 +67,7 @@ foundational_sfd/
 ├── ridge_regressor.py
 ├── rule_based.py
 ├── tabpfn_binary.py
+├── weight_link_binary.py
 └── xgboost_regressor.py
 ```
 

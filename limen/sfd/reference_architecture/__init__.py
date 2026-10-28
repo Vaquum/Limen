@@ -1,3 +1,4 @@
+from limen.sfd.reference_architecture.weight_link_binary import WeightLinkedBinary, weight_link_binary
 from limen.sfd.reference_architecture.pseudo_label_binary import PseudoLabelBinary, pseudo_label_binary
 from limen.sfd.reference_architecture.feature_link_binary import FeatureLinkedBinary, feature_link_binary
 from limen.sfd.reference_architecture.entropy_var_regressor import EntropyVaRRegressor, entropy_var_regressor
@@ -23,9 +24,10 @@ __all__ = [
     'FeatureLinkedBinary', 'GaussianHMMBinary', 'LSTMBinary', 'LightGBMBinary',
     'LogRegBinary', 'PseudoLabelBinary', 'RBFSVMBinary', 'RandomBinary',
     'ReferenceModel', 'ResidualRegressor', 'RidgeRegressor', 'RuleBasedStrategy',
-    'TabPFNBinary', 'XGBoostRegressor', 'cnn1d_binary', 'direction_sizing',
-    'dlinear_regressor', 'entropy_var_regressor', 'feature_link_binary', 'gaussian_hmm_binary',
-    'lightgbm_binary', 'logreg_binary', 'lstm_binary', 'pseudo_label_binary',
-    'random_binary', 'rbf_svm_binary', 'residual_regressor', 'ridge_regressor',
-    'rule_based', 'tabpfn_binary', 'xgboost_regressor',
+    'TabPFNBinary', 'WeightLinkedBinary', 'XGBoostRegressor', 'cnn1d_binary',
+    'direction_sizing', 'dlinear_regressor', 'entropy_var_regressor', 'feature_link_binary',
+    'gaussian_hmm_binary', 'lightgbm_binary', 'logreg_binary', 'lstm_binary',
+    'pseudo_label_binary', 'random_binary', 'rbf_svm_binary', 'residual_regressor',
+    'ridge_regressor', 'rule_based', 'tabpfn_binary', 'weight_link_binary',
+    'xgboost_regressor',
 ]

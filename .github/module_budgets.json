@@ -591,5 +591,8 @@
   "limen/sfd/foundational_sfd/feature_link_binary.py": 50,
   "limen/sfd/reference_architecture/_pseudo_pool.py": 100,
   "limen/sfd/reference_architecture/pseudo_label_binary.py": 200,
-  "limen/sfd/foundational_sfd/pseudo_label_binary.py": 50
+  "limen/sfd/foundational_sfd/pseudo_label_binary.py": 50,
+  "limen/sfd/reference_architecture/weight_link_binary.py": 165,
+  "limen/sfd/foundational_sfd/weight_link_binary.py": 50,
+  "limen/sfd/reference_architecture/_chronological_link.py": 80
 }

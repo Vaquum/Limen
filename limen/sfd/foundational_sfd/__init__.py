@@ -6,6 +6,7 @@ from typing import Any
 
 
 _LAZY_EXPORTS = {
+    'weight_link_binary': ('limen.sfd.foundational_sfd.weight_link_binary', None),
     'pseudo_label_binary': ('limen.sfd.foundational_sfd.pseudo_label_binary', None),
     'feature_link_binary': ('limen.sfd.foundational_sfd.feature_link_binary', None),
     'entropy_var_regressor': ('limen.sfd.foundational_sfd.entropy_var_regressor', None),
@@ -28,8 +29,7 @@ _LAZY_EXPORTS = {
 
 
 if TYPE_CHECKING:
-    from limen.sfd.foundational_sfd import pseudo_label_binary
-    from limen.sfd.foundational_sfd import feature_link_binary
+    from limen.sfd.foundational_sfd import feature_link_binary, pseudo_label_binary, weight_link_binary
     from limen.sfd.foundational_sfd import entropy_var_regressor
     from limen.sfd.foundational_sfd import cnn1d_binary
     from limen.sfd.foundational_sfd import residual_regressor
@@ -45,7 +45,7 @@ __all__ = [
     'entropy_var_regressor', 'feature_link_binary', 'gaussian_hmm_binary', 'lightgbm_binary',
     'logreg_binary', 'lstm_binary', 'pseudo_label_binary', 'random_binary',
     'rbf_svm_binary', 'residual_regressor', 'ridge_regressor', 'rule_based',
-    'tabpfn_binary', 'xgboost_regressor',
+    'tabpfn_binary', 'weight_link_binary', 'xgboost_regressor',
 ]
 
 

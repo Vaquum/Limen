@@ -14,6 +14,7 @@ This page covers:
 The current public reference-architecture exports are:
 
 - `ReferenceModel`
+- `WeightLinkedBinary`
 - `PseudoLabelBinary`
 - `FeatureLinkedBinary`
 - `EntropyVaRRegressor`
@@ -34,7 +35,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `pseudo_label_binary`, `feature_link_binary`, `entropy_var_regressor`, `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `weight_link_binary`, `pseudo_label_binary`, `feature_link_binary`, `entropy_var_regressor`, `cnn1d_binary`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -678,6 +679,9 @@ violation rate alone establishes neither calibrated tails nor GARCH superiority.
 
 ## `FeatureLinkedBinary`
 
+This bounded link requires fitted `NextBarUpTarget` labels. Other targets and
+unverified label horizons are rejected; prepare data through the matching manifest.
+
 `feature_link_binary` appends an upstream logistic probability as the final
 downstream feature, after the completed raw `ret_1_lag_0..N` inputs. Training
 uses chronological out-of-sample probabilities from expanding prefixes; initial
@@ -750,3 +754,43 @@ the same pool identity and reconstructs identical provenance. Relative pool path
 resolve from the working directory; use an absolute path for replay elsewhere. Generated labels
 remain distinct from observed labels. Model confidence does not establish label
 correctness or predictive/trading benefit.
+
+## `WeightLinkedBinary`
+
+This bounded link requires fitted `NextBarUpTarget` labels. Other targets and
+unverified label horizons are rejected; prepare data through the matching manifest.
+
+`weight_link_binary` fits an ordinary logistic classifier on each expanding
+training prefix. Observed next-close direction and the prefix model's
+chronological out-of-sample probability define difficulty `abs(y-p)`. The
+downstream classifier fits covered rows with actual native `sample_weight`
+values `weight_floor + (1-weight_floor) * difficulty**weight_power`. Initial
+rows without out-of-sample predictions are excluded. Inference uses the fitted
+downstream classifier with target-free probabilities and binary decisions.
+
+Inputs are completed contiguous raw `ret_1_lag_0..N` windows. Other feature
+columns are ignored; external scaling/PCA and calibration are rejected. Nested
+`upstream_params`/`downstream_params` retain native logistic controls, with
+default max_iter 200 and seed 42. Split count, positive weight floor/power and
+`observation_interval_seconds` control the link. The floor is at most one.
+
+The matching SFD's `recorded_rows` extension carries each split's real
+timestamps through the existing data-dictionary extension. Timestamps must be
+ordered and equally spaced at the declared interval. A completed bar's
+features are available at its open timestamp plus one interval; the next-close
+label is observed at plus two. Each prefix excludes labels unavailable by the
+first prediction decision time and must contain both observed classes. No
+validation/test rows or labels enter either fit.
+
+Ordinary `linkage_*` log columns retain ordered feature names, component
+identity, training/covered row counts, fold fit/prediction cutoffs and SHA-256
+fingerprints of features, observed labels, timestamps, covered indices,
+out-of-sample probabilities and consumed weights. Each fingerprint covers a
+compact JSON `[shape, dtype]` header followed by C-order little-endian bytes
+(float64 values or int64 timestamps/indices). Existing round parameters and
+Trainer reconstruct the same training payload and provenance. The compiled
+example is `compiled-research/family_weight_link_binary.yaml`.
+
+Recorded-data assertions inspect actual native fit inputs and independently
+rebuild prefix probabilities, weights and final metrics. Weighting may worsen
+held-out results; this capability carries no predictive or trading-benefit claim.

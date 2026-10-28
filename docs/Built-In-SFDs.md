@@ -28,6 +28,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `entropy_var_regressor` | signed lower return quantile | raw sign entropy; continuous risk output, no execution |
 | `feature_link_binary` | binary next-return sign | chronological upstream probabilities appended to downstream inputs |
 | `pseudo_label_binary` | binary next-return sign | explicit recorded pool and recoverable generated-training-label provenance |
+| `weight_link_binary` | binary next-return sign | chronological observed difficulty consumed as downstream row weights |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
@@ -168,7 +169,8 @@ limen run --no-progress-bar \
   compiled-research/family_cnn1d_binary.yaml \
   compiled-research/family_entropy_var_regressor.yaml \
   compiled-research/family_feature_link_binary.yaml \
-  compiled-research/family_pseudo_label_binary.yaml
+  compiled-research/family_pseudo_label_binary.yaml \
+  compiled-research/family_weight_link_binary.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
@@ -298,3 +300,11 @@ confidence and upstream/downstream regularization. The data-dictionary extension
 carries real split row times; generated labels and their provenance remain
 visible in the experiment log. See [Reference Architecture](Reference-Architecture.md#pseudolabelbinary)
 for selection, disjointness, replay and the protected-holdout restriction.
+
+## `weight_link_binary`
+
+The native manifest supplies bounded hourly observations and 12/24-bar raw
+return windows with recorded row timestamps. The dated YAML template exposes
+eight combinations of lookback, upstream regularization and weight floor.
+See [Reference Architecture](Reference-Architecture.md#weightlinkedbinary)
+for causal fit boundaries, actual row-weight fitting and provenance.

@@ -1020,6 +1020,22 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.pseudo_label_binary.PseudoLabelBinary.evaluate`](Public-API.md#limensfdreference_architecturepseudolabelbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
 | [`limen.sfd.reference_architecture.pseudo_label_binary.pseudo_label_binary`](Public-API.md#limensfdreference_architecturepseudo_label_binary) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
 | [`limen.sfd.reference_architecture.pseudo_label_binary.recorded_rows`](Public-API.md#limensfdreference_architecturepseudo_label_binaryrecorded_rows) | `signature` | `limen/sfd/reference_architecture/pseudo_label_binary.py` |
+| `limen.sfd.foundational_sfd.weight_link_binary` | `module` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
+| [`limen.sfd.foundational_sfd.weight_link_binary.manifest`](Public-API.md#limensfdfoundational_sfdweight_link_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
+| [`limen.sfd.foundational_sfd.weight_link_binary.params`](Public-API.md#limensfdfoundational_sfdweight_link_binaryparams) | `signature` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.WeightLinkedBinary`](Public-API.md#limensfdreference_architectureweightlinkedbinary) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.WeightLinkedBinary.__init__`](Public-API.md#limensfdreference_architectureweightlinkedbinary__init__) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.WeightLinkedBinary.train`](Public-API.md#limensfdreference_architectureweightlinkedbinarytrain) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.WeightLinkedBinary.predict`](Public-API.md#limensfdreference_architectureweightlinkedbinarypredict) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.WeightLinkedBinary.evaluate`](Public-API.md#limensfdreference_architectureweightlinkedbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary`](Public-API.md#limensfdreference_architectureweight_link_binary) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary`](Public-API.md#limensfdreference_architectureweightlinkedbinary) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.__init__`](Public-API.md#limensfdreference_architectureweightlinkedbinary__init__) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.train`](Public-API.md#limensfdreference_architectureweightlinkedbinarytrain) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.predict`](Public-API.md#limensfdreference_architectureweightlinkedbinarypredict) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary.WeightLinkedBinary.evaluate`](Public-API.md#limensfdreference_architectureweightlinkedbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary.recorded_rows`](Public-API.md#limensfdreference_architectureweight_link_binaryrecorded_rows) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
+| [`limen.sfd.reference_architecture.weight_link_binary.weight_link_binary`](Public-API.md#limensfdreference_architectureweight_link_binary) | `signature` | `limen/sfd/reference_architecture/weight_link_binary.py` |
 
 ## Additional component contracts
 
@@ -5368,6 +5384,81 @@ def pseudo_label_binary(data: dict[str, object], pool_path: str, pool_sha256: st
 ### `limen.sfd.reference_architecture.pseudo_label_binary.recorded_rows`
 
 <!-- reference: public-limen-sfd-reference-architecture-pseudo-label-binary-recorded-rows source=limen/sfd/reference_architecture/pseudo_label_binary.py region=signature:recorded_rows role=signature -->
+```python
+def recorded_rows(data_dict: dict[str, object], split_data: list[pl.DataFrame], round_params: dict[str, object], fitted_params: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.weight_link_binary.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-weight-link-binary-manifest source=limen/sfd/foundational_sfd/weight_link_binary.py region=signature:manifest role=signature -->
+```python
+def manifest() -> MLManifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.weight_link_binary.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-weight-link-binary-params source=limen/sfd/foundational_sfd/weight_link_binary.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.WeightLinkedBinary`
+
+<!-- reference: public-limen-sfd-reference-architecture-weightlinkedbinary source=limen/sfd/reference_architecture/weight_link_binary.py region=signature:WeightLinkedBinary role=signature -->
+```python
+class WeightLinkedBinary(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.WeightLinkedBinary.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-weightlinkedbinary---init-- source=limen/sfd/reference_architecture/weight_link_binary.py region=signature:WeightLinkedBinary.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.WeightLinkedBinary.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-weightlinkedbinary-train source=limen/sfd/reference_architecture/weight_link_binary.py region=signature:WeightLinkedBinary.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], *, upstream_params: dict[str, object] | None=None, downstream_params: dict[str, object] | None=None, n_splits: int=3, weight_floor: float=0.1, weight_power: float=1.0, observation_interval_seconds: int=3600, **params: object) -> 'WeightLinkedBinary':
+    ...
+```
+
+### `limen.sfd.reference_architecture.WeightLinkedBinary.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-weightlinkedbinary-predict source=limen/sfd/reference_architecture/weight_link_binary.py region=signature:WeightLinkedBinary.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.WeightLinkedBinary.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-weightlinkedbinary-evaluate source=limen/sfd/reference_architecture/weight_link_binary.py region=signature:WeightLinkedBinary.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.weight_link_binary`
+
+<!-- reference: public-limen-sfd-reference-architecture-weight-link-binary source=limen/sfd/reference_architecture/weight_link_binary.py region=signature:weight_link_binary role=signature -->
+```python
+def weight_link_binary(data: dict[str, object], upstream_params: dict[str, object] | None=None, downstream_params: dict[str, object] | None=None, n_splits: int=3, weight_floor: float=0.1, weight_power: float=1.0, observation_interval_seconds: int=3600) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.weight_link_binary.recorded_rows`
+
+<!-- reference: public-limen-sfd-reference-architecture-weight-link-binary-recorded-rows source=limen/sfd/reference_architecture/weight_link_binary.py region=signature:recorded_rows role=signature -->
 ```python
 def recorded_rows(data_dict: dict[str, object], split_data: list[pl.DataFrame], round_params: dict[str, object], fitted_params: dict[str, object]) -> dict[str, object]:
     ...

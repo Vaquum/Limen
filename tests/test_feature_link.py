@@ -123,3 +123,15 @@ def test_feature_controls_and_fit_boundary_guards(recorded):
         FeatureLinkedBinary().train(scaled)
     with pytest.raises(ValueError,match='calibration'):
         FeatureLinkedBinary().train(data,upstream_params={'prediction_calibration_config':object()})
+
+
+def test_rejects_targets_without_the_declared_next_close_availability(recorded):
+    from limen.targets import ThresholdBinaryTarget
+    bars, params, original = recorded
+    manifest = foundational.manifest().with_target_label('next_close_up', ThresholdBinaryTarget,
+        fit_params={'source_column': 'ret_1', 'threshold': 0.}, transform_params={'shift': -5})
+    data = manifest.prepare_data(bars, params)
+    with pytest.raises(ValueError, match='NextBarUpTarget'):
+        FeatureLinkedBinary().train(data)
+    with pytest.raises(ValueError, match='NextBarUpTarget'):
+        FeatureLinkedBinary().train(original | {'_fitted_params': {}})

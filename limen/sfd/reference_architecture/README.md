@@ -50,6 +50,7 @@ reference_architecture/
 ├── README.md
 ├── __init__.py
 ├── _backtest_evaluation.py
+├── _chronological_link.py
 ├── _pseudo_pool.py
 ├── _sequence_binary.py
 ├── base.py
@@ -70,6 +71,7 @@ reference_architecture/
 ├── ridge_regressor.py
 ├── rule_based.py
 ├── tabpfn_binary.py
+├── weight_link_binary.py
 └── xgboost_regressor.py
 ```
 

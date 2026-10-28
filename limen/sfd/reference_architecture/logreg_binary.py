@@ -18,7 +18,7 @@ class _BinaryClassifier(Protocol):
 
     '''Typed facade over the fitted sklearn LogisticRegression surface used here.'''
 
-    def fit(self, X: Any, y: Any) -> Any: ...
+    def fit(self, X: object, y: object, *, sample_weight: object = None) -> object: ...
 
     def predict(self, X: Any) -> npt.NDArray[Any]: ...
 
@@ -97,7 +97,7 @@ class LogRegBinary(ReferenceModel):
         calibrated = config is not None and config.calibration_func is not None
         x_train = data['x_train'] if calibrated else np.asarray(data['x_train'])
         y_train = data['y_train'] if calibrated else np.asarray(data['y_train'])
-        _ = self.model.fit(x_train, y_train)
+        _ = self.model.fit(x_train, y_train, **({'sample_weight': data['_sample_weight']} if '_sample_weight' in data else {}))
         self._fitted_calibrator = None
         self._calibration_threshold = 0.5
         self._val_score = None

@@ -1,0 +1,62 @@
+schema_version: '1.0'
+metadata:
+  name: weight_link_binary_experiment
+  limen_version: 5.46.2
+  mode: development
+  description: Chronological upstream difficulty consumed by downstream training
+    weights
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_spot_klines
+      params:
+        kline_size: 3600
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: '{lookback_end}'
+    target:
+      name: next_close_up
+      class: limen.targets.NextBarUpTarget
+    strict_mode: true
+    reference_architecture: limen.sfd.reference_architecture.weight_link_binary
+    data_dict_extension:
+      func: limen.sfd.reference_architecture.weight_link_binary.recorded_rows
+  params:
+    lookback_end:
+    - 11
+    - 23
+    upstream_params:
+    - C: 0.5
+    - C: 1.0
+    downstream_params:
+    - C: 1.0
+    n_splits:
+    - 3
+    weight_floor:
+    - 0.1
+    - 0.25
+    weight_power:
+    - 1.0
+    observation_interval_seconds:
+    - 3600
+uel:
+  n_permutations: 8
+  search_strategy:
+    type: random
+  prep_each_round: true
+  output_format: csv
