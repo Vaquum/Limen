@@ -174,7 +174,7 @@ def test_parsed_float_spellings_collide_at_the_second_choice():
     assert [error.path for error in validate(config).errors] == ['sfd.params.C[1]']
 
 
-def test_all_shipped_seeded_sequences_match_the_prechange_observation():
+def test_all_shipped_seeded_sequences_match_recorded_observations():
     observation = json.loads((ROOT / 'tests/fixtures/search_identity_sequences.json').read_text())
     assert len(observation['records']) == 27
     for record in observation['records']:

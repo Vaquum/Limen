@@ -446,6 +446,49 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 
 `_preds` is present; `_probs` is intentionally absent (not applicable to rule-based strategies).
 
+## TabPFN controls
+
+`tabpfn_binary` exposes the nondeprecated constructor controls of
+[TabPFN 6.4.1](https://github.com/PriorLabs/TabPFN/blob/v6.4.1/src/tabpfn/classifier.py).
+The existing `n_ensemble_configurations` name maps to upstream `n_estimators`;
+`n_preprocessing_jobs` replaces upstream's deprecated `n_jobs`. Existing positional
+arguments retain their order; additional controls are keyword-only.
+
+| Control | Wrapper default | Meaning |
+|---|---|---|
+| `n_ensemble_configurations` | `4` | Ensemble forward passes |
+| `device` | `'cpu'` | Upstream device specification |
+| `categorical_features_indices` | `None` | Categorical feature column indices |
+| `softmax_temperature` | `0.9` | Probability temperature |
+| `balance_probabilities` | `False` | Adjust probabilities for class frequency |
+| `average_before_softmax` | `False` | Aggregate ensemble logits before softmax |
+| `model_path` | `'tabpfn-v2-classifier-v2_default.ckpt'` | Checkpoint path or upstream Python model specifications |
+| `ignore_pretraining_limits` | `True` | Permit inputs outside upstream pretraining limits |
+| `inference_precision` | `'auto'` | Automatic precision, autocast or an upstream Python dtype |
+| `fit_mode` | `'fit_preprocessors'` | Upstream fitting/cache mode |
+| `memory_saving_mode` | `'auto'` | Upstream memory-saving policy |
+| `random_state` | `0` | Seed, NumPy random generator/state or `None` |
+| `n_preprocessing_jobs` | `1` | Preprocessing parallelism |
+| `inference_config` | `None` | Expert inference configuration |
+| `differentiable_input` | `False` | Upstream differentiable-input mode |
+| `eval_metric` | `None` | Upstream evaluation metric |
+| `tuning_config` | `None` | Upstream classifier tuning configuration |
+
+Limen's `prediction_calibration_config` remains separate from upstream tuning.
+Prediction/calibration logic and the default CPU/v2 checkpoint are preserved.
+Controls pass through without coercion; upstream validates compatible combinations.
+Python can supply supported upstream objects directly. YAML retains its existing
+serializable-value boundary; represent a list or configuration as one candidate
+inside the parameter's outer search list.
+
+The foundational SFD searches ensemble counts `[4, 8]`, temperatures
+`[0.7, 0.9, 1.1]`, and both probability-balancing/logit-averaging settings.
+Other controls have singleton defaults, including `device: ['cpu']`.
+Existing target and indicator domains remain. Select a bounded run explicitly:
+the complete Cartesian product is large and these starting domains do not imply
+better market performance. The [real-model procedure](Built-In-SFDs.md#tabpfn_binary)
+verifies the supported surface and selected nondefault controls on recorded bars.
+
 ## Optional Dependencies
 
 - `xgboost_regressor` requires `xgboost`

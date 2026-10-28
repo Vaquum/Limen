@@ -188,7 +188,9 @@ That optional status matters at execution time: discovery and template listing w
 
 The opt-in foundational-SFD test runs one CPU ensemble on 384 recorded hourly
 Bitcoin bars, checks the actual fitted classifier and verifies its predictions,
-probabilities, accuracy and AUC. From a checkout with the `test,data,tabpfn`
+probabilities, accuracy and AUC. A second case verifies nondefault scalar, list
+and configuration candidates through a compiled run and its saved parameters.
+From a checkout with the `test,data,tabpfn`
 extras installed, run
 `LIMEN_RUN_TABPFN_MODEL_TEST=1 python -m pytest tests/test_tabpfn.py -q`.
 

@@ -219,33 +219,81 @@
     },
     {
       "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
       "domain_cardinality": 32,
+      "observation_checkout": "5473c59d8fc5ba5551f63c9cd930b9bbd8300474",
+      "prior_observation": {
+        "count": 8,
+        "domain_cardinality": 32,
+        "seed": 42,
+        "sequence_sha256": "ed0e27c992f59ef9149978ccc3bfdb7c6df96639e63879a827ad94fc0a17cf88",
+        "shuffle": true,
+        "strategy": "grid",
+        "template": "limen/yaml/templates/tabpfn_binary.yaml",
+        "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+      },
+      "refresh_reason": "Add explicit singleton TabPFN controls; retain the original search observation above.",
       "seed": 42,
-      "sequence_sha256": "ed0e27c992f59ef9149978ccc3bfdb7c6df96639e63879a827ad94fc0a17cf88",
+      "sequence_sha256": "546648245144d403328684126c0b6dcdc4310aae2241f074c51c500b4df02182",
       "shuffle": true,
       "strategy": "grid",
       "template": "limen/yaml/templates/tabpfn_binary.yaml",
-      "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+      "template_sha256": "41bbfdf540c03fcc78bb83aee4ccbae976d0510aa024ddc236db850dd8a6440b"
     },
     {
       "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
       "domain_cardinality": 32,
+      "observation_checkout": "5473c59d8fc5ba5551f63c9cd930b9bbd8300474",
+      "prior_observation": {
+        "count": 8,
+        "domain_cardinality": 32,
+        "seed": 42,
+        "sequence_sha256": "b52f86d93a8d0e4cfb6dd5e755701c1027c59029dc7356190ae1d8d4aa54d62a",
+        "shuffle": false,
+        "strategy": "random",
+        "template": "limen/yaml/templates/tabpfn_binary.yaml",
+        "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+      },
+      "refresh_reason": "Add explicit singleton TabPFN controls; retain the original search observation above.",
       "seed": 42,
-      "sequence_sha256": "b52f86d93a8d0e4cfb6dd5e755701c1027c59029dc7356190ae1d8d4aa54d62a",
+      "sequence_sha256": "92ae0762e69e6432882f6e793ff7a7657885afafe6013bda1d8ab4d22b481703",
       "shuffle": false,
       "strategy": "random",
       "template": "limen/yaml/templates/tabpfn_binary.yaml",
-      "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+      "template_sha256": "41bbfdf540c03fcc78bb83aee4ccbae976d0510aa024ddc236db850dd8a6440b"
     },
     {
       "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
       "domain_cardinality": 32,
+      "observation_checkout": "5473c59d8fc5ba5551f63c9cd930b9bbd8300474",
+      "prior_observation": {
+        "count": 8,
+        "domain_cardinality": 32,
+        "seed": 42,
+        "sequence_sha256": "92e309050763c7f3f1a040f78ee47fe27fcd38c519bfefbe57fec02ff1cbaf42",
+        "shuffle": false,
+        "strategy": "sobol",
+        "template": "limen/yaml/templates/tabpfn_binary.yaml",
+        "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+      },
+      "refresh_reason": "Add explicit singleton TabPFN controls; retain the original search observation above.",
       "seed": 42,
-      "sequence_sha256": "92e309050763c7f3f1a040f78ee47fe27fcd38c519bfefbe57fec02ff1cbaf42",
+      "sequence_sha256": "2b35d45bb2e9b4c0020be470562613a48ac3b11d3bc6c35150b67f3f1ae6c2dc",
       "shuffle": false,
       "strategy": "sobol",
       "template": "limen/yaml/templates/tabpfn_binary.yaml",
-      "template_sha256": "3df2c76338c849bc5ffa40ec2ce5c8c8b9e30ecebe771d4255967c232adb2ed4"
+      "template_sha256": "41bbfdf540c03fcc78bb83aee4ccbae976d0510aa024ddc236db850dd8a6440b"
     },
     {
       "count": 8,

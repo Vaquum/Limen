@@ -4251,29 +4251,11 @@ dict: Rule-based metrics with Tier 1, Tier 2, Tier 3 keys and '_preds'
 
 <!-- reference: public-limen-sfd-reference-architecture-tabpfn-binary source=limen/sfd/reference_architecture/tabpfn_binary.py region=signature:tabpfn_binary role=signature -->
 ```python
-def tabpfn_binary(data: dict[str, Any], n_ensemble_configurations: int=4, device: str='cpu', prediction_calibration_config: 'CalibrationConfig | None'=None) -> dict[str, Any]:
+def tabpfn_binary(data: dict[str, Any], n_ensemble_configurations: int=4, device: object='cpu', prediction_calibration_config: 'CalibrationConfig | None'=None, *, categorical_features_indices: Sequence[int] | None=None, softmax_temperature: float=0.9, balance_probabilities: bool=False, average_before_softmax: bool=False, model_path: object=TABPFN_MODEL_PATH, ignore_pretraining_limits: bool=True, inference_precision: object='auto', fit_mode: Literal['low_memory', 'fit_preprocessors', 'fit_with_cache', 'batched']='fit_preprocessors', memory_saving_mode: str | bool | float='auto', random_state: int | np.random.RandomState | np.random.Generator | None=0, n_preprocessing_jobs: int=1, inference_config: object=None, differentiable_input: bool=False, eval_metric: object=None, tuning_config: object=None) -> dict[str, Any]:
     ...
 ```
 
-Compute TabPFN binary classification with optional calibration and threshold tuning.
-
-Args:
-
-data (dict): Data dictionary with x_train, y_train, x_val, y_val, x_test, y_test
-
-n_ensemble_configurations (int): Number of ensemble configurations for TabPFN
-
-device (str): Device to run on ('cpu' or 'cuda')
-
-prediction_calibration_config (CalibrationConfig \| None): Optional calibration config
-
-Returns:
-
-dict: Results with binary metrics, predictions, inline confusion metrics,
-
-backtest metrics when price_data_for_backtest is in data,
-
-and optionally 'optimal_threshold', 'val_score' when calibration is configured
+Fit TabPFN with the explicit [classifier controls](Reference-Architecture.md#tabpfn-controls) and optional Limen calibration. Return binary metrics, predictions, the fitted model and applicable inline confusion/backtest metrics. Calibrated results also contain `optimal_threshold` and `val_score`.
 
 ### `limen.sfd.reference_architecture.xgboost_regressor`
 
