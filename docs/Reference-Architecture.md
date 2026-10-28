@@ -23,6 +23,7 @@ The current public reference-architecture exports are:
 - `LogRegBinary`
 - `RandomBinary`
 - `RBFSVMBinary`
+- `ResidualRegressor`
 - `RidgeRegressor`
 - `RuleBasedStrategy`
 - `XGBoostRegressor`
@@ -30,7 +31,7 @@ The current public reference-architecture exports are:
 
 Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The separate [TabPFN campaign](examples/compiled-research/README.md#optional-model-campaign) records a real pinned-checkpoint CPU run, its environment and numerical assertions. It does not claim CUDA execution or deterministic reconstruction.
 
-The function exports are `direction_sizing`, `dlinear_regressor`, `entropy_var_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+The function exports are `entropy_var_regressor`, `direction_sizing`, `dlinear_regressor`, `gaussian_hmm_binary`, `lightgbm_binary`, `logreg_binary`, `lstm_binary`, `random_binary`, `rbf_svm_binary`, `residual_regressor`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
 
 ## Caller-owned fitting
 
@@ -597,6 +598,34 @@ establishes application relevance, without demonstrating efficacy for this
 specific return-window configuration. The bundled Apple Silicon research lock
 requires macOS 14 or later for its pinned PyTorch wheel. The [native LSTM contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.LSTM.html)
 defines the sequence and final-state semantics.
+
+## `ResidualRegressor`
+
+Install `vaquum-limen[boosting]`. `residual_regressor` fits Ridge to observed
+training returns, then fits XGBoost to the aligned training errors
+`y - ridge.predict(x)`. Inference needs features only and returns
+`ridge.predict(x) + correction_scale * xgboost.predict(x)`. Both components
+retain their fitted state. This is a bounded regression pair.
+
+`ridge_params` and `xgboost_params` preserve native constructor controls as
+nested dictionaries. Defaults use Ridge alpha 1/SVD and 32 CPU XGBoost trees,
+depth 2, learning rate 0.1 and seed 42. The correction uses
+`reg:squarederror`; its early stopping is disabled unless explicitly supplied.
+Enabled early stopping requires nonempty observed validation data and uses
+validation residuals from the training-fitted Ridge. Test labels never enter
+either fit. `correction_scale` must be finite. Zero retains the primary forecast.
+
+Evaluation reports final continuous metrics and ordinary `linkage_*` log
+columns: kind, ordered component identities, training row count and SHA-256
+fingerprints of features, observed targets and residual targets. Fingerprints
+cover a compact JSON header `[shape, columns-or-null]` followed by C-order
+little-endian float64 bytes. Round parameters preserve nested controls; Trainer
+rebuilds the same pair and provenance through the existing recorded round.
+The matching compiled example is `compiled-research/family_residual_regressor.yaml`.
+
+An error correction may overfit and worsen held-out error. The recorded
+acceptance cases establish actual residual fitting and additive reconstruction,
+without a predictive or trading-benefit claim.
 
 ## `EntropyVaRRegressor`
 

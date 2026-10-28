@@ -23,6 +23,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `gaussian_hmm_binary` | binary next-return sign | causal window-local homogeneous Gaussian return model; requires `hmm` |
 | `lstm_binary` | binary next-return sign | bounded CPU temporal classifier; requires `neural` |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
+| `residual_regressor` | regression | Ridge plus an XGBoost correction trained on observed errors; requires `boosting` |
 | `entropy_var_regressor` | signed lower return quantile | raw sign entropy; continuous risk output, no execution |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
@@ -160,6 +161,7 @@ limen run --no-progress-bar \
   compiled-research/family_rbf_svm_binary.yaml \
   compiled-research/family_gaussian_hmm_binary.yaml \
   compiled-research/family_lstm_binary.yaml \
+  compiled-research/family_residual_regressor.yaml \
   compiled-research/family_entropy_var_regressor.yaml
 ```
 
@@ -257,3 +259,11 @@ Its classifier controls replace LogReg's; native requests are bounded to 2048
 training-source and 512 independent test-source bars. The matching YAML template
 is `limen/yaml/templates/rbf_svm_binary.yaml`. Probability fitting is always enabled;
 large sweeps should account for the recorded kernel cost.
+
+## `residual_regressor`
+
+The native manifest supplies bounded hourly observations, lagged returns and
+train-fitted robust scaling. The dated YAML template exposes nested component
+controls and correction scale over eight combinations. See
+[Reference Architecture](Reference-Architecture.md#residualregressor) for
+residual targets, optional observed validation, addition and log provenance.

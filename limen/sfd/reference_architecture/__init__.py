@@ -1,4 +1,5 @@
 from limen.sfd.reference_architecture.entropy_var_regressor import EntropyVaRRegressor, entropy_var_regressor
+from limen.sfd.reference_architecture.residual_regressor import ResidualRegressor, residual_regressor
 from limen.sfd.reference_architecture.direction_sizing import DirectionSizingModel, direction_sizing
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.dlinear_regressor import DLinearRegressor, dlinear_regressor
@@ -16,12 +17,10 @@ from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor,
 
 __all__ = [
     'DLinearRegressor', 'DirectionSizingModel', 'EntropyVaRRegressor', 'GaussianHMMBinary',
-    'LSTMBinary',
-    'LightGBMBinary',
-    'LogRegBinary',
-    'RBFSVMBinary',
+    'LSTMBinary', 'LightGBMBinary', 'LogRegBinary', 'RBFSVMBinary',
     'RandomBinary',
     'ReferenceModel',
+    'ResidualRegressor',
     'RidgeRegressor',
     'RuleBasedStrategy',
     'TabPFNBinary',
@@ -35,6 +34,7 @@ __all__ = [
     'lstm_binary',
     'random_binary',
     'rbf_svm_binary',
+    'residual_regressor',
     'ridge_regressor',
     'rule_based',
     'tabpfn_binary',

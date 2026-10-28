@@ -461,6 +461,51 @@
       "template_sha256": "f20c3fa04eeb0fde017dc6cfd23460d6805e096b02b56799b7928cfb53205782"
     },
     {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "23c6c71b0b9c066c27ad9917eb593683b360e780",
+      "seed": 42,
+      "sequence_sha256": "9ddb61c5183d53a5e9f315a6a2521e75850c253d40b6075bb18e2b8a1fe54af1",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/residual_regressor.yaml",
+      "template_sha256": "2b038175babff9fa3da737888c542f8af6f81509f35e5f39324ac8afa045d000"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "23c6c71b0b9c066c27ad9917eb593683b360e780",
+      "seed": 42,
+      "sequence_sha256": "3ce69b5db6b2e6bc8e61cb76b2ceb553a4b79cb09e084a677b4ac43f34a7a87e",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/residual_regressor.yaml",
+      "template_sha256": "2b038175babff9fa3da737888c542f8af6f81509f35e5f39324ac8afa045d000"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "23c6c71b0b9c066c27ad9917eb593683b360e780",
+      "seed": 42,
+      "sequence_sha256": "01319442170214df83c4ea0f9b6229561bf2b8fd6a268ac11e5515237b9f1257",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/residual_regressor.yaml",
+      "template_sha256": "2b038175babff9fa3da737888c542f8af6f81509f35e5f39324ac8afa045d000"
+    },
+    {
       "count": 4,
       "dependencies": {
         "numpy": "2.2.6",
