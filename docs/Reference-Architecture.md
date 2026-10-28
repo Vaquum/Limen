@@ -540,3 +540,23 @@ The matching foundational SFD reuses LogReg preparation with SVM control domains
 and bounded native data requests. The shipped `rbf_svm_binary` template supplies
 every public control and a small dated experiment. The canonical compiled example
 is `docs/examples/compiled-research/family_rbf_svm_binary.yaml`.
+
+## `LSTMBinary`
+
+Install `vaquum-limen[neural]`. `lstm_binary` fits a PyTorch LSTM and a scalar
+linear head using binary cross-entropy with logits and Adam on CPU. Each input
+is a completed contiguous `ret_1_lag_0..N` window ordered oldest first. Other
+feature columns are ignored. One shared mean/std is fitted to training windows
+only, retained, and used unchanged in target-free inference. Hidden state resets
+for each window. Bidirectional mode combines both final-layer final states;
+all observations in either direction are already available at the decision.
+
+Inference uses eval mode, sigmoid probabilities and probability >0.5 decisions.
+Initialization and training restore the caller's CPU RNG state. Exposed controls
+cover the native LSTM structure, Adam configuration, epochs, minibatch size and
+seed. Supervised validation calibration and GPU execution are outside this variant.
+The [Bitcoin LSTM direction study](https://doi.org/10.1109/PDP2018.2018.00060)
+establishes application relevance, without demonstrating efficacy for this
+specific return-window configuration. The bundled Apple Silicon research lock
+requires macOS 14 or later for its pinned PyTorch wheel. The [native LSTM contract](https://docs.pytorch.org/docs/2.14/generated/torch.nn.LSTM.html)
+defines the sequence and final-state semantics.

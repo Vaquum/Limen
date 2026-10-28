@@ -55,6 +55,7 @@ foundational_sfd/
 ├── dollar_bar_crash_reversal.py
 ├── lightgbm_binary.py
 ├── logreg_binary.py
+├── lstm_binary.py
 ├── random_binary.py
 ├── rbf_svm_binary.py
 ├── ridge_regressor.py

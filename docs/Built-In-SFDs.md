@@ -20,6 +20,7 @@ They show the packaged Limen experiment shape because each one combines:
 |---|---|---|
 | `logreg_binary` | binary classification | canonical manifest-driven logistic-regression reference flow |
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
+| `lstm_binary` | binary next-return sign | bounded CPU temporal classifier; requires `neural` |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |

@@ -26,3 +26,4 @@ pytest-xdist>=3.8,<4
 build>=1,<2
 cyclonedx-bom>=5,<8
 pip-audit>=2.9,<3
+torch>=2.6,<3
