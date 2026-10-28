@@ -48,6 +48,11 @@ def test_recorded_entropy_quantile_and_independent_losses(recorded, quantile, fi
     assert result['violation_rate'] == float(np.mean(truth < expected))
     assert not any(key.startswith(('confusion_', 'backtest_')) for key in result)
     assert '_probs' not in result
+    bars = recorded[0]
+    alignment = data['_alignment']
+    future = bars.with_columns((((pl.col('close').shift(-params['horizon']) - pl.col('close')) / pl.col('close')) * 100).alias('target'))
+    aligned = future.filter(pl.col('datetime').is_between(alignment['first_test_datetime'], alignment['last_test_datetime']))
+    np.testing.assert_allclose(truth, aligned['target'].to_numpy(), rtol=1e-12, atol=1e-12)
     for index in range(5):
         np.testing.assert_allclose(model.predict({'x_test': data['x_test'].slice(index, 1)})['_preds'], expected[index:index + 1])
     np.testing.assert_allclose(model.predict({'x_test': data['x_test'].head(5).to_numpy()})['_preds'], expected[:5])

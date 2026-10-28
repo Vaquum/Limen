@@ -22,6 +22,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `lightgbm_binary` | binary classification | the tradeline long-binary experiment: line-geometry features, train-fitted breakout target, LightGBM classifier |
 | `gaussian_hmm_binary` | binary next-return sign | causal window-local homogeneous Gaussian return model; requires `hmm` |
 | `random_binary` | binary classification baseline | sanity-check and control-comparison flow |
+| `entropy_var_regressor` | signed lower return quantile | raw sign entropy; continuous risk output, no execution |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
@@ -156,7 +157,8 @@ limen run --no-progress-bar \
   compiled-research/family_random_binary.yaml \
   compiled-research/family_direction_sizing.yaml \
   compiled-research/family_rbf_svm_binary.yaml \
-  compiled-research/family_gaussian_hmm_binary.yaml
+  compiled-research/family_gaussian_hmm_binary.yaml \
+  compiled-research/family_entropy_var_regressor.yaml
 ```
 
 This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.

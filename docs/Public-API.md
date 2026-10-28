@@ -928,6 +928,21 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.predict`](Public-API.md#limensfdreference_architecturegaussianhmmbinarypredict) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
 | [`limen.sfd.reference_architecture.gaussian_hmm_binary.GaussianHMMBinary.evaluate`](Public-API.md#limensfdreference_architecturegaussianhmmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
 | [`limen.sfd.reference_architecture.gaussian_hmm_binary.gaussian_hmm_binary`](Public-API.md#limensfdreference_architecturegaussian_hmm_binary) | `signature` | `limen/sfd/reference_architecture/gaussian_hmm_binary.py` |
+| `limen.sfd.foundational_sfd.entropy_var_regressor` | `module` | `limen/sfd/foundational_sfd/entropy_var_regressor.py` |
+| [`limen.sfd.foundational_sfd.entropy_var_regressor.manifest`](Public-API.md#limensfdfoundational_sfdentropy_var_regressormanifest) | `signature` | `limen/sfd/foundational_sfd/entropy_var_regressor.py` |
+| [`limen.sfd.foundational_sfd.entropy_var_regressor.params`](Public-API.md#limensfdfoundational_sfdentropy_var_regressorparams) | `signature` | `limen/sfd/foundational_sfd/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.EntropyVaRRegressor`](Public-API.md#limensfdreference_architectureentropyvarregressor) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.EntropyVaRRegressor.__init__`](Public-API.md#limensfdreference_architectureentropyvarregressor__init__) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.EntropyVaRRegressor.train`](Public-API.md#limensfdreference_architectureentropyvarregressortrain) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.EntropyVaRRegressor.predict`](Public-API.md#limensfdreference_architectureentropyvarregressorpredict) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.EntropyVaRRegressor.evaluate`](Public-API.md#limensfdreference_architectureentropyvarregressorevaluate) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.entropy_var_regressor`](Public-API.md#limensfdreference_architectureentropy_var_regressor) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor`](Public-API.md#limensfdreference_architectureentropyvarregressor) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.__init__`](Public-API.md#limensfdreference_architectureentropyvarregressor__init__) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.train`](Public-API.md#limensfdreference_architectureentropyvarregressortrain) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.predict`](Public-API.md#limensfdreference_architectureentropyvarregressorpredict) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.entropy_var_regressor.EntropyVaRRegressor.evaluate`](Public-API.md#limensfdreference_architectureentropyvarregressorevaluate) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
+| [`limen.sfd.reference_architecture.entropy_var_regressor.entropy_var_regressor`](Public-API.md#limensfdreference_architectureentropy_var_regressor) | `signature` | `limen/sfd/reference_architecture/entropy_var_regressor.py` |
 
 ## Additional component contracts
 
@@ -4860,5 +4875,72 @@ def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[s
 <!-- reference: public-limen-sfd-reference-architecture-gaussian-hmm-binary source=limen/sfd/reference_architecture/gaussian_hmm_binary.py region=signature:gaussian_hmm_binary role=signature -->
 ```python
 def gaussian_hmm_binary(data: dict[str, object], n_components: int=2, covariance_type: str='diag', min_covar: float=0.001, startprob_prior: float=1.0, transmat_prior: float=1.0, means_prior: float=0.0, means_weight: float=0.0, covars_prior: float=0.01, covars_weight: float=1.0, random_state: int | None=42, n_iter: int=30, tol: float=0.01, verbose: bool=False, implementation: str='scaling') -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.entropy_var_regressor.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-entropy-var-regressor-manifest source=limen/sfd/foundational_sfd/entropy_var_regressor.py region=signature:manifest role=signature -->
+```python
+def manifest() -> MLManifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.entropy_var_regressor.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-entropy-var-regressor-params source=limen/sfd/foundational_sfd/entropy_var_regressor.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.EntropyVaRRegressor`
+
+<!-- reference: public-limen-sfd-reference-architecture-entropyvarregressor source=limen/sfd/reference_architecture/entropy_var_regressor.py region=signature:EntropyVaRRegressor role=signature -->
+```python
+class EntropyVaRRegressor(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.EntropyVaRRegressor.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-entropyvarregressor---init-- source=limen/sfd/reference_architecture/entropy_var_regressor.py region=signature:EntropyVaRRegressor.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.EntropyVaRRegressor.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-entropyvarregressor-train source=limen/sfd/reference_architecture/entropy_var_regressor.py region=signature:EntropyVaRRegressor.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], quantile: float=0.05, **params: object) -> 'EntropyVaRRegressor':
+    ...
+```
+
+### `limen.sfd.reference_architecture.EntropyVaRRegressor.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-entropyvarregressor-predict source=limen/sfd/reference_architecture/entropy_var_regressor.py region=signature:EntropyVaRRegressor.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, _FloatArray]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.EntropyVaRRegressor.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-entropyvarregressor-evaluate source=limen/sfd/reference_architecture/entropy_var_regressor.py region=signature:EntropyVaRRegressor.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.entropy_var_regressor`
+
+<!-- reference: public-limen-sfd-reference-architecture-entropy-var-regressor source=limen/sfd/reference_architecture/entropy_var_regressor.py region=signature:entropy_var_regressor role=signature -->
+```python
+def entropy_var_regressor(data: dict[str, object], quantile: float=0.05, alpha: float=0.0, fit_intercept: bool=True, solver: str='highs', solver_options: dict[str, object] | None=None) -> dict[str, object]:
     ...
 ```

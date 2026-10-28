@@ -414,6 +414,51 @@
       "strategy": "sobol",
       "template": "limen/yaml/templates/gaussian_hmm_binary.yaml",
       "template_sha256": "4b3e2daa142971206455198fec640e1c0814ec1c1e0559eb3d0d8063f6d7014b"
+    },
+    {
+      "count": 4,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 4,
+      "observation_checkout": "0bf0f3ad1af9ccfde5a099fb7011e49714622e0b",
+      "seed": 42,
+      "sequence_sha256": "c695eadcf2e7d427ca9f73319d25b59049e14e5b919ccb3f5cc9de51b0a6be34",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/entropy_var_regressor.yaml",
+      "template_sha256": "711b0beb23ab9a757c94f992e9a4fc7491d9897b678cf51fa6bf2c0e68408f81"
+    },
+    {
+      "count": 4,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 4,
+      "observation_checkout": "0bf0f3ad1af9ccfde5a099fb7011e49714622e0b",
+      "seed": 42,
+      "sequence_sha256": "aa902e1199f971176800972d6339f48eec5594e5f10f5c1e2dc7615d70fd6a8d",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/entropy_var_regressor.yaml",
+      "template_sha256": "711b0beb23ab9a757c94f992e9a4fc7491d9897b678cf51fa6bf2c0e68408f81"
+    },
+    {
+      "count": 4,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 4,
+      "observation_checkout": "0bf0f3ad1af9ccfde5a099fb7011e49714622e0b",
+      "seed": 42,
+      "sequence_sha256": "b6e8bc4ea5354920ccc8d925cf4dc907c97b0b2ce6d71e07e62cc3b2d13613c4",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/entropy_var_regressor.yaml",
+      "template_sha256": "711b0beb23ab9a757c94f992e9a4fc7491d9897b678cf51fa6bf2c0e68408f81"
     }
   ]
 }

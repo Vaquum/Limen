@@ -33,10 +33,10 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    'entropy_var_regressor',
     'common_strategies',
     'dlinear_regressor',
     'dollar_bar_crash_reversal',
+    'entropy_var_regressor',
     'gaussian_hmm_binary',
     'lightgbm_binary',
     'logreg_binary',

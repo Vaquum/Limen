@@ -15,8 +15,8 @@ from limen.sfd.reference_architecture.xgboost_regressor import XGBoostRegressor,
 
 __all__ = [
     'DLinearRegressor',
-    'EntropyVaRRegressor',
     'DirectionSizingModel',
+    'EntropyVaRRegressor',
     'GaussianHMMBinary',
     'LightGBMBinary',
     'LogRegBinary',
