@@ -189,11 +189,8 @@ That optional status matters at execution time: discovery and template listing w
 The opt-in foundational-SFD test runs one CPU ensemble on 384 recorded hourly
 Bitcoin bars, checks the actual fitted classifier and verifies its predictions,
 probabilities, accuracy and AUC. From a checkout with the `test,data,tabpfn`
-extras installed, run:
-
-```bash
-LIMEN_RUN_TABPFN_MODEL_TEST=1 python -m pytest tests/test_tabpfn.py -q
-```
+extras installed, run
+`LIMEN_RUN_TABPFN_MODEL_TEST=1 python -m pytest tests/test_tabpfn.py -q`.
 
 The provisioned baseline is Python 3.12 on macOS ARM64 with TabPFN 6.4.1;
 the [real-model campaign](examples/compiled-research/README.md#optional-model-campaign)
