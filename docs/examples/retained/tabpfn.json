@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T10:06:07.975921+00:00",
-  "execution_checkout_head": "9d4862b7373d99b6f5cfb01177290711eda33bc9",
+  "observed_at": "2026-10-28T10:12:35.291990+00:00",
+  "execution_checkout_head": "97117612f6b7877fdd0e337b022a9fe6fa4a3ece",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -15,7 +15,7 @@
     "backtest/_cost_statistics.py": "68bc84acbf72ff375b48e53052eb45a7840bea86493f1dc3d7a27e2355216dba",
     "backtest/_event_clock.py": "4d0505b0b531763c930963b90a597eeae0226994a3c4d78f9acab5e653ce51fb",
     "backtest/_event_plan.py": "9c7076733624d9d2f1668f15ed60d12a6248c85a4df281a50c1b24f836571d6b",
-    "backtest/_exit_evidence.py": "33deb513be16ea749f1c6590947474b8b31d7a6ddf34b7281c2bc1c2b627ab0d",
+    "backtest/_exit_evidence.py": "4c8b1476039f78917ffce0e847b80ecc2d892bdf25b3369241e19bc9b82ba2f5",
     "backtest/_explicit_exit_strategy.py": "6e2adeec418a69b9650237eac8fe972da7ad65f3635ccc565613c485fc4d47d6",
     "backtest/_long_flat_tp_sl.py": "8c05a4ac215a6a25aad96a42d5ca113c349846d93da51aa7de1e9291dd57fef0",
     "backtest/_rule_exit_state.py": "b96c40eb6f6cdcc139a4b2c4fb8ea339f0e699cadc9c5db68582ba98db7613ef",
@@ -91,7 +91,7 @@
     "experiment/_boolean_controls.py": "82ca4565653838cd24485bf4a9273488ad9dcc4fd351c04937b976e4d0f25146",
     "experiment/_column_shims.py": "c9916e0037d54e6276512af0c91acaa2b7f3e13a66d7b91e9f9bfb0560ac872e",
     "experiment/_dynamic_barriers.py": "faf2c26ec316ee7085b45f346f22896e2331a9afed640c080aacc8c34bdcf676",
-    "experiment/_exit_rules.py": "8f35da2ea1a95bb92950302c3cb2a7192127b537fb287d4b640aefae0f68f482",
+    "experiment/_exit_rules.py": "82007263a778a396d14b5999d2df2c98beea0af1a8f6d1e573fd43e5130d125f",
     "experiment/_factorize.py": "ddd165700b7af60286b22c1e216d6dc1311109f36ad9a5ffbde1314634a05754",
     "experiment/_factorized_admission.py": "0cbd508e1fa1a07078403bbf5d237fc41cf036acf5ad81b3eca9b3f5c4785bb6",
     "experiment/_factorized_contract.py": "c816d2f1a02f29f3fb9c392877192925754879d7a1796fe51cc47a126b952fff",
