@@ -230,6 +230,8 @@ Intensive scalars:
 
 The metrics were computed with each round's declared trading policy during execution; aggregate reads preserve those numbers. Source changes after capture cannot change the aggregate result. Aggregate readers do not invoke the [internal legacy snapshot helper](Backtest.md#internal-legacy-snapshot-normalization). For explicit snapshot inputs, TP/SL provenance and source requirements, see [Backtest](Backtest.md#tunable-take-profit-and-stop-loss).
 
+For retained multiclass or multilabel prediction/price rows, call the module-level `backtest_snapshot()` with an explicit `class_mapping` or `label_index`; [Backtest](Backtest.md#explicit-multiclass-and-multilabel-inputs) defines accepted shapes and mapping. This produces a separate snapshot interpretation. Aggregate reads preserve captured metrics, and a file-only Log without row evidence cannot reconstruct missing predictions or prices.
+
 ## Parameter correlation surface
 
 ### `experiment_parameter_correlation(metric)`
