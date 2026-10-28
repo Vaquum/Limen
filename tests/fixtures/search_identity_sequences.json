@@ -602,6 +602,51 @@
         "scipy": "1.15.3"
       },
       "domain_cardinality": 8,
+      "observation_checkout": "f0dedb8d57cd4ecbb6176511d49e8287236c0786",
+      "seed": 42,
+      "sequence_sha256": "fbdd811ab29bd57092e827bb81e212437c121be8c6e6fe4ce262c1923b2c5995",
+      "shuffle": true,
+      "strategy": "grid",
+      "template": "limen/yaml/templates/feature_link_binary.yaml",
+      "template_sha256": "2deeb2a3b23fb4ff636b32e05049ec8e3000349ba23607c90d3d10e197da41c8"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "f0dedb8d57cd4ecbb6176511d49e8287236c0786",
+      "seed": 42,
+      "sequence_sha256": "2c912dd21f0866de1aefe2b324f2fe35c6a098c694d4cae1cd6f1ea48785d9c1",
+      "shuffle": false,
+      "strategy": "random",
+      "template": "limen/yaml/templates/feature_link_binary.yaml",
+      "template_sha256": "2deeb2a3b23fb4ff636b32e05049ec8e3000349ba23607c90d3d10e197da41c8"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
+      "observation_checkout": "f0dedb8d57cd4ecbb6176511d49e8287236c0786",
+      "seed": 42,
+      "sequence_sha256": "1c4dfb5e6ea835ddfe5fdd6dddb6c716639315fa906bbc982b479636c33fd420",
+      "shuffle": false,
+      "strategy": "sobol",
+      "template": "limen/yaml/templates/feature_link_binary.yaml",
+      "template_sha256": "2deeb2a3b23fb4ff636b32e05049ec8e3000349ba23607c90d3d10e197da41c8"
+    },
+    {
+      "count": 8,
+      "dependencies": {
+        "numpy": "2.2.6",
+        "scipy": "1.15.3"
+      },
+      "domain_cardinality": 8,
       "observation_checkout": "56a21d4ef91f4c2f501937fd43cb95694c2ebe27",
       "seed": 42,
       "sequence_sha256": "db5f48bf5666e54e81445578e681686ff9228de7a08c7761ea61aa8102ec25a2",

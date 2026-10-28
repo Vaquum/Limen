@@ -26,6 +26,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `residual_regressor` | regression | Ridge plus an XGBoost correction trained on observed errors; requires `boosting` |
 | `cnn1d_binary` | binary next-return sign | bounded CPU temporal convolution; requires `neural` |
 | `entropy_var_regressor` | signed lower return quantile | raw sign entropy; continuous risk output, no execution |
+| `feature_link_binary` | binary next-return sign | chronological upstream probabilities appended to downstream inputs |
 | `weight_link_binary` | binary next-return sign | chronological observed difficulty consumed as downstream row weights |
 | `ridge_regressor` | regression | sklearn Ridge with lagged returns and train-fitted robust scaling |
 | `xgboost_regressor` | regression | tree-based regression workflow |
@@ -166,6 +167,7 @@ limen run --no-progress-bar \
   compiled-research/family_residual_regressor.yaml \
   compiled-research/family_cnn1d_binary.yaml \
   compiled-research/family_entropy_var_regressor.yaml \
+  compiled-research/family_feature_link_binary.yaml \
   compiled-research/family_weight_link_binary.yaml
 ```
 
@@ -279,6 +281,14 @@ and a bounded 1024-bar source. The dated YAML template supplies all 16 controls
 and eight sampled rounds from 16 combinations. Both use observed next-close
 sign labels. See [Reference Architecture](Reference-Architecture.md#cnn1dbinary)
 for normalization, temporal convolution and probability semantics.
+
+## `feature_link_binary`
+
+The native SFD supplies bounded hourly observations, 12/24-bar raw return
+windows and recorded row times. The dated YAML template exposes eight
+combinations of lookback and upstream/downstream regularization. See
+[Reference Architecture](Reference-Architecture.md#featurelinkedbinary) for
+out-of-sample features, availability and retained inference.
 
 ## `weight_link_binary`
 
