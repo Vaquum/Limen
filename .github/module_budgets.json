@@ -585,6 +585,8 @@
   "limen/sfd/reference_architecture/_sequence_binary.py": 170,
   "limen/sfd/reference_architecture/cnn1d_binary.py": 130,
   "limen/sfd/foundational_sfd/cnn1d_binary.py": 40,
+  "limen/sfd/reference_architecture/entropy_var_regressor.py": 130,
+  "limen/sfd/foundational_sfd/entropy_var_regressor.py": 40,
   "limen/sfd/reference_architecture/feature_link_binary.py": 180,
   "limen/sfd/foundational_sfd/feature_link_binary.py": 50
 }
