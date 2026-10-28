@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import hashlib
+from io import BytesIO
 from pathlib import Path
 from typing import cast
 
@@ -23,7 +24,8 @@ def utc(value: str) -> datetime:
 def load_pool(path: str, sha256: str, start: str, end: str, cutoff: str,
               interval: int, columns: list[str], rows: dict[str, pl.DataFrame]) -> tuple[pl.DataFrame, datetime]:
     source = Path(path)
-    if hashlib.sha256(source.read_bytes()).hexdigest() != sha256:
+    payload = source.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != sha256:
         raise ValueError('PseudoLabelBinary pool SHA-256 differs from the supplied identity')
     first, last, training_cutoff = utc(start), utc(end), utc(cutoff)
     step = timedelta(seconds=interval)
@@ -33,7 +35,7 @@ def load_pool(path: str, sha256: str, start: str, end: str, cutoff: str,
         raise ValueError('PseudoLabelBinary pool must precede observed evaluation and the training cutoff')
     if max(train_times) + 2 * step > first + step:
         raise ValueError('PseudoLabelBinary pool must follow the observed upstream fitting boundary')
-    raw = pl.read_parquet(source).select('datetime', 'close')
+    raw = pl.read_parquet(BytesIO(payload)).select('datetime', 'close')
     if not isinstance(raw.schema['datetime'], pl.Datetime) or cast(pl.Datetime, raw.schema['datetime']).time_zone is None:
         raise ValueError('PseudoLabelBinary pool requires timezone-aware recorded row times')
     raw = raw.filter(pl.col('datetime') + step <= training_cutoff)

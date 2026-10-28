@@ -153,3 +153,21 @@ def test_pseudo_native_and_yaml_controls(recorded):
     controls = set(inspect.signature(pseudo_label_binary).parameters) - {'data'}
     assert validate(config).valid and controls <= config['sfd']['params'].keys() and controls <= foundational.params().keys()
     assert build_search_strategy(config).domain.total_combinations == 8
+
+
+def test_pool_fit_consumes_the_exact_bytes_whose_identity_was_verified(recorded, tmp_path, monkeypatch):
+    bars, params, data = recorded
+    pool = tmp_path / 'changing_pool.parquet'
+    shutil.copyfile(SOURCE, pool)
+    original = Path.read_bytes
+
+    def read_then_replace(path):
+        payload = original(path)
+        if path == pool:
+            bars.head(100).write_parquet(pool)
+        return payload
+
+    monkeypatch.setattr(Path, 'read_bytes', read_then_replace)
+    model = PseudoLabelBinary().train(data, **(_controls(params) | {'pool_path': str(pool)}))
+    assert model._provenance['linkage_pseudo_rows'] == 6
+    assert model._provenance['linkage_pool_sha256'] == params['pool_sha256']
