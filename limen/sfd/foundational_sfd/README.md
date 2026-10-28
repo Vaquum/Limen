@@ -59,6 +59,7 @@ foundational_sfd/
 ├── lstm_binary.py
 ├── random_binary.py
 ├── rbf_svm_binary.py
+├── residual_regressor.py
 ├── ridge_regressor.py
 ├── rule_based.py
 ├── tabpfn_binary.py

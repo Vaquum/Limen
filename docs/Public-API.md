@@ -943,6 +943,21 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.sfd.reference_architecture.lstm_binary.LSTMBinary.predict`](Public-API.md#limensfdreference_architecturelstmbinarypredict) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
 | [`limen.sfd.reference_architecture.lstm_binary.LSTMBinary.evaluate`](Public-API.md#limensfdreference_architecturelstmbinaryevaluate) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
 | [`limen.sfd.reference_architecture.lstm_binary.lstm_binary`](Public-API.md#limensfdreference_architecturelstm_binary) | `signature` | `limen/sfd/reference_architecture/lstm_binary.py` |
+| `limen.sfd.foundational_sfd.residual_regressor` | `module` | `limen/sfd/foundational_sfd/residual_regressor.py` |
+| [`limen.sfd.foundational_sfd.residual_regressor.manifest`](Public-API.md#limensfdfoundational_sfdresidual_regressormanifest) | `signature` | `limen/sfd/foundational_sfd/residual_regressor.py` |
+| [`limen.sfd.foundational_sfd.residual_regressor.params`](Public-API.md#limensfdfoundational_sfdresidual_regressorparams) | `signature` | `limen/sfd/foundational_sfd/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.ResidualRegressor`](Public-API.md#limensfdreference_architectureresidualregressor) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.ResidualRegressor.__init__`](Public-API.md#limensfdreference_architectureresidualregressor__init__) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.ResidualRegressor.train`](Public-API.md#limensfdreference_architectureresidualregressortrain) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.ResidualRegressor.predict`](Public-API.md#limensfdreference_architectureresidualregressorpredict) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.ResidualRegressor.evaluate`](Public-API.md#limensfdreference_architectureresidualregressorevaluate) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.residual_regressor`](Public-API.md#limensfdreference_architectureresidual_regressor) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.residual_regressor.ResidualRegressor`](Public-API.md#limensfdreference_architectureresidualregressor) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.__init__`](Public-API.md#limensfdreference_architectureresidualregressor__init__) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.train`](Public-API.md#limensfdreference_architectureresidualregressortrain) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.predict`](Public-API.md#limensfdreference_architectureresidualregressorpredict) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.residual_regressor.ResidualRegressor.evaluate`](Public-API.md#limensfdreference_architectureresidualregressorevaluate) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
+| [`limen.sfd.reference_architecture.residual_regressor.residual_regressor`](Public-API.md#limensfdreference_architectureresidual_regressor) | `signature` | `limen/sfd/reference_architecture/residual_regressor.py` |
 | `limen.sfd.foundational_sfd.weight_link_binary` | `module` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
 | [`limen.sfd.foundational_sfd.weight_link_binary.manifest`](Public-API.md#limensfdfoundational_sfdweight_link_binarymanifest) | `signature` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
 | [`limen.sfd.foundational_sfd.weight_link_binary.params`](Public-API.md#limensfdfoundational_sfdweight_link_binaryparams) | `signature` | `limen/sfd/foundational_sfd/weight_link_binary.py` |
@@ -4958,6 +4973,73 @@ def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[s
 <!-- reference: public-limen-sfd-reference-architecture-lstm-binary source=limen/sfd/reference_architecture/lstm_binary.py region=signature:lstm_binary role=signature -->
 ```python
 def lstm_binary(data: dict[str, object], hidden_size: int=16, num_layers: int=1, bias: bool=True, dropout: float=0.0, bidirectional: bool=False, proj_size: int=0, epochs: int=10, batch_size: int=64, learning_rate: float=0.01, weight_decay: float=0.0, betas: tuple[float, float]=(0.9, 0.999), eps: float=1e-08, random_state: int=42) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.residual_regressor.manifest`
+
+<!-- reference: public-limen-sfd-foundational-sfd-residual-regressor-manifest source=limen/sfd/foundational_sfd/residual_regressor.py region=signature:manifest role=signature -->
+```python
+def manifest() -> MLManifest:
+    ...
+```
+
+### `limen.sfd.foundational_sfd.residual_regressor.params`
+
+<!-- reference: public-limen-sfd-foundational-sfd-residual-regressor-params source=limen/sfd/foundational_sfd/residual_regressor.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[object]]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.ResidualRegressor`
+
+<!-- reference: public-limen-sfd-reference-architecture-residualregressor source=limen/sfd/reference_architecture/residual_regressor.py region=signature:ResidualRegressor role=signature -->
+```python
+class ResidualRegressor(ReferenceModel):
+    ...
+```
+
+### `limen.sfd.reference_architecture.ResidualRegressor.__init__`
+
+<!-- reference: public-limen-sfd-reference-architecture-residualregressor---init-- source=limen/sfd/reference_architecture/residual_regressor.py region=signature:ResidualRegressor.__init__ role=signature -->
+```python
+def __init__(self) -> None:
+    ...
+```
+
+### `limen.sfd.reference_architecture.ResidualRegressor.train`
+
+<!-- reference: public-limen-sfd-reference-architecture-residualregressor-train source=limen/sfd/reference_architecture/residual_regressor.py region=signature:ResidualRegressor.train role=signature -->
+```python
+@override
+def train(self, data: dict[str, object], *, ridge_params: dict[str, object] | None=None, xgboost_params: dict[str, object] | None=None, correction_scale: float=1.0, **params: object) -> 'ResidualRegressor':
+    ...
+```
+
+### `limen.sfd.reference_architecture.ResidualRegressor.predict`
+
+<!-- reference: public-limen-sfd-reference-architecture-residualregressor-predict source=limen/sfd/reference_architecture/residual_regressor.py region=signature:ResidualRegressor.predict role=signature -->
+```python
+@override
+def predict(self, data: dict[str, object]) -> dict[str, _FloatArray]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.ResidualRegressor.evaluate`
+
+<!-- reference: public-limen-sfd-reference-architecture-residualregressor-evaluate source=limen/sfd/reference_architecture/residual_regressor.py region=signature:ResidualRegressor.evaluate role=signature -->
+```python
+@override
+def evaluate(self, data: dict[str, object], inline_metrics: bool=True) -> dict[str, object]:
+    ...
+```
+
+### `limen.sfd.reference_architecture.residual_regressor`
+
+<!-- reference: public-limen-sfd-reference-architecture-residual-regressor source=limen/sfd/reference_architecture/residual_regressor.py region=signature:residual_regressor role=signature -->
+```python
+def residual_regressor(data: dict[str, object], ridge_params: dict[str, object] | None=None, xgboost_params: dict[str, object] | None=None, correction_scale: float=1.0) -> dict[str, object]:
     ...
 ```
 

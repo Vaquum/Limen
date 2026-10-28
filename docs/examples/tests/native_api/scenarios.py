@@ -216,7 +216,7 @@ def recorded_predictions(directory: Path, record):
 # region model_comparisons
 def model_comparisons(data_dir, output):
     families = {}
-    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'weight_link_binary'):
+    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'weight_link_binary'):
         config = configuration('family_' + family, data_dir)
         # This diagnostic baseline uses NumPy's caller-owned process RNG.
         if family == 'random_binary':
