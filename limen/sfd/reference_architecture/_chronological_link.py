@@ -9,6 +9,7 @@ import polars as pl
 from sklearn.model_selection import TimeSeriesSplit
 
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
+from limen.targets.next_bar_up import NextBarUpTarget
 
 __all__: list[str] = []
 _FloatArray = npt.NDArray[np.float64]
@@ -17,6 +18,12 @@ _IndexArray = npt.NDArray[np.int64]
 
 class _ChronologicalSplits(Protocol):
     def split(self, inputs: _FloatArray) -> Iterator[tuple[_IndexArray, _IndexArray]]: ...
+
+
+def require_next_close(fitted: dict[str, object], name: str) -> None:
+    targets = [value for key, value in fitted.items() if key.startswith('_target_cls_')]
+    if len(targets) != 1 or type(targets[0]) is not NextBarUpTarget:
+        raise ValueError(name + ' requires fitted NextBarUpTarget labels with one-bar availability')
 
 
 def row_carriers(data_dict: dict[str, object], split_data: list[pl.DataFrame],

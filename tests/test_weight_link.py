@@ -129,3 +129,15 @@ def test_weight_link_controls_reject_unavailable_rows_and_global_scaling(recorde
         WeightLinkedBinary().train(data, observation_interval_seconds=0)
     with pytest.raises(ValueError, match='contiguous'):
         WeightLinkedBinary().train(data | {'x_train':data['x_train'].drop('ret_1_lag_1')})
+
+
+def test_rejects_targets_without_the_declared_next_close_availability(recorded):
+    from limen.targets import ThresholdBinaryTarget
+    bars, params, original = recorded
+    manifest = foundational.manifest().with_target_label('next_close_up', ThresholdBinaryTarget,
+        fit_params={'source_column': 'ret_1', 'threshold': 0.}, transform_params={'shift': -5})
+    data = manifest.prepare_data(bars, params)
+    with pytest.raises(ValueError, match='NextBarUpTarget'):
+        WeightLinkedBinary().train(data)
+    with pytest.raises(ValueError, match='NextBarUpTarget'):
+        WeightLinkedBinary().train(original | {'_fitted_params': {}})

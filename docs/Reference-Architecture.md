@@ -678,6 +678,9 @@ violation rate alone establishes neither calibrated tails nor GARCH superiority.
 
 ## `FeatureLinkedBinary`
 
+This bounded link requires fitted `NextBarUpTarget` labels. Other targets and
+unverified label horizons are rejected; prepare data through the matching manifest.
+
 `feature_link_binary` appends an upstream logistic probability as the final
 downstream feature, after the completed raw `ret_1_lag_0..N` inputs. Training
 uses chronological out-of-sample probabilities from expanding prefixes; initial
@@ -712,6 +715,9 @@ chronological prefixes. Recorded assertions establish feature meaning, fit
 boundaries and reconstruction; they do not establish predictive or trading benefit.
 
 ## `WeightLinkedBinary`
+
+This bounded link requires fitted `NextBarUpTarget` labels. Other targets and
+unverified label horizons are rejected; prepare data through the matching manifest.
 
 `weight_link_binary` fits an ordinary logistic classifier on each expanding
 training prefix. Observed next-close direction and the prefix model's

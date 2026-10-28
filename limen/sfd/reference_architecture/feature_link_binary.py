@@ -7,7 +7,7 @@ import numpy.typing as npt
 import polars as pl
 from typing_extensions import override
 
-from limen.sfd.reference_architecture._chronological_link import digest as _digest, probabilities as _out_of_sample, row_carriers as _row_carriers
+from limen.sfd.reference_architecture._chronological_link import digest as _digest, probabilities as _out_of_sample, row_carriers as _row_carriers, require_next_close as _require_next_close
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 
@@ -56,6 +56,7 @@ class FeatureLinkedBinary(ReferenceModel):
             raise ValueError('FeatureLinkedBinary requires its declared controls and unscaled raw return windows')
         if type(observation_interval_seconds) is not int or observation_interval_seconds <= 0:
             raise ValueError('FeatureLinkedBinary requires a positive integer observation interval')
+        _require_next_close(fitted, type(self).__name__)
         configurations = [{'max_iter': 200, 'random_state': 42} | (values or {}) for values in (upstream_params, downstream_params)]
         if any(config.get('prediction_calibration_config') is not None for config in configurations):
             raise ValueError('FeatureLinkedBinary does not configure calibration')
