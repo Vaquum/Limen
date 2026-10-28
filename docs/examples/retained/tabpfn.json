@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-28T17:58:26.131962+00:00",
-  "execution_checkout_head": "c699d8f820d582cb9668657e18468403fddacaa4",
+  "observed_at": "2026-10-28T18:08:29.184109+00:00",
+  "execution_checkout_head": "3829826619e33999c0b587235a3570efac0da640",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -499,7 +499,7 @@
     "sfd/reference_architecture/ridge_regressor.py": "cec41523234c2034b7260d2d52e2c58eee02781c5c104f9f8a01d4d03473132d",
     "sfd/reference_architecture/rule_based.py": "92bf6862697eeefc5a976a45c8cdb0a3e5a2c113632ffb901498a3a7d378d4ca",
     "sfd/reference_architecture/tabpfn_binary.py": "a6fa31f0813aca5c7db5e773c6f51b5288ffa4a9bbbacacddcb0370cfa23375a",
-    "sfd/reference_architecture/weight_link_binary.py": "c9c953e9758ece2c47a9a2b6319132e518892f8689c76a433e491e3535ae80c0",
+    "sfd/reference_architecture/weight_link_binary.py": "1d5041d40061425fcd9b775ec1ab51edc0bad51936019ac07d491d8a0ee4972f",
     "sfd/reference_architecture/xgboost_regressor.py": "3bb51ad9e6eff423172bc7293b699a7828fa9843585d2e6883762ac0c8a94efe",
     "sfd/rule_based/__init__.py": "56c8df23490f1693ea1e4f8ad3f31b3e0a7aa236ae5381c31220961ffc1b4f4c",
     "sfd/rule_based/_conditions.py": "a64264a9ad9d8d9854a15ce5e1f32794e438820a5affafb5f89274edca967a44",
