@@ -1,49 +1,177 @@
 # From a research question to a Sensor
 
-A model can fit the past and still fail as a trading signal. The research question is what remains after chronological selection, declared costs and the handoff to inference. Limen lets you own that methodology in Python, or adopt the declared pipeline through Compiled Research.
+Limen is a research engine for Bitcoin trading. The engine evaluates model and strategy parameters, records results, and carries selected models into inference. Python Research defines the methodology through ordinary Python functions. Compiled Research declares experiments in YAML and executes them through the configured Limen pipeline.
 
-These projects use recorded Bitcoin observations. Their results describe those observations and decisions; they do not establish future returns. The same research question does not require identical models or make unlike evaluation populations comparable.
+Research proceeds from **observations → experiment → search → selection → Sensor or Cohort**. A Sensor combines a fitted model, its input preparation, and timing information for inference. A Cohort combines compatible Sensors. The Python and Compiled projects provide executable examples for each stage.
 
-## Prerequisites
+## The interfaces assign research responsibility
 
-Use Python 3.10–3.13 and the matching wheel and recorded project bundle. The acquisition steps below establish the environment and working directory for either interface.
+The interfaces share one engine and assign different parts of the methodology to the caller.
 
-## Acquire the project
+| Research responsibility | Python Research | Compiled Research |
+|---|---|---|
+| Experiment definition | Ordinary Python functions for preparation, fitting, evaluation, and selection. | A YAML definition of sources, splits, preparation, models, search, and assessment, executed through the command-line interface (CLI). |
+| Engine behavior | Experiment execution, parameter search, and result logging, with research components for use alongside caller-defined code. | Execution of the declared pipeline, its configured safeguards, and recorded evidence for inspection and reconstruction. |
+| Caller responsibility | The methodology and its checks, including the interpretation of data, scores, and predictions. | The declaration, its assumptions, and the interpretation of the resulting evidence. |
+| Inference handoff | Evaluated fitted state wrapped in Sensors and composed in Python. | Selected recorded rounds reconstructed through `limen assess`, with compatible Sensors bound into a Cohort. |
 
-Choose the [Python project](examples/python-research/README.md#acquire-the-matching-project) or [Compiled project](examples/compiled-research/README.md#acquire-the-matching-project). Each begins with the same digest-verified bundle and wheel acquisition, environment and working directory. You can follow either path independently. This chapter uses the small selection run; later chapters develop its decisions through named variants.
+Python Research supports caller-defined data sources, models, backtesting, and selection in ordinary Python. Compiled Research defines experiments in YAML and executes them through the CLI under the [Manifest contract](Experiment-Manifest.md). Limen’s indicators, features, targets, scalers, and backtesting tools are available through both interfaces.
 
-## Choose who owns the experiment
+## Both projects investigate momentum after costs
 
-Python Research keeps data, preparation, fitting, backtesting and selection in your functions. Compiled Research records the Manifest definition and applies its configured checks. Compiled Research is authored in YAML and executed through the CLI.
+**The research question is whether recent price momentum supports a trading decision after costs.** Recorded quarter-hour Bitcoin bars supply observations for candidate evaluation, chronological selection, and later inference.
 
-Both paths use UEL and MSQ internally. Python Research owns ordinary Python functions; Compiled Research owns YAML files and CLI commands. Read [the two interfaces](../README.md#two-interfaces-different-purposes) before deciding which responsibility you want Limen to carry.
+The Python project predicts the return on the next bar with Ridge regression. The Compiled project uses logistic regression with a fitted binary target. The models, date partitions, and trading policies differ. Their scores measure separate experiments.
 
-## Begin with recorded observations
+Both projects require Python 3.10–3.13 and the [matching project bundle and wheel](examples/python-research/README.md#acquire-the-matching-project). The bundle contains the recorded inputs and both complete projects, distributed separately from the installed package. The commands execute from the acquired bundle root with its environment activated. Each excerpt comes from the corresponding complete project.
 
-The selection scenarios use `spot_15m_20250101_20250531.parquet`, recorded quarter-hour Bitcoin bars. Its SHA-256 is `eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a`. The Python example reads the first 1,920 observations: 960 for fitting, 480 for validation and 480 reserved for subsequent inference.
+## Python Research executes caller-defined functions
 
-Each split loses warm-up and forward-label rows before its partition backtest. Live inference has preceding completed context. Those populations differ; a result should name which one it measures. The source clocks and [data contract](Historical-Data.md) determine when an observation can be used.
+The Python project splits observations before preparing momentum features and forward labels. A scaler and Ridge model fit the training observations. The backtest trades the next bar using the sign of the forecast and deducts a round-trip cost of 2 basis points. Ordinary Python functions define each step.
 
-## Own the Python methodology
+The Universal Experiment Loop (UEL) executes the research definition through three functions. `params()` supplies candidate values, `prep()` prepares the data, and `model()` fits and evaluates each candidate. The project functions `fit`, `prep`, and `backtest` define the methodology. Limen evaluates four combinations of momentum window and Ridge alpha, then logs each validation score.
 
-The Python project fits Ridge models to a momentum feature. Every candidate receives the same warm-up exclusion. A decision trades the next bar, with a declared two-basis-point round-trip cost. Search sees fitting and validation observations only. Selection chooses the best validation return per window, using alpha to break ties.
-
-<!-- example: python-selection source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
+<!-- example: book-python-trials source=docs/examples/python-research/research.py region=trials scenario=selection interface=python role=executed -->
 ```python
-def run_research(bars, experiment_name):
-    research = bars[:1440]
-    uel, retained = run_trials(research, experiment_name)
-    selected = choose_parameters(uel)
-    sensors = selected_sensors(bars, selected, retained)
-    cohort = Cohort.from_python(sensors)
-    return cohort, uel, selected, retained
+def run_trials(research, experiment_name):
+    space = {"window": [4, 12], "alpha": [0.1, 1.0]}
+    retained = {}
+
+    def model(data, round_params):
+        fitted = fit(data["train"], round_params)
+        forecasts = fitted.predict(data["validation"].select("momentum"))
+        score = backtest(data["validation"], forecasts)
+        retained[(round_params["window"], round_params["alpha"])] = fitted
+        return {"validation_net_return": score}
+
+    sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
+    uel = UniversalExperimentLoop(
+        data=research, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space))
+    )
+    # An absolute filename stem writes only this CSV; no persisted round artifacts.
+    uel.run(experiment_name, n_permutations=4, workers=1,
+            post_processing=False, progress_bar=False)
+    return uel, retained
 ```
 
-The selected Sensors wrap the same fitted pipelines that were evaluated. Preprocessing is retained with the model. `Cohort.from_python` averages compatible next-bar return forecasts; it does not convert their units or certify the caller's methodology. See [Python Sensor construction](Trainer.md#python-construction) and [Cohort composition](Cohort.md).
+`SimpleNamespace` groups the three functions into a single-file decoder (SFD). `GridStrategy` generates parameter combinations, and the Mutable Search Queue (MSQ) manages the candidates. The functions and search policy remain caller-controlled.
 
-## Adopt the Compiled pipeline
+Selection ranks candidates by validation return within each momentum window, using alpha to break ties. `Sensor.from_model` wraps each selected fitted pipeline:
 
-The Compiled project declares its source, dates, preparation, model, search and selection in YAML. Execute and assess the introductory declaration from the bundle root:
+<!-- example: book-python-sensors source=docs/examples/python-research/research.py region=selected_sensors scenario=selection interface=python role=executed -->
+```python
+def selected_sensors(bars, selected, retained):
+    return [
+        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
+                          params=p, fitting_cutoff=bars["datetime"][960],
+                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
+        for p in selected
+    ]
+```
+
+Each Sensor retains the evaluated scaler and model. The caller-defined `prepare_live` function computes the matching feature and its availability time. `Cohort.from_python` averages the compatible next-bar return forecasts. The caller defines the prediction meaning and units.
+
+The [complete Python project](examples/python-research/README.md#run-the-selection-scenario) executes with this command:
+
+<!-- example: book-python-command source=docs/examples/commands.json region=python-selection scenario=selection interface=python role=executed -->
+```bash
+python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python
+```
+
+The command writes `research.csv` and `summary.json`. The evaluated models and Cohort remain in process memory. The project function `run_research` returns those objects for continued inference within that process.
+
+## Compiled Research executes a YAML definition
+
+The YAML definition specifies the research choices in Compiled Research. `selection.yaml` names the recorded source and chronological splits. The declared pipeline calculates a one-bar rate of change, fits a binary target and scaler, and evaluates two logistic-regression candidates. Cash-spot execution applies a fee of 1 basis point per fill. Assessment selects the highest validation backtest return.
+
+The declaration specifies data, preparation, fitting, search, and assessment. Changes to supported choices remain within YAML and execute through the CLI.
+
+<details>
+<summary>Read the complete selection.yaml</summary>
+
+<!-- example: compiled-selection source=docs/examples/compiled-research/selection.yaml region=declaration scenario=selection interface=compiled role=executed -->
+```yaml
+schema_version: "1.0"
+metadata:
+  name: book_compiled_selection
+  mode: development
+sfd:
+  manifest:
+    type: ml
+# region recorded_source
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+# endregion recorded_source
+    split_dates:
+      train_start: "2025-01-01"
+      train_end: "2025-01-15"
+      val_start: "2025-01-15"
+      val_end: "2025-01-18"
+      test_start: "2025-01-18"
+      test_end: "2025-01-22"
+# region momentum_indicator
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: 1
+          group: momentum
+# endregion momentum_indicator
+# region fitted_target
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+# endregion fitted_target
+# region validation_objective
+    objective:
+      metric: backtest_total_return
+      direction: maximize
+# endregion validation_objective
+    backtest:
+      source_interval_seconds: 900
+      fee_bps: 1.0
+      slip_bps: 0.0
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1.0e-9
+        min_notional: 0.0
+# region fitted_scaler
+    scaler:
+      from_params: scaler_type
+# endregion fitted_scaler
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type: [logreg]
+    C: [1.0, 0.5]
+    random_state: [42]
+uel:
+  output_path: compiled-cli
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+
+# region assessment
+assessment:
+  metric: val_backtest_total_return
+  direction: maximize
+  top_k: 1
+  predict: true
+# endregion assessment
+```
+
+</details>
+
+The CLI validates, profiles, executes, and assesses the declaration from the bundle root:
 
 <!-- example: book-compiled-first-command source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
 ```bash
@@ -54,26 +182,25 @@ limen run --no-progress-bar compiled-research/selection.yaml
 limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
-Its selection block fixes the validation ranking before assessment. `limen assess` reconstructs the selected Sensors and writes Cohort predictions; the [complete project](examples/compiled-research/README.md) explains their artifacts.
+`validate` checks the declaration. `profile` reports the search size and estimates runtime by loading data and sampling preparation and fitting. The dry run checks readiness. `run` evaluates candidates and records results. `assess` applies the declared validation ranking, reconstructs the selected Sensor, and writes Cohort predictions. The [complete Compiled project](examples/compiled-research/README.md) documents the artifacts.
 
-<!-- example: compiled-selection source=docs/examples/compiled-research/selection.yaml region=assessment scenario=selection interface=compiled role=executed -->
-```yaml
-assessment:
-  metric: val_backtest_total_return
-  direction: maximize
-  top_k: 1
-  predict: true
-```
+Reconstruction refits the selected model under the recorded contract and checks numeric replay metrics against the recorded round. Pipeline checks establish compliance with the configured safeguards. Source accuracy and feature causality require independent verification. Source selection and research assumptions remain caller-controlled.
 
-Reconstruction validates the replayed numeric metrics against the recorded round. It is a refit under the recorded contract; it is not restoration of arbitrary saved weights. [Trainer](Trainer.md#training-and-validation) explains that boundary. A configured pipeline check also does not prove that an arbitrary feature is causal or that source observations are correct.
+## Retained results record selection and inference
 
-## Run the complete source
+The retained outputs record candidate evaluation, selection, and inference on the recorded observations:
 
-The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) give the entry-point commands and required inputs. Their source is the source executed by documentation tests. A partial chapter excerpt does not replace the complete project or its preparation functions.
+| Python Research | Compiled Research |
+|---|---|
+| Evaluated four candidates and retained all four fitted pipelines. Selected `alpha=0.1` for each of the 4-bar and 12-bar momentum windows. | Evaluated two candidates, selected one recorded round and reconstructed one Sensor. |
+| Produced 480 later Cohort predictions. The last forecast was approximately 3.68 basis points of next-bar return. | Reconstruction validated numeric replay metrics against the recorded round. |
 
-## Observe the retained run
+These results establish execution, selection, and inference on recorded observations. Assessment of the trading question requires validation scores, costs, traded observations, and the later assessment population.
 
-These are retained outputs of the identified successful run. The Python project and unchanged Compiled YAML/CLI commands ran against the same isolated installed wheel. Their counts and selected parameters are exact. The Python forecast permits only the numerical tolerance stated in its evidence record. The current validation is shown separately; it does not change when these observations were made.
+<details>
+<summary>Inspect the retained outputs and their execution evidence</summary>
+
+Each output retains its original run identity. Source links identify the recorded inputs, package, and execution evidence. Current validation and retained observations have separate execution dates.
 
 ### Python selection result
 
@@ -114,8 +241,10 @@ These are retained outputs of the identified successful run. The Python project 
 }
 ```
 
-## Inspect the result before continuing
+</details>
 
-A result needs more than a score. Inspect its selected parameters, fitting and selection cutoffs, traded observations, costs and inference population. Python proves those choices through caller-owned assertions. Compiled Research supplies the evidence admitted by its declared pipeline and recording policy.
+## Source clocks govern the next research decision
 
-Continue to [recorded observations](Historical-Data.md) to establish the data and clocks the experiment will consume. The Reference appendix retains the exact names, defaults and failure conditions.
+The selection projects use `spot_15m_20250101_20250531.parquet`. The Python project uses 960 observations for fitting, 480 for validation, and 480 for subsequent inference. Preparation removes warm-up and forward-label rows from each research partition. Inference uses preceding completed context. Result interpretation depends on the population evaluated. The Compiled declaration specifies separate date boundaries.
+
+[Historical Data](Historical-Data.md) establishes the source, its digest, and its availability clocks for both interfaces. Protected final observations require a reserved boundary before research begins.
