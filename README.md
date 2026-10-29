@@ -27,24 +27,24 @@
 
 <a id="limen"></a>
 
-# The Strategy Tested is the Strategy Deployed
+# Research models and strategies for Bitcoin trading
 
-Limen is a research engine for Bitcoin traders that brings together parameter sweep for machine learning and rule-based models, financially rigorous backtesting, and trading sensor cohort selection.
+Limen is a research engine for Bitcoin trading. The engine prepares observations, evaluates model and strategy parameters, records research evidence, and carries selected models into inference through Sensors and Cohorts.
 
-Limen helps you go from hypothesis to a trading-ready sensor or sensor cohort with freedom and speed that set a new standard for similar systems.
+Limen supports activity and adaptive bars, feature and target design, classification, continuous and quantile forecasts, rule strategies, and linked learning. Search, controlled perturbations, walk-forward evaluation, costed execution, and protected final assessment connect those choices to recorded outcomes. The [research book](https://docs.vaquum.fi/limen/) develops that sequence through two complete executable projects.
 
 ## Two interfaces, different purposes
 
-Limen offers two interfaces to one research engine: **Python Research** and **Compiled Research**. Python Research gives you unrestricted control: bring your own data, models, backtesting and selection logic, using ordinary Python without a new language or programming model. Compiled Research turns strictly typed manifests into experiments through the CLI, enforcing safeguards against common financial-modelling pitfalls and producing inspectable evidence of what was checked. Both share the same execution safety; one gives you complete methodological freedom, while the other makes its methodological constraints explicit and enforceable.
+Limen offers **Python Research** and **Compiled Research**. Python Research defines preparation, fitting, backtesting, and selection through ordinary Python functions and caller-chosen libraries. Compiled Research declares those choices in YAML and executes them through the command-line interface (CLI), within the [Manifest contract](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md). Both use the same experiment engine. Indicators, features, targets, scalers, backtesting tools, and inference adapters support composition in Python and declared use in Compiled Research.
 
 ## Choose your path
 
-| Your choice | Python Research | Compiled Research |
+| Research choice | Python Research | Compiled Research |
 |---|---|---|
-| Choose it when | You want to own the research methodology and every component. | You want Limen to enforce the declared experiment's research constraints. |
-| Define the experiment in | Ordinary Python, with your choice of libraries and functions. | A strictly typed YAML manifest, compiled and run through the CLI. |
-| Control data and models | Bring your own sources, preparation, models, backtesting and selection. | Declare sources, splits, features, targets, models and execution assumptions within the Manifest contract. |
-| Checks and evidence | You implement the preparation, evaluation and evidence you need. | Limen applies the configured pipeline safeguards and records the run definition and configured evidence. |
+| Choose it when | The methodology and components require caller-defined Python. | The experiment fits the declared pipeline and its enforced research constraints. |
+| Define the experiment in | Ordinary Python, with caller-chosen libraries and functions. | A strictly typed YAML manifest, compiled and run through the CLI. |
+| Control data and models | Supply sources, preparation, models, backtesting, and selection. | Declare sources, splits, features, targets, models, and execution assumptions within the Manifest contract. |
+| Checks and evidence | Caller-defined methodology uses component checks and explicit evidence collection. | The configured pipeline applies safeguards and records its definition and selected evidence. |
 | Start here | [Start Python Research](#python-research) | [Start Compiled Research](#compiled-research) |
 
 ## Install
@@ -60,9 +60,9 @@ Requires Python `>=3.10,<3.14` (3.10–3.13) on macOS or Linux. Optional extras:
 
 ## Python Research
 
-Bring your own data and define the experiment in ordinary Python. Your functions own the research methodology, including features, targets, backtesting strategies and cohort selection.
+Python functions define the research methodology: data acquisition, features, targets, fitting, backtesting, and selection. Ordinary estimators, custom learning stages, and Limen components can participate in the same experiment.
 
-The path is **your data → experiment → search → selection → fitted models → Sensor**. The [complete Python project](https://github.com/Vaquum/Limen/blob/main/docs/examples/python-research/README.md) defines every research component explicitly. Replace any function with your own Python or compose it with Limen's built-in tools. These excerpts belong to that complete source, including its imports, entry point and recorded input checks.
+The path is **observations → experiment → search → selection → fitted models → Sensor**. The [complete Python project](https://github.com/Vaquum/Limen/blob/main/docs/examples/python-research/README.md) defines every research component explicitly, including its imports, entry point, and recorded input checks. The excerpts below belong to that complete source.
 
 ### Define your experiment
 
@@ -115,7 +115,7 @@ def backtest(validation, forecasts):
     return float(np.mean(net))
 ```
 
-The score uses signed forecasts, fixed notional and a two-basis-point round-trip cost. This calculation belongs to the caller; it is separate from Limen's configured event execution policy.
+The score uses signed forecasts, fixed notional, and a round-trip cost of two basis points. The caller defines this calculation. Limen's event backtester instead applies a declared execution, product, and funding policy.
 
 ### Run the experiment
 
@@ -143,21 +143,21 @@ The command checks the recorded source digest and writes `research.csv` and `sum
 
 ### Create a Sensor
 
-The function above wraps each selected evaluated pipeline with `Sensor.from_model`. The Sensor reuses the fitted scaler and model without refitting, selects the feature names recorded during fitting, and blocks null or nonfinite features and decisions before the selection cutoff. Pass completed history to `sensor.predict(history)` for its latest numeric forecast or explicit unavailable reason. Availability remains a separate declared clock.
+The function above wraps each selected evaluated pipeline with `Sensor.from_model`. The Sensor reuses the fitted scaler and model, selects the feature names recorded during fitting, and blocks null or nonfinite features and decisions before the selection cutoff. `sensor.predict(history)` returns the latest numeric forecast or an explicit unavailable reason. Availability remains a separate declared clock.
 
-Your Python still owns preparation and causality. Custom prediction and output mapping remain available, while `Sensor.from_python` accepts arbitrary fitted state and inference logic. See [Python Sensor construction](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md#python-construction).
+Python functions supply preparation and its causal assumptions. `Sensor.from_python` accepts arbitrary fitted state and inference logic, with custom prediction and output mapping. [Captured fitted state](https://github.com/Vaquum/Limen/blob/main/docs/Run-And-Recover.md#the-python-snapshot-case-retains-fitted-objects-explicitly) preserves explicitly retained estimators in a `.uel` object. The project restores those estimators and verifies their forecasts. See [Python Sensor construction](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md#python-construction).
 
 ### Create a sensor cohort
 
-Your own Python selects any number of candidates from the results. The project combines its two selected Sensors with `Cohort.from_python`, averaging compatible next-bar return forecasts. Call `cohort.predict(history)` just like a Sensor. Members declare the same `output_id` to identify compatible meanings; Limen checks timestamp alignment and preserves unavailable results. Binary voting and custom aggregation are also available. See [Python cohorts](https://github.com/Vaquum/Limen/blob/main/docs/Cohort.md#python-cohorts).
+Python selection supplies the cohort members. The project combines two selected Sensors with `Cohort.from_python`, averaging compatible next-bar return forecasts. `cohort.predict(history)` returns the aggregated prediction. Members declare the same `output_id` to identify compatible meanings; Limen checks timestamp alignment and preserves unavailable results. Binary voting and custom aggregation support other declared outputs. See [Python cohorts](https://github.com/Vaquum/Limen/blob/main/docs/Cohort.md#python-cohorts).
 
-This recorded case fits on the first 960 observations, compares candidates on the next 480 and reserves the final 480 for later inference and assessment. The project continues through search, feedback, recovery, walk-forward, calibration, execution and holdout decisions. Replace any research component with your own Python; the one-feature model and one-bar score are the starting point.
+This recorded case fits on the first 960 observations, compares candidates on the next 480, and reserves the final 480 for later inference and assessment. The complete project extends to adaptive bars, fitted feature transformations, targets, search and feedback, recovery, walk-forward evaluation, calibration, event execution, and holdout decisions. A [linked-learning case](https://github.com/Vaquum/Limen/blob/main/docs/Linked-Models.md) fits Ridge forecasts and an XGBoost residual correction, retains both stages, and selects the correction depth on validation.
 
 Continue with [custom SFDs](https://github.com/Vaquum/Limen/blob/main/docs/Single-File-Decoder.md#custom-sfds), [UEL](https://github.com/Vaquum/Limen/blob/main/docs/Universal-Experiment-Loop.md#direct-python-run), or [search and feedback](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md).
 
 ## Compiled Research
 
-Declare the experiment and let Limen enforce its pipeline contract. The Manifest specifies the data, chronological splits, preparation, model and parameter space; the CLI validates and compiles that definition before executing it. The YAML is the complete research definition; run it through the CLI.
+Compiled Research executes a declared pipeline. The Manifest specifies data, chronological splits, preparation, model, and parameter space. The CLI validates and compiles the complete YAML definition before execution.
 
 The [complete Compiled project](https://github.com/Vaquum/Limen/blob/main/docs/examples/compiled-research/README.md) starts with a recorded-data logistic experiment. Its selection declaration fixes the source, dates, train-fitted target/scaler, execution policy and validation objective:
 
@@ -262,14 +262,14 @@ The command validates and compiles the declaration, executes two candidates and 
 limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
-After execution, `limen assess` applies the YAML's validation selection, reconstructs the selected Sensors and binds their Cohort. Reconstruction refits under the recorded pipeline and checks replayed metrics. The [comprehensive YAML](https://github.com/Vaquum/Limen/blob/main/docs/examples/compiled-research/research.yaml) continues through feature ablation, PCA, calibration, threshold selection, full recording and inference; separate declarations cover incompatible research choices.
+After execution, `limen assess` applies the YAML's validation selection, reconstructs the selected Sensors, and binds their Cohort. Reconstruction refits under the recorded pipeline. When `results.csv` is present, Trainer compares eligible overlapping numeric metrics within declared tolerances. The [comprehensive YAML](https://github.com/Vaquum/Limen/blob/main/docs/examples/compiled-research/research.yaml) continues through feature ablation, PCA, calibration, threshold selection, full recording, and inference. Separate declarations cover model families, rule strategies, adaptive bars, linked learning, protected research, and final assessment; the [supported-workflow table](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md#supported-research-workflows) records their admission boundaries.
 
 | Artifact | What it records |
 |---|---|
 | Copied YAML manifest | The experiment definition. |
 | `metadata.json` | Run configuration and provenance metadata. |
 | `results.csv` | Candidate results. |
-| `round_data.jsonl.gz` | Round identities, parameters and payloads selected by the recording policy. |
+| `round_data.jsonl.gz` | Round identities, parameters, and payloads selected by the recording policy. |
 
 Row evidence and recovery depend on the [recording policy](https://github.com/Vaquum/Limen/blob/main/docs/Universal-Experiment-Loop.md#recording-policy). Choose it before a run when later replay or continuation needs those payloads.
 
@@ -277,19 +277,19 @@ Continue with the [CLI workflow](https://github.com/Vaquum/Limen/blob/main/docs/
 
 ## Shared safety
 
-Both interfaces share the search engine and reusable research components. Python Research lets you compose or replace them; Compiled Research wires their safeguards into a checked pipeline.
+Both interfaces use the experiment engine and reusable research components. Python functions compose or replace those components. Compiled Research connects their safeguards through the declared pipeline.
 
 ### Common foundations
 
-MSQ and UEL provide parameter-domain checks, parameter identities, explicit budgets, round results and convergence-warning records. Seeded built-in search supports repeatable candidate ordering. Optional persistence adds checkpoint and artifact-integrity checks; recovery requires a compatible checkpoint and full recording. Search seeds do not freeze models, data or environments. See [search and recovery](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md).
+The Mutable Search Queue (MSQ) and Universal Experiment Loop (UEL) provide parameter identities, explicit budgets, round results, and convergence-warning records. Search includes grid, seeded shuffled traversal, random, and Sobol strategies, with feedback-driven queue updates. Reducers prune the remaining queue from observed results. Compatible checkpoint and full-recording artifacts support continuation, while factorization reuses eligible preparation across candidates. Search seeds control candidate ordering; model, data, and environment identities remain separate. See [search and recovery](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md).
 
-In both interfaces, native Sensors wrap fitted state and distinguish usable predictions from unavailable decisions. Native Cohorts check member timestamp alignment before aggregation. Python callers supply their own preparation, selection cutoff and output meanings; these declarations do not create compiled provenance or methodological proof.
+Sensors wrap fitted state and distinguish usable predictions from unavailable decisions. Cohorts check member timestamp alignment before aggregation. Python adapters preserve declared continuous forecasts or signed exposure through compatible aggregation. Native Cohorts aggregate binary decisions under their member-output contract; model and fold compatibility governs admission. See [selected behavior](https://github.com/Vaquum/Limen/blob/main/docs/Selected-Behavior.md) for selection, cutoffs, and output meanings.
 
-In Python Research, component safeguards apply to the Limen components you use; custom replacements define their own behavior.
+In Python Research, safeguards follow the selected Limen components. Caller-defined replacements supply their own checks and evidence.
 
 ### What Compiled Research adds
 
-The CLI validates schema, component references, parameter links, split declarations and execution settings before running. It coordinates the following controls for the declared pipeline:
+The CLI validates schema, component references, parameter links, split declarations, and execution settings before running. Its native architectures cover binary classification, continuous and quantile forecasts, neural sequences, latent states, linked learning, and explicit rule strategies. Preparation supports grouped indicators, fitted targets and scalers, causal feature transformations, PCA, sampling, and controlled ablation. The [model-choice chapter](https://github.com/Vaquum/Limen/blob/main/docs/Model-Selection.md) connects model outputs to execution and reconstruction contracts. The declared pipeline coordinates the following controls:
 
 | Common pitfall | Pipeline protection |
 |---|---|
@@ -300,21 +300,21 @@ The CLI validates schema, component references, parameter links, split declarati
 | Invalid rule conditions or history windows | Validate condition identities, dependencies and temporal parameters; evaluate trailing persistence and recency within each split. |
 | Inflated returns from omitted trading assumptions | Apply execution lag, fees, slippage and notional settings through the selected backtester. Configured stops verify OHLC provenance and use explicit gap and same-bar exit rules. |
 | Impossible fills, unavailable prices or incorrect funding charges | Configured event execution checks availability clocks, source coverage, exposure, quantity and collateral rules. Funding adapters validate units, schedules and valuation evidence and separate accrual from settlement. |
-| Research and inference quietly using different pipelines | Trainer reconstructs the declared pipeline and checks replayed results and recorded bindings where available. Compiled Sensors carry manifest and permutation identities and reuse fitted preprocessing; artifact-backed Cohorts bind the selected member identities. |
+| Research and inference using different pipelines | Trainer reconstructs the declared pipeline, compares eligible recorded numeric metrics when `results.csv` is present, and checks available recorded bindings. Compiled Sensors carry manifest and permutation identities and reuse fitted preprocessing; artifact-backed Cohorts bind selected member identities. |
 
 See the [preparation contract](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md#how-a-manifest-executes), [backtest mechanics](https://github.com/Vaquum/Limen/blob/main/docs/Backtest.md) and [inference contract](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md#sensor) for each control's scope.
 
 ### Additional validation, when enabled
 
-- [Walk-forward validation](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md#walk-forward-sweeps) refits each fold with declared purge and embargo gaps. Choose gaps that cover your label horizon.
+- [Walk-forward validation](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md#walk-forward-sweeps) refits each fold with declared purge and embargo gaps. Recorded fold Sensors carry their fitting and selection cutoffs into compatible cohorts. Purge and embargo lengths must cover the declared label horizon.
 - A [validation-return objective](https://github.com/Vaquum/Limen/blob/main/docs/Calibration.md#shared-validation-return-objective) binds supported threshold tuning and reducers to validation execution. [DSR and PBO reports](https://github.com/Vaquum/Limen/blob/main/docs/Benchmark.md#walk-forward-selection-report) assess retained research evidence; failed or unavailable criteria are reported rather than stopping the run.
-- Opt-in [project holdout reservations](https://github.com/Vaquum/Limen/blob/main/docs/Final-Holdout.md) exclude reserved observations from supported research and replay. Active reservations reject custom SFDs and unsupported modes; see the workflow's restrictions.
+- Opt-in [project holdout reservations](https://github.com/Vaquum/Limen/blob/main/docs/Final-Holdout.md) exclude reserved observations from admitted research, recovery, and replay. Frozen selection binds the chosen members and assessment scenarios before final observations are consumed. Protected research and final assessment have distinct model and workflow requirements.
 
 Compilation does not establish arbitrary feature causality, data correctness or future performance. Validation used for tuning is selection evidence; statistical reports do not create an untouched holdout.
 
 ## Research scope
 
-Limen handles research, backtesting and the creation of reusable Sensors and Cohorts. Its built-in components focus on Bitcoin models and strategies. The surrounding Vaquum tools have distinct roles:
+Limen covers research from recorded observations to reusable Sensors and Cohorts: preparation, model and rule comparison, robustness analysis, execution policy, selection, and assessment. Its built-in components focus on Bitcoin markets. The surrounding Vaquum tools have distinct roles:
 
 | Tool | Role |
 |---|---|
@@ -323,9 +323,9 @@ Limen handles research, backtesting and the creation of reusable Sensors and Coh
 | [Nexus](https://github.com/Vaquum/Nexus) | Turns prediction signals into trading decisions, applying risk checks and capital allocation. |
 | [Praxis](https://github.com/Vaquum/Praxis) | Submits and manages venue orders, tracks fills and positions, and records trade outcomes. |
 
-You can also integrate Limen's Sensors and Cohorts into your own trading system.
+Sensors and Cohorts also expose inference interfaces for integration with other trading systems.
 
-## Risk Boundary
+## Risk boundary
 
 Limen is research software. Benchmark and backtest outputs are not investment advice, trading advice, execution simulation, regulatory approval, or a promise of future performance. Past performance is not predictive, and trading digital assets can result in total loss of capital.
 
@@ -346,10 +346,11 @@ See how to [verify a release](https://github.com/Vaquum/Limen/blob/main/docs/Dev
 
 | Path | Guides |
 |---|---|
-| Python Research | [Search and feedback](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md), [custom SFDs](https://github.com/Vaquum/Limen/blob/main/docs/Single-File-Decoder.md#custom-sfds), [UEL](https://github.com/Vaquum/Limen/blob/main/docs/Universal-Experiment-Loop.md). |
+| Python Research | [Complete Python project](https://github.com/Vaquum/Limen/blob/main/docs/examples/python-research/README.md), [search and feedback](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md), [custom SFDs](https://github.com/Vaquum/Limen/blob/main/docs/Single-File-Decoder.md#custom-sfds). |
 | Compiled Research | [CLI](https://github.com/Vaquum/Limen/blob/main/docs/Command-Line-Interface.md), [Manifest](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md), [end-to-end workflow](https://github.com/Vaquum/Limen/blob/main/docs/End-to-End-Workflow.md). |
-| Research tools | [Features](https://github.com/Vaquum/Limen/blob/main/docs/Features.md), [targets](https://github.com/Vaquum/Limen/blob/main/docs/Targets.md), [backtesting](https://github.com/Vaquum/Limen/blob/main/docs/Backtest.md), [analysis](https://github.com/Vaquum/Limen/blob/main/docs/Log.md). |
-| Model reuse | [Trainer](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md), [Cohort](https://github.com/Vaquum/Limen/blob/main/docs/Cohort.md). |
+| Research design | [Bars](https://github.com/Vaquum/Limen/blob/main/docs/Data-Bars.md), [features](https://github.com/Vaquum/Limen/blob/main/docs/Feature-Design.md), [targets](https://github.com/Vaquum/Limen/blob/main/docs/Target-Design.md), [model choice](https://github.com/Vaquum/Limen/blob/main/docs/Model-Selection.md), [rules](https://github.com/Vaquum/Limen/blob/main/docs/Rule-Research.md). |
+| Research evaluation | [Robustness](https://github.com/Vaquum/Limen/blob/main/docs/Robustness-Research.md), [trading behavior](https://github.com/Vaquum/Limen/blob/main/docs/Trading-Behavior.md), [research evidence](https://github.com/Vaquum/Limen/blob/main/docs/Research-Evidence.md), [final holdout](https://github.com/Vaquum/Limen/blob/main/docs/Final-Holdout.md). |
+| Model reuse | [Linked models](https://github.com/Vaquum/Limen/blob/main/docs/Linked-Models.md), [selected behavior](https://github.com/Vaquum/Limen/blob/main/docs/Selected-Behavior.md), [Trainer](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md), [Cohort](https://github.com/Vaquum/Limen/blob/main/docs/Cohort.md). |
 
 See the [documentation hub](https://github.com/Vaquum/Limen/blob/main/docs/README.md), [Roadmap](https://github.com/Vaquum/Limen/blob/main/docs/Roadmap.md), and [Security Assurance Case](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Security-Assurance-Case.md).
 
