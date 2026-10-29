@@ -11,7 +11,7 @@ The [Python project](../examples/python-research/README.md) and [Compiled projec
 
 ## Version rules
 
-[Semantic versioning](../Semantic-Versioning.md) defines the bump semantics. This policy adds one rule with no exceptions: a version that has ever been tagged or uploaded is burned. PyPI permanently rejects any filename it has ever accepted, even after the file is deleted, and deleted releases disappear from PyPI's JSON API, so a reused version fails in the least visible way possible. Never reuse a version; always bump past it.
+[Semantic versioning](../Semantic-Versioning.md) defines the bump semantics. This policy adds one rule with no exceptions: a version that has ever been tagged or uploaded is burned. PyPI permanently rejects any filename it has ever accepted, even after the file is deleted, and deleted releases disappear from PyPI's JSON API, so a reused version fails in the least visible way possible. Never reuse a version; always bump past it. The `6.0.0` and `7.0.0` filenames withdrawn under [#814](https://github.com/Vaquum/Limen/issues/814) remain burned even though their releases are absent from the public PyPI JSON API.
 
 ## Publish-path gates
 
