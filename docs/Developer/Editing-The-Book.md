@@ -6,7 +6,7 @@ The [Python project](../examples/python-research/README.md) and [Compiled projec
 
 ## Prerequisites
 
-Source contributions require a current checkout, the repository's supported Python environment, and the locked documentation dependencies. Changes follow the issue, branch, pull request, and review requirements in [CLAUDE.md](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md). The authenticated editor additionally requires current GitHub write permission and an activated deployment. [Documentation System](Documentation-System.md#prose-editing) records configuration and activation status.
+Source contributions require a current checkout, the repository's supported Python environment, and the locked documentation dependencies. Changes follow the issue, branch, pull request, and review requirements in [repository law](https://github.com/Vaquum/Limen/blob/main/.github/REPOSITORY-LAW.md). The authenticated editor additionally requires current GitHub write permission and an activated deployment. [Documentation System](Documentation-System.md#prose-editing) records configuration and activation status.
 
 ## The reader supports sequential and reference work
 

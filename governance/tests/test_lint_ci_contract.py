@@ -171,7 +171,7 @@ def test_pr_checks_lint_runs_pinned_ruff_on_tools_and_tests_tools() -> None:
     assert '-m vulture' not in workflow
 
     # Deliberately absent, and asserted absent so their omission is a recorded
-    # decision rather than drift. Each is named in CLAUDE.md law 6 with its
+    # decision rather than drift. Each is named in .github/REPOSITORY-LAW.md law 6 with its
     # reason; see also the workflow's own header comment.
     for withdrawn in (
         'governance/check_module_docstrings.py',
