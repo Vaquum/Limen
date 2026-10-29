@@ -161,7 +161,7 @@ def test_tests_run_rejects_invalid_slowest_limit_before_pytest() -> None:
 def test_default_parallel_args_and_caller_selection() -> None:
     from tests.run import _pytest_args
 
-    assert _pytest_args([]) == ['--assert=plain', '-n', '4', '--dist', 'loadgroup', '--max-worker-restart=0', 'tests']
+    assert _pytest_args([]) == ['--assert=plain', '-n', '6', '--dist', 'loadgroup', '--max-worker-restart=0', 'tests']
     for args in (['-n', '0'], ['-n', '2'], ['-n', '4'], ['-p', 'no:xdist'], ['--dist', 'load'],
                  ['-k', 'runtime'], ['tests/test_runtime_tracking.py'], ['--max-worker-restart=3'], ['--assert=plain'], ['--assert=rewrite']):
         original = args[:]
