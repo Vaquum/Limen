@@ -51,7 +51,7 @@ def package_reference(source: str, name: str) -> str:
             members = [node for node in matches if isinstance(node, ast.FunctionDef)]
             for member in members:
                 member.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
-            return ast.unparse(ast.fix_missing_locations(ast.Module(body=members, type_ignores=[]))) + '\n'
+            return ast.unparse(ast.fix_missing_locations(ast.Module(body=[*members], type_ignores=[]))) + '\n'
         if len(matches) != 1:
             raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
         selected = matches[0]
