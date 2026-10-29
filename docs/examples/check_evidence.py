@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-from copy import deepcopy
 from functools import lru_cache
 import hashlib
 import json
@@ -49,7 +48,7 @@ def package_reference(source: str, name: str) -> str:
                     isinstance(decorator, ast.Name) and decorator.id == 'property' or
                     isinstance(decorator, ast.Attribute) and decorator.attr == 'setter'
                     for decorator in node.decorator_list) for node in matches):
-            members = [deepcopy(node) for node in matches if isinstance(node, ast.FunctionDef)]
+            members = [node for node in matches if isinstance(node, ast.FunctionDef)]
             for member in members:
                 member.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
             return ast.unparse(ast.fix_missing_locations(ast.Module(body=members, type_ignores=[]))) + '\n'
@@ -62,7 +61,6 @@ def package_reference(source: str, name: str) -> str:
             scope = selected.body
     if selected is None:
         raise ValueError('Missing reference symbol: ' + symbol)
-    selected = deepcopy(selected)
     if kind == 'signature':
         if isinstance(selected, ast.ClassDef):
             selected.body = [node for node in selected.body if isinstance(node, ast.AnnAssign)] or [ast.Expr(value=ast.Constant(value=Ellipsis))]
@@ -82,12 +80,11 @@ def region(path: Path, name: str) -> str:
         if name != 'layout:package' or path.name != 'README.md':
             raise ValueError('A package layout must name its package README')
         directory = path.parent.resolve()
-        root = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], cwd=directory, text=True).strip())
-        tracked = subprocess.check_output(['git', 'ls-files', '-z', '--', str(directory.relative_to(root))], cwd=root, text=True)
+        tracked = subprocess.check_output(['git', 'ls-files', '-z', '--', '.'], cwd=directory, text=True)
         names = set()
         for filename in tracked.split('\0'):
             if filename:
-                parts = (root / filename).relative_to(directory).parts
+                parts = Path(filename).parts
                 names.add(parts[0] + ('/' if len(parts) > 1 else ''))
         ordered = sorted(names)
         if not ordered:
