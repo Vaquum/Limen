@@ -114,7 +114,7 @@ def test_all_wired_scripts_pass_on_current_repo() -> None:
 
 
 # Gates that ship but are not wired into pr_checks_lint. Each is named in
-# CLAUDE.md law 6 with its reason; their verdict must match their exit code.
+# .github/REPOSITORY-LAW.md law 6 with its reason; their verdict must match their exit code.
 UNWIRED_GATES: Final[frozenset[str]] = frozenset({
     # Coverage is enforced by `PR Checks Coverage` at a 92% floor, computed
     # from the suite's own run. Wiring these into pr_checks_lint would run the

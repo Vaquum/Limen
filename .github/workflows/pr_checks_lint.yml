@@ -4,7 +4,7 @@ name: pr_checks_lint
 # no-swallowed-violations scan, declared-dependency vulnerabilities, and
 # the budget-raise ratchet.
 #
-# Deliberately NOT here, and deliberately not named in CLAUDE.md law 6:
+# Deliberately NOT here, and deliberately not named in .github/REPOSITORY-LAW.md law 6:
 #   check_module_docstrings   - this repo ignores D100 by choice; one
 #                               function per file with filename-matching
 #                               names makes a module docstring a

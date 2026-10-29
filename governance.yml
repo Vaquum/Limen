@@ -2,7 +2,7 @@
 # tool versions, and review authority. It is a CONTRACT ANCHOR, not a runtime
 # source or generator — nothing reads it at run time. The contract tests
 # (governance/tests/test_governance_config.py) pin the workflows, the ruleset,
-# pyproject.toml, and CLAUDE.md to these values, so a value here and the file
+# pyproject.toml, and .github/REPOSITORY-LAW.md to these values, so a value here and the file
 # it mirrors must change together or the test fails.
 schema_version: 1
 
@@ -22,7 +22,7 @@ prd:
 
 ruleset:
   name: Protect-Main
-  # The gated laws in CLAUDE.md must be in exact bijection with this list, and
+  # The gated laws in .github/REPOSITORY-LAW.md must be in exact bijection with this list, and
   # this list with the live ruleset. pr_checks_honesty proves the first,
   # pr_checks_ruleset the second.
   #

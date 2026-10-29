@@ -1,6 +1,6 @@
 """Honesty gate: the written laws and the enforced ruleset agree exactly.
 
-The constitution (CLAUDE.md) lists the laws; each workflow-gate law carries
+The record (.github/REPOSITORY-LAW.md) lists the laws; each workflow-gate law carries
 its required-status-check context as a trailing `*(context)*` annotation,
 exactly one law is the server-side branch-protection law, and exactly one
 law is a manual procedure. This gate asserts a
@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LAWS_DOC = REPO_ROOT / 'CLAUDE.md'
+LAWS_DOC = REPO_ROOT / '.github/REPOSITORY-LAW.md'
 RULESET = REPO_ROOT / '.github/rulesets/main.json'
 
 # The one law that maps to server-side branch protection, not a status check.
