@@ -327,7 +327,7 @@ Sensors and Cohorts also expose inference interfaces for integration with other 
 
 ## Risk boundary
 
-Limen is research software. Benchmark and backtest outputs are not investment advice, trading advice, execution simulation, regulatory approval, or a promise of future performance. Past performance is not predictive, and trading digital assets can result in total loss of capital.
+Limen is research software. Benchmark and backtest outputs are not investment advice, trading advice, regulatory approval, or a promise of future performance. Past performance is not predictive, and trading digital assets can result in total loss of capital.
 
 ## Supply chain and provenance
 
