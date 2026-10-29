@@ -16,7 +16,7 @@ DIRECTORIES = {
     'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-parallel', 'compiled-rule-contracts', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'residual_regressor', 'random_binary', 'direction_sizing', 'rbf_svm_binary', 'gaussian_hmm_binary', 'lstm_binary', 'cnn1d_binary', 'entropy_var_regressor', 'feature_link_binary', 'pseudo_label_binary', 'weight_link_binary')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
     'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment', 'compiled-calibration-isotonic'],
-    'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
+    'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars', 'compiled-bars-adaptive'],
     'allocation': ['compiled-allocation', 'compiled-allocation_ml', 'compiled-allocation_funded'],
 }
 
@@ -306,7 +306,8 @@ def verify_project(project):
         {'method': method, 'reconstructed_members': json.loads((base / directory / 'assessment.json').read_text())['members']}
         for method, directory in [('sigmoid', 'compiled-calibration-assessment'), ('isotonic', 'compiled-calibration-isotonic')]]
     summaries['execution'] = {name: verify_execution(project, name) for name in ('execution', 'funded')}
-    summaries['bars'] = verify_bars(project)
+    from bar_oracles import verify_adaptive_cli
+    summaries['bars'] = verify_bars(project) | {'adaptive': verify_adaptive_cli(project)}
     allocation = {name: verify_allocation(project, name) for name in ('allocation', 'allocation_ml', 'allocation_funded')}
     summaries['allocation'] = allocation
     original, restored = project / 'results/compiled-project', project / 'results/compiled-restored'

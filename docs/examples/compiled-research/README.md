@@ -266,6 +266,8 @@ The bundle includes these ready-to-read files; no preprocessing command is part 
 
 ## Optional model campaign
 
+Built with PriorLabs-TabPFN. The optional example retains the [TabPFN 6.4.1 package license](licenses/TabPFN-code-6.4.1-LICENSE.txt) and [pinned checkpoint license](licenses/TabPFN-v2-model-LICENSE.txt), including their additional attribution terms. The checkpoint is downloaded separately and is not bundled with Limen.
+
 Run `sh compiled-research/tabpfn.sh` separately from the ordinary campaign, from the same bundle root. It requires the matching `vaquum-limen[data,tabpfn]` installation, TabPFN `6.4.1`, and the environment recorded in the [real-model observation](../retained/tabpfn.json). The recorded run used Python 3.12 on macOS ARM64; its dependency versions are observations, not a claim of proof on every supported host.
 
 The [YAML declaration](tabpfn.yaml) fits one CPU ensemble on January 1–2, 2025, uses January 3 for validation and evaluates January 4. The [shell command](tabpfn.sh) downloads the actual checkpoint from an immutable upstream revision and verifies its SHA-256 before execution. It retains 95 predictions and probabilities. Independent assertions reconstruct training-only label thresholds, later labels, accuracy and pairwise AUC.
@@ -285,3 +287,5 @@ The [documentation contract](../../Developer/Documentation-System.md) requires e
 The project lifecycle uses the static production declaration in `project.yaml`. Its four candidates share the selection pipeline; production mode permits content-addressed commits and lineage. The shell script copies that declaration unchanged.
 
 `limen fork` leaves an editable development declaration. The lifecycle commits the separately reviewed `project_child.yaml` unchanged, with the original identity supplied through `--parent`; its content and lineage are explicit.
+
+The [adaptive bar cases](../../Data-Bars.md#recorded-trade-points-exercise-adaptive-formation) use a pinned unique-clock view of the recorded trade archive. They retain their actual formed populations and the native fold-promotion limitation.

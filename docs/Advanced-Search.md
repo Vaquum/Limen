@@ -11,7 +11,7 @@ The [Python project](examples/python-research/README.md) supplies its search fun
 - the statistics extra for Sobol sampling
 - an experiment directory and the required recording groups when continuing an interrupted run
 
-## The core pieces
+## The search components retain distinct state
 
 | Piece | What it owns |
 |---|---|
@@ -57,7 +57,7 @@ def search(data_dir, output):
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
     return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
-            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars)}
+            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars), 'linked': residual_research(bars, output / 'linked')}
 ```
 
 <!-- example: search-compiled-traversal source=docs/examples/compiled-research/run.sh region=search scenario=search interface=compiled role=executed -->
@@ -70,37 +70,122 @@ limen run --no-progress-bar \
   compiled-research/adaptive.yaml
 ```
 
-The Python case compares grid, random, Sobol and shuffled traversal over two windows and two Ridge penalties. The Compiled case compares the same traversal choices, a separately admitted factorized grid and declared model families. Their budgets finish the bounded comparison used in this proof; they do not establish universal finite-domain coverage for a sampler. A search seed does not control model randomness.
+The Python case compares grid, random, Sobol and shuffled traversal over two windows and two Ridge penalties. The Compiled case declares its traversal campaigns, a separately admitted factorized grid, and model-family experiments. Their budgets finish the bounded comparison used in this proof; they do not establish universal finite-domain coverage for a sampler. A search seed does not control model randomness.
 
-## Seeded finite traversal
+<a id="seeded-finite-traversal" data-reader-heading="plain"></a>
 
-The Python search function constructs its shuffled grid with `shuffle=True, seed=42`. The Compiled declarations record every traversal choice: the random and Sobol definitions use seed 7, while the factorized grid declares `factorize: true`, `shuffle: true` and seed 13. These choices are executed directly from the displayed files.
+## Strategy choice follows the research budget
 
-Fresh seeded shuffled grids use version 2: eight balanced Feistel rounds with SHAKE-256, cycle-walked into the finite index domain. Candidate generation never materializes the Cartesian product or a permutation list. Cycle-walk cost varies. Sorted parameter keys and declared level order define the mixed-radix mapping. The seed changes the permutation; the round budget does not, so increasing it extends the same prefix. Exhaustion stops normally.
+Grid search enumerates the finite domain. A seeded shuffle changes joint candidate order while preserving a reproducible prefix. Increasing the permutation budget extends that prefix when the ordered domain and traversal identity remain fixed. Grid is the appropriate choice when completion must establish exhaustive coverage.
 
-Each parameter's choices must have distinct execution identities. YAML, `ParamDomain`, legacy `ParamSpace` and restored domain states reject collisions before accepting the domain. Identity uses the existing sorted JSON encoding with `default=str` and SHA-256; mapping key order, tuple/list pairs or an object and its identical string representation can collide. Values such as `1`, `1.0` and `True` retain distinct identities. Inputs are never silently deduplicated, and existing hashes and seeded traversal remain unchanged. A checkpoint with colliding choices requires a corrected declaration and a new run. Exact-choice removal, retention, membership and injection use that same identity. Numeric reducer decisions are rebound to the unique original domain choice when log concatenation widens integers to floats; ambiguous numeric groups fail explicitly. Reducer checkpoint pairs retain their existing format and distinguish exact identities. Numeric range operations retain their comparison semantics. Injecting an existing domain identity returns `False` without notification; priority `MSQ.inject` retains its explicit queue semantics.
+Random and Sobol strategies sample unseen discrete combinations under their respective contracts. Their seeds control candidate generation. Models, source snapshots, and fitted preprocessing retain separate sources of variation. Sampling, projection, deduplication, and feedback also affect which alternatives actually execute.
 
-This is joint candidate traversal, rather than shuffling levels before nested enumeration. Tests measure marginal and pair-projection prefix coverage over pinned unequal domains/seeds against affine and nested-enumeration controls. They establish those cases, not a universal prefix-coverage guarantee or uniform random sampling. A search seed does not seed models.
+The four-candidate Python comparison completes grid, random, Sobol, and shuffled traversal over its bounded domain. Compiled YAML separately records grid/random/Sobol campaigns, the shuffled composable experiment, and a factorized shuffled grid. Their native artifacts identify the actual candidate identities and scores.
 
-Version and ordered-domain identity are saved in strategy state; existing metadata independently pins version 2. Factorized resume rejects seed/version/ordered-domain changes before rewriting artifacts and restarts reuse caches empty. Versionless old integer-seeded shuffled checkpoints retain their affine version-1 order on the ordinary path. Seedless native shuffle remains legacy version 1, without a reproducible resume guarantee, and is not admitted by factorization. Existing unshuffled behavior is unchanged.
+<a id="seeded-sobol-sampling" data-reader-heading="plain"></a>
 
-Factorized traversal retains its [snapshot admission and cache limits](Universal-Experiment-Loop.md#factorized-snapshot-grids). Live pruning, callbacks and interventions remain excluded; use a new immutable manifest for a follow-up search.
+### Sobol projects a seeded sequence onto declared values
 
-## Seeded Sobol sampling
+Sobol sampling uses scrambled sequence coordinates to select from each parameter's ordered values. Multiple sequence points can map to one discrete candidate. Deduplication and bounded retries preserve the sampler's declared behavior, while grid traversal provides exhaustive finite-domain completion. The [Sobol implementation contract](Search-Reference.md#seeded-sobol-sampling) states the seed, dependency, projection, and recovery requirements.
 
-Install the existing statistics extra with `pip install 'vaquum-limen[stats]'` for SciPy `>=1.15,<2`.
+## Candidate identity preserves declared alternatives
 
-Each traversal comparison uses four candidate combinations. The Python variants use seed `42`; Compiled random and Sobol use `7`, and its factorized grid uses `13`; the assertions compare completed candidate identities and retain the resulting scores. The Compiled scenario also runs its separate model-family diagnostics.
+Parameter identity includes the sorted parameter keys and each declared choice. Distinct execution identities are required before search begins. Exact-choice mutations and priority injections use that identity, while occurrence identity distinguishes repeated executions of a configuration.
 
-Python Research uses `SobolStrategy(domain, seed=42)`, imported from `limen.experiment.param_search`. The seed is a required literal, non-boolean, nonnegative integer. Scrambling is always enabled; `scramble`, `shuffle` and other unsupported Sobol fields are rejected. This selects a candidate generator for the existing MSQ path, without changing model execution or its randomness. `factorize=True` still requires GridStrategy and rejects Sobol.
+A restored strategy validates its saved domain and traversal state before accepting work. Changing the ordered choices or seed changes the continuation contract. The [finite traversal reference](Search-Reference.md#seeded-finite-traversal) owns exact identity rules, traversal versions, recovery compatibility, and prefix measurements. The [Sobol reference](Search-Reference.md#seeded-sobol-sampling) defines projection, bounded retries, sequence limits, and dependency compatibility.
 
-The sampler uses [SciPy's Sobol engine](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html) with LMS+shift scrambling and 30 bits. Sorted parameter keys define coordinates; declared value-list order defines equal-width bins. Coordinate `u` selects `values[floor(u * len(values))]`, preserving the declared value and its existing parameter hash. No Cartesian product is materialized. Domain value changes update these bins while retaining the raw sequence position and accepted hashes. Existing MSQ budgets, filters, feedback and explicit repeat injections keep their semantics.
+## Factorization reuses independent preparation and signals
 
-Different points can select the same discrete combination. Accepted combinations are deduplicated; failure to find a novel combination within 1,000 proposals raises an error, without switching samplers. The engine also raises when its `2**30` points are exhausted. Use grid search when exhaustive traversal is required. Discrete projection, arbitrary prefixes, filters and deduplication remove Sobol balance guarantees; no convergence gain, speedup or universal finite-domain coverage is promised.
+The Compiled factorized case crosses two LightGBM tree counts with two fee assumptions. Four economic results require only the admitted fitting work for each model choice. Replaying fees can reuse predictions because the fee axis is independent of the configured preparation and model signal:
 
-Checkpoint state pins the seed, stream format, raw point position, generated count, ordered current domain and SciPy version. Resume reconstructs the engine and fast-forwards to that position, using the existing domain and accepted-hash restoration. Changed or unsupported state fails before persisted artifacts are rewritten; keep the same SciPy version when resuming. The existing [recording requirements](Search-Reference.md#resume-flow) still apply.
+<details>
+<summary>Read the complete factorized experiment</summary>
 
-The project proof uses the pinned hourly observations. [Sobol protocol tests](../tests/test_sobol_search.py) retain additional state, mutation and refusal cases; the [scenario assertions](examples/tests/scenario_oracles.py) check the project runs.
+<!-- example: search-compiled-factorized source=docs/examples/compiled-research/factorized.yaml region=declaration scenario=search interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: book_compiled_factorized
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: ret_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: '{fee}'
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      class: limen.scalers.RobustScaler
+    reference_architecture: limen.sfd.reference_architecture.lightgbm_binary
+  params:
+    fee:
+    - 7.0
+    - 9.0
+    n_estimators:
+    - 4
+    - 8
+    n_jobs:
+    - 1
+    random_state:
+    - 42
+    deterministic:
+    - true
+    force_row_wise:
+    - true
+    early_stopping_rounds:
+    - 0
+    subsample_freq:
+    - 0
+    subsample:
+    - 1.0
+    colsample_bytree:
+    - 1.0
+uel:
+  output_path: compiled-factorized
+  factorize: true
+  n_permutations: 4
+  search_strategy:
+    type: grid
+    shuffle: true
+    seed: 13
+  output_format: csv
+  checkpoint_interval: 1
+```
+
+</details>
+
+Admission requires a deterministic reuse declaration for every relevant stage and an immutable compatible grid. Preparation and signal caches are bounded separately at 128 entries. Supported training preparation reuse has a narrower target, scaler, and feature contract than signal reuse. Cache eviction affects repeated work while preserving the required research result.
+
+Factorization uses snapshot execution. Walk-forward, multiple native workers, active feedback, allocation, explicit exits, and validation objectives have their own execution paths. A resumed factorized run validates its prefix and starts reuse caches empty. The [factorization contract](Universal-Experiment-Loop.md#factorized-snapshot-grids) gives exact admission and comparison requirements.
+
+## Workers parallelize admitted candidate fits
+
+Native workers reconstruct supported components from unchanged compiled YAML and frozen hashed input frames. The parent selects candidates, applies feedback, commits completed results in order, and writes artifacts. Interrupted execution preserves the committed contiguous prefix and its matching checkpoint.
+
+Arbitrary caller-owned Python functions execute with one worker. Native worker admission includes per-round preparation, thread controls, source identity, and recording. The [workflow table](Experiment-Manifest.md#supported-research-workflows) connects these requirements to folds, recovery, and protected research. The [complete workflow](End-to-End-Workflow.md#choose-parallel-execution-deliberately) demonstrates the installed CLI worker and resume commands.
 
 ## Keep the completed search identifiable
 

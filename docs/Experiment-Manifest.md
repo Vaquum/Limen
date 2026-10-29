@@ -364,6 +364,25 @@ Stopped/resumed equality requires unchanged source observations, deterministic
 model settings and equivalent feedback inputs; concurrency does not establish
 new RNG or statistical guarantees.
 
+## Supported research workflows
+
+Execution, recovery, and inference have separate admission requirements. A valid model definition establishes its preparation and learning contract. The chosen workflow additionally determines recording, source, and reconstruction requirements.
+
+| Research workflow | Authoring and execution | Recovery and retained state | Selection and inference |
+|---|---|---|---|
+| Caller-owned Python functions | Python preparation, estimators, evaluation, and selection; one worker for arbitrary functions | Persisted MSQ recovery retains an admitted queue and committed results. A trusted `.uel` snapshot separately preserves objects captured by the run. | `Sensor.from_model`, `Sensor.from_python`, and Python Cohorts wrap caller-owned fitted state and explicit output meaning. |
+| Ordinary native ML or rules | YAML and CLI; supported components can use native process workers under the parallel-round contract | Resume requires the unchanged recorded definition, source identities, checkpoint, and applicable recording. | Trainer refits admitted recorded rounds. Homogeneous ordinary Cohorts retain architecture-specific probability/vote conventions; mixed and fold-containing selections require declared native binary outputs and aligned decisions. |
+| Native walk-forward | YAML folds with independent target, preparation, calibration, and model fits | Recovery follows the native run contract. Selected-fold reconstruction requires qualified fold witnesses and recording. | Assessment names explicit folds. Fold promotion preserves their fitted state and selection identity. |
+| Factorized snapshot grid | An admitted immutable grid with deterministic reuse declarations and independent economic axes | Supported resume validates the recorded prefix and restarts bounded reuse caches empty. Active feedback, multiple workers, walk-forward, event execution, allocation, objectives, and explicit exits are excluded. | Recorded candidate identities retain their original definition. Subsequent reconstruction and assessment follow their own eligibility contracts. |
+| Dynamic barriers or learned meta-allocation | Admitted native definitions in fresh serial research | Resume and multiple native workers are excluded. | Trainer/Sensor promotion is excluded. Retained research outputs support the declared comparison. |
+| Observed-cost comparison | Python-only frozen calibration and fresh paired execution | Recorded actual fills and references supply cutoff-bound calibration provenance. | Calibration changes slippage under the admitted contract; the compared candidates retain their original definitions. |
+| Reservation-bound research | Supported project-bound native source and preparation paths, including independently valid resume, factorization, workers, and walk-forward | Project history, revision leases, original source evidence, and genuine committed occurrences remain required. Ordinary mode exclusions still apply. | Protected research records exposure and exclusion. Final assessment has the narrower requirements below. |
+| Protected final assessment | A frozen ordinary YAML-backed binary LogReg/LightGBM selection with completed Trainer provenance | Fitted state, selection, configuration, environment, reservation history, and evidence remain fixed. | Supported Sensor/Cohort snapshot scenarios, or the restricted single-Sensor event route with frozen economics and empty scenarios. |
+
+The [worker contract](#parallel-rounds), [factorized-grid contract](Universal-Experiment-Loop.md#factorized-snapshot-grids), [fold evidence](Trainer.md#recorded-walk-forward-folds), and [guarded holdout reference](Guarded-Holdout-Reference.md) own the detailed admission rules. Model-specific restrictions remain in [Reference Architecture](Reference-Architecture.md). An ordinary research run can support a capability that its protected final assessment excludes.
+
+The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) exercise these workflows through separately authored programs and YAML/CLI commands. Their scenario records identify which configuration actually executed.
+
 ## Manifest Types
 
 There are two manifest subclasses under the YAML and Python surfaces:

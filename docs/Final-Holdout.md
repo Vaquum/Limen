@@ -47,6 +47,16 @@ limen run --no-progress-bar compiled-research/final/holdout.yaml
 limen assess compiled-research/final/holdout.yaml --results results/dev/compiled-holdout --reservation "$reservation"
 ```
 
+## Research support and final eligibility remain separate
+
+| Stage | Admitted scope |
+|---|---|
+| Reservation-bound research | Independently valid source preparation, profiling, saved resume, factorization, native workers, and walk-forward, with original mode exclusions preserved |
+| Snapshot final assessment | Frozen ordinary YAML-backed binary LogReg or LightGBM Sensors/Cohorts with genuine completed Trainer provenance and already fitted state |
+| Event final assessment | One ordinary selected Sensor with a recorded round locator, frozen economics, and empty scenario list |
+
+Final assessment excludes caller-owned Python selections, nonordinary splits, formed bars, and unsupported model/output types. The protected research stage can use capabilities that do not qualify for that final route. The [canonical workflow table](Experiment-Manifest.md#supported-research-workflows) and [guarded reference](Guarded-Holdout-Reference.md#final-assessment) define their exact relationship.
+
 ## Preserve event economics
 
 The separate `final-event/holdout.yaml` project selects one Sensor and retains the event policy used during research. Its source clock, product, costs and exposure remain fixed through final assessment.

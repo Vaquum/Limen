@@ -125,6 +125,16 @@ factorized snapshot admission follows its explicit [reuse contract](Universal-Ex
 | `DLinearRegressor` | regression | yes | canonical DLinear semantics; closed-form SVD ridge fit, no seed; requires `scipy` |
 | `TabPFNBinary` | binary classification | no | optional, requires `tabpfn` |
 | `RuleBasedStrategy` | rule-based long/flat | yes | no training step; boolean predicate logic |
+| `RBFSVMBinary` | binary classification | no | RBF SVC probabilities with optional validation calibration and threshold selection |
+| `GaussianHMMBinary` | binary classification | no | fitted return-state dynamics over raw chronological return windows |
+| `LSTMBinary` | binary sequence classification | no | optional CPU PyTorch learner over completed return windows |
+| `CNN1DBinary` | binary sequence classification | no | optional one-dimensional CPU convolution over completed return windows |
+| `EntropyVaRRegressor` | forward-return quantile | no | signed quantile forecast with pinball loss and violation rate; no attached trading metrics |
+| `ResidualRegressor` | residual regression | no | Ridge baseline plus XGBoost correction of observed training error |
+| `FeatureLinkedBinary` | linked binary classification | no | chronological upstream predictions become a downstream feature |
+| `PseudoLabelBinary` | binary classification | no | generated training labels for an explicitly pinned pool of real observations |
+| `WeightLinkedBinary` | linked binary classification | no | chronological upstream errors determine downstream sample weights |
+| `DirectionSizingModel` | signed exposure | component-dependent | paired completed trade outcomes fit direction and magnitude components |
 
 The `deterministic` flag matters because [Trainer](Trainer.md) uses it to choose its validation tolerance.
 
@@ -245,7 +255,7 @@ JSONL binds the architecture, factory source hashes, component params, seed, fea
 
 For Cohort, “probability” always means **P(1)**: the probability that the positive class is `1`.
 
-Architectures that expose valid P(1) may use Cohort's probability-weighted aggregation path. Architectures that do not expose valid P(1) use Cohort's majority-vote fallback path instead.
+Ordinary homogeneous Cohorts select aggregation through architecture capability hints. Mixed and fold-containing selections instead require the fitted model's native binary-output declaration. A returned probability and an ordinary Cohort's selected aggregation mode therefore have separate contracts. [Cohort compatibility](Cohort.md#architecture-consistency-rule) defines binding and output validation.
 
 | Architecture | Returns probabilities P(1) | Cohort mode | Notes |
 |---|---:|---|---|
@@ -254,9 +264,19 @@ Architectures that expose valid P(1) may use Cohort's probability-weighted aggre
 | `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are fixed surrogate scores (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
 | `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimized before `_preds` are produced. This is compatible with P(1). |
 | `RidgeRegressor` | no | fallback | Continuous `_preds` only; no class probabilities. Ordinary unqualified regressor Cohorts vote up at `prediction > 0`; qualified folds keep their separate contract. |
-| `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
+| `XGBoostRegressor` | no | fallback | Ordinary regressor members vote up at `prediction > 0`; forecast magnitude is not preserved by native voting. |
 | `DLinearRegressor` | no | fallback | `predict()` returns only `_preds`. Same regressor caveat as `XGBoostRegressor`. |
 | `RuleBasedStrategy` | no | fallback | `predict()` returns positions as `_preds`; `_probs` is intentionally absent. |
+| `RBFSVMBinary` | yes | probability | Positive-class SVC or retained calibrated probability. |
+| `GaussianHMMBinary` | yes | probability | Probability of positive next return under fitted state dynamics. |
+| `LSTMBinary` | yes | probability | Sigmoid probability from the fitted sequence classifier. |
+| `CNN1DBinary` | yes | probability | Sigmoid probability from the fitted convolutional classifier. |
+| `ResidualRegressor` | no | fallback | Ordinary regressor voting uses the sign of the corrected forecast. |
+| `EntropyVaRRegressor` | no | fallback | Ordinary regressor voting uses the sign of the quantile forecast and discards its magnitude. |
+| `FeatureLinkedBinary` | yes | fallback | Ordinary architecture hints use voting; admitted mixed binary membership uses its explicit probability declaration. |
+| `PseudoLabelBinary` | yes | fallback | Ordinary architecture hints use voting; admitted mixed binary membership uses its explicit probability declaration. |
+| `WeightLinkedBinary` | yes | fallback | Ordinary architecture hints use voting; admitted mixed binary membership uses its explicit probability declaration. |
+| `DirectionSizingModel` | no | refused | Native Cohort rejects signed-exposure members. Use the Sensor's signed output or explicitly compatible Python composition. |
 
 ## `predict()` Versus `evaluate()`
 
@@ -457,6 +477,8 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 
 ## TabPFN controls
 
+Built with PriorLabs-TabPFN. The [optional model project](examples/compiled-research/README.md#optional-model-campaign) retains the package and checkpoint licenses with their additional attribution provisions.
+
 `tabpfn_binary` exposes the nondeprecated constructor controls of
 [TabPFN 6.4.1](https://github.com/PriorLabs/TabPFN/blob/v6.4.1/src/tabpfn/classifier.py).
 The existing `n_ensemble_configurations` name maps to upstream `n_estimators`;
@@ -503,16 +525,11 @@ verifies the supported surface and selected nondefault controls on recorded bars
 - `xgboost_regressor` requires `xgboost`
 - `dlinear_regressor` requires `scipy` (the `stats` extra), loaded lazily inside the model
 - `tabpfn_binary` requires `tabpfn`
+- `lstm_binary` and `cnn1d_binary` require `torch` through the `neural` extra
+- `gaussian_hmm_binary` requires `hmmlearn` through the `hmm` extra
+- `residual_regressor` requires the `boosting` extra for its XGBoost correction
 
 Optional dependencies are checked when the relevant model executes, not when the package is imported.
-
-## Read Next
-
-- Continue to [Built-In SFDs](Built-In-SFDs.md) to see how the shipped foundational SFDs package these model surfaces.
-- Continue to [Trainer](Trainer.md) for the reconstruction workflow that replays and validates selected rounds.
-- Continue to [Standard Metrics Library](Standard-Metrics-Library.md) for the low-level metric helpers used inside these model classes.
-
-For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
 
 ### Primary-preserving meta allocation
 
@@ -794,3 +811,11 @@ example is `compiled-research/family_weight_link_binary.yaml`.
 Recorded-data assertions inspect actual native fit inputs and independently
 rebuild prefix probabilities, weights and final metrics. Weighting may worsen
 held-out results; this capability carries no predictive or trading-benefit claim.
+
+## Read Next
+
+- Continue to [Built-In SFDs](Built-In-SFDs.md) to see how the shipped foundational SFDs package these model surfaces.
+- Continue to [Trainer](Trainer.md) for the reconstruction workflow that replays and validates selected rounds.
+- Continue to [Standard Metrics Library](Standard-Metrics-Library.md) for the low-level metric helpers used inside these model classes.
+
+For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).

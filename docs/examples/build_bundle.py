@@ -8,6 +8,7 @@ import tarfile
 
 
 INPUTS = {
+    'recorded-trade-points.parquet': '873faec863bbcc6656f902b17daf4d29a043b4f9d38b2872670920a3dac4bec5',
     'recorded-hourly.csv': 'c763aa3bfd07c6e67754c14786f636e12085ba201fe2e91bf5d860133fbd7c7f',
     'recorded-hourly.zip': '4bd430b7e839128cf688ee824ea02cfffcf637351493563d745050b189adb24c',
     'recorded-hourly.arrow': 'b30dc10270712f5b12525d2991c4f401f65a9ce81890189f209eb681b4c350f5',
@@ -58,7 +59,7 @@ def build(root: Path, output: Path) -> str:
     entries = {}
     for interface in ('python', 'compiled'):
         for path in (root / f'docs/examples/{interface}-research').rglob('*'):
-            if path.is_file() and path.suffix in ('.py', '.yaml', '.md', '.sh', '.toml'):
+            if path.is_file() and path.suffix in ('.py', '.yaml', '.md', '.sh', '.toml', '.txt'):
                 entries[f'{interface}-research/{path.relative_to(root / f"docs/examples/{interface}-research")}'] = path.read_bytes()
     for name in ('catalogue.json', 'evidence.schema.json', 'recorded_inputs.py', 'commands.json', 'acquire.sh'):
         entries[name] = (root / 'docs/examples' / name).read_bytes()

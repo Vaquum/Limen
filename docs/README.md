@@ -15,12 +15,19 @@ Obtain the matching wheel and recorded inputs from the project page before runni
 | Choose who owns the methodology | [Begin the research](Research-Book.md) |
 | Establish the observations and their clocks | [Historical data](Historical-Data.md) |
 | Change the bar clock | [Data bars](Data-Bars.md) |
+| Define the information available to a model | [Feature design](Feature-Design.md) |
+| Define the observed outcome | [Target design](Target-Design.md) |
+| Choose the learner and prediction meaning | [Model choice](Model-Selection.md) |
+| Express a strategy through predicates | [Rule research](Rule-Research.md) |
 | Define preparation, fitting and the objective | [Define the experiment](Compiled-Research.md) |
+| Compare controlled changes to the definition | [Perturbation and robustness](Robustness-Research.md) |
 | Choose the candidates to evaluate | [Search](Advanced-Search.md) |
 | Change a running search deliberately | [Reducers and feedback](Reducers-And-Feedback.md) |
 | Retain, inspect and continue a run | [Run and recover](Run-And-Recover.md) |
 | Evaluate successive periods | [Walk-forward](Walk-Forward.md) |
 | Interpret predictions as trades | [Trading behavior](Trading-Behavior.md) |
+| Connect learning stages chronologically | [Linked models](Linked-Models.md) |
+| Interpret scores, alternatives, and selection reports | [Research evidence](Research-Evidence.md) |
 | Carry selected fitted behavior forward | [Selected behavior](Selected-Behavior.md) |
 | Assess the observations reserved earlier | [Final assessment](Final-Holdout.md) |
 | Inspect the complete chain | [End-to-end workflow](End-to-End-Workflow.md) |
@@ -35,4 +42,4 @@ Use [historical source methods](Historical-Data-Reference.md) and [search/recove
 
 ## Developer
 
-Start with [Developer home](Developer/README.md) to change, test, review, package or release Limen. The [documentation contract](Developer/Documentation-System.md) maintains the connection between the projects, displayed examples, tests, merged source and released wheel. [Roadmap](Roadmap.md) describes future direction; current behavior belongs in the book and reference.
+Start with [Developer home](Developer/README.md) to change, test, review, package, or release Limen. [Edit and verify the book](Developer/Editing-The-Book.md) covers the reader, prose editor, source contributions, and publication. The [documentation contract](Developer/Documentation-System.md) maintains the connection between projects, displayed examples, tests, merged source, and released wheel. [Roadmap](Roadmap.md) describes future direction; current behavior belongs in the book and reference.

@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 
 from check_evidence import bindings, region
-from recorded_inputs import funding_history, target_label_inputs
+from recorded_inputs import funding_history, target_label_inputs, trade_points
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -44,5 +44,6 @@ def test_bundled_derivations_equal_the_recorded_sources():
     inputs = ROOT / 'tests/fixtures'
     assert pl.read_parquet(inputs / 'spot_1h_20240101_20240116.parquet').equals(pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet').head(384))
     assert pl.read_parquet(inputs / 'recorded-funding.parquet').equals(funding_history(inputs))
+    assert pl.read_parquet(inputs / 'recorded-trade-points.parquet').equals(trade_points(inputs))
     for name, expected in target_label_inputs(inputs).items():
         assert pl.read_parquet(inputs / ('recorded-' + name + '-labels.parquet')).equals(expected)

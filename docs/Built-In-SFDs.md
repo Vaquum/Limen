@@ -197,6 +197,8 @@ It requires `scipy` (the `stats` extra), loaded lazily inside the model.
 
 ## `tabpfn_binary`
 
+Built with PriorLabs-TabPFN. The [optional model project](examples/compiled-research/README.md#optional-model-campaign) retains the package and checkpoint licenses with their additional attribution provisions.
+
 `tabpfn_binary` is an optional packaged SFD. Its lazy module and exported symbols can be imported without TabPFN, but model construction and training require the `tabpfn` extra. That dependency is intentionally outside the base install because it is materially larger than the default sklearn path.
 
 It uses `CalibrationBuilder` with the same probability calibration and threshold optimization wiring as `logreg_binary`, so its results also include `optimal_threshold` and `val_score` when calibration is active.
@@ -243,13 +245,6 @@ The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template 
 - Choose `dlinear_regressor` for a deterministic linear forecasting reference with canonical DLinear semantics.
 - Choose `tabpfn_binary` only when that dependency is installed and the TabPFN workflow is required.
 - Choose `dollar_bar_crash_reversal` for the bundled exhaustive dollar-bar rule sweep and its fixed-cost evidence contract.
-
-## Read next
-
-- Continue to [Single-File Decoder](Single-File-Decoder.md) for the general SFD contract.
-- Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run loop.
-- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
-- Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.
 
 ## `gaussian_hmm_binary`
 
@@ -308,3 +303,10 @@ return windows with recorded row timestamps. The dated YAML template exposes
 eight combinations of lookback, upstream regularization and weight floor.
 See [Reference Architecture](Reference-Architecture.md#weightlinkedbinary)
 for causal fit boundaries, actual row-weight fitting and provenance.
+
+## Read next
+
+- Continue to [Single-File Decoder](Single-File-Decoder.md) for the general SFD contract.
+- Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run loop.
+- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
+- Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.

@@ -1969,3 +1969,17 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve numeric metrics, parameter types and active filters across checkpoint recovery; reject unrestorable filters.
 - Export configured Parquet results after a successful CLI resume.
 - Admit valid representable frozen PBO partition counts.
+
+## [6.0.0] - 2026-10-29
+
+- Change public UEL and Log analysis tables from pandas to Polars, replace correlation MultiIndex levels with explicit columns, and remove pandas from runtime dependencies. Migrate table consumers with the Log reference guidance.
+- Add RBF SVM, Gaussian HMM, LSTM, CNN, entropy/VaR, residual, feature-linked, pseudo-label, and weight-linked architectures with native SFDs, templates, recorded-input proofs, and model-specific inference contracts.
+- Add fixed Bayesian reliability voting for compatible Python Sensors using observed correctness evidence and explicit outcome availability.
+- Add a stateful seven-label market-regime classifier with batch/stream parity, independent series state, prior-only ranks, audit fields, and validated JSON snapshots.
+- Add trusted full-object UEL snapshots, restricted budgeted serial candidate-error recording, complete perturbation primitives, and correlation/held-out-forest reducer analysis.
+- Add explicit short/flat snapshot accounting, multiclass/multilabel interpretation, and independent binary exit conditions with retained execution and reconstruction contracts.
+- Expand supported TabPFN controls and preserve separately executed pinned-checkpoint evidence for the optional backend.
+- Validate indicator/feature parameters, YAML structure and callable binding, consumed search axes, ordered domain identities, declared date windows, output containment, and immutable manifest lineage before execution.
+- Preserve protected source populations and genuine operation lineage across resume, factorization, native workers, walk-forward, fitted preparation, Trainer reconstruction, and final-assessment readback.
+- Expand the research book to 19 sequential chapters covering features, targets, models, rules, linked learning, robustness, and research evidence. Develop the existing chapters, workflow compatibility matrix, contributor guide, and current capability references in the approved voice.
+- Execute caller-owned residual learning, captured fitted-state restoration, and adaptive trade-point examples alongside the canonical Python and YAML/CLI research projects, with pinned recorded inputs and independent assertions.

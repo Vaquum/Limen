@@ -115,7 +115,8 @@ def bars(data_dir, output):
         formed = compute_data_bars(raw, bar_type=kind, **{parameter: threshold})
         formed.write_parquet(output / (kind + '.parquet'))
         results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1], 'first_start': formed['datetime'][0].isoformat(), 'last_start': formed['datetime'][-1].isoformat(), 'last_available': (raw['datetime'][int(formed['bar_count'].sum()) - 1] + timedelta(hours=1)).isoformat()})
-    return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output)}
+    return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output),
+            'adaptive': adaptive_trade_bars(data_dir, output / 'adaptive')}
 ```
 
 The [Compiled project's](examples/compiled-research/README.md) `bars` scenario runs three declared parameter choices. Its Manifest forms bars separately after each chronological split:
@@ -162,6 +163,124 @@ Inside a manifest-driven experiment, the order is:
 
 This keeps train-only fitting and test-only evaluation aligned with the actual post-bar data seen by each fold.
 
+## Recorded trade points exercise adaptive formation
+
+The adaptive cases use the archive's first recorded trade at each unique microsecond timestamp. This declared view contains 817 actual observations. The source derivation preserves price, quantity, quote turnover, maker fields, and exact clocks. The bundle pins the resulting Parquet file and checks its equality with the archive-derived frame.
+
+The Python diagnostic forms imbalance and run bars over that complete declared view, with `expected_num_ticks=20` and `ema_span=10`:
+
+<!-- example: bars-python-adaptive source=docs/examples/python-research/bar_cases.py region=adaptive_formation scenario=bars interface=python role=executed -->
+```python
+def adaptive_trade_bars(data_dir, output):
+    output.mkdir(parents=True)
+    points = trade_points(data_dir)
+    rows = []
+    for kind in ('imbalance', 'run'):
+        formed = compute_data_bars(points, bar_type=kind, expected_num_ticks=20, ema_span=10)
+        path = output / (kind + '.parquet')
+        formed.write_parquet(path)
+        consumed = int(formed['bar_count'].sum())
+        rows.append({'kind': kind, 'rows': formed.height, 'consumed_trade_rows': consumed,
+                     'omitted_trade_rows': points.height - consumed,
+                     'volume': float(formed['volume'].sum()),
+                     'last_available_at_ns': int(points['available_at_ns'][consumed - 1]),
+                     'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
+    return {'trade_rows': points.height, 'expected_num_ticks': 20, 'ema_span': 10,
+            'population': 'first recorded trade per unique microsecond timestamp', 'formed': rows}
+```
+
+Independent checks reconstruct tick direction, exponentially weighted estimates, stopping boundaries, and each completed bar's constituents. The result also records the omitted trailing observations and final consumed availability clock:
+
+<!-- result: bars-python-adaptive-results interface=python scenario=bars fields=adaptive.trade_rows,adaptive.formed[].kind,adaptive.formed[].rows,adaptive.formed[].consumed_trade_rows,adaptive.formed[].omitted_trade_rows,adaptive.formed[].volume -->
+
+The Compiled case uses its own declared controls: five expected ticks, span 10, and two chronological folds with 225 raw test observations each. Bar formation occurs separately inside the native partitions. DLinear predicts the declared next formed-bar return.
+
+<details>
+<summary>Read the complete adaptive-bar experiment</summary>
+
+<!-- example: bars-compiled-adaptive source=docs/examples/compiled-research/bars_adaptive.yaml region=declaration scenario=bars interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: recorded_adaptive_bars
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/recorded-trade-points.parquet
+        expected_sha256: '873faec863bbcc6656f902b17daf4d29a043b4f9d38b2872670920a3dac4bec5'
+    split_walk_forward:
+      n_folds: 2
+      test_bars: 225
+      purge_bars: 1
+      embargo_bars: 1
+      anchored: true
+    bar_formation:
+      func: limen.data.utils.compute_data_bars
+      params:
+        bar_type: '{bar_type}'
+        expected_num_ticks: '{expected_num_ticks}'
+        ema_span: '{ema_span}'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: 2
+    target:
+      name: next_return
+      class: limen.targets.NextReturnTarget
+    reference_architecture: limen.sfd.reference_architecture.dlinear_regressor
+    backtest:
+      fee_bps: 4.0
+      slip_bps: 0.0
+      notional_rate: 0.5
+      product:
+        kind: linear_perpetual
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1.0e-9
+        min_notional: 0.0
+  params:
+    bar_type: [imbalance, run]
+    expected_num_ticks: [5]
+    ema_span: [10]
+uel:
+  output_path: compiled-bars-adaptive
+  n_permutations: 2
+  prep_each_round: true
+  search_strategy:
+    type: grid
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+```
+
+</details>
+
+<!-- example: bars-compiled-commands source=docs/examples/compiled-research/run.sh region=bars scenario=bars interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/bars.yaml
+limen run --no-progress-bar compiled-research/bars_adaptive.yaml
+```
+
+<!-- result: bars-compiled-adaptive-results interface=compiled scenario=bars fields=adaptive.rounds,adaptive.source_rows,adaptive.folds[].kind,adaptive.folds[].fold,adaptive.folds[].formed_test_rows,adaptive.folds[].predictions,adaptive.folds[].promotion_unavailable_reason -->
+
+The native checks reconstruct observed labels on the formed test bars and reconcile their prediction counts and reported errors. These folds retain an explicit `clock` promotion-unavailable reason: the irregular trade source has no admitted native interval for that fold-promotion route. Research execution and promotion eligibility remain separate contracts.
+
+The 90-second archive supplies a bounded formation and pipeline diagnostic. A research assessment of a market hypothesis requires its own declared population, selection rule, and retained evidence.
+
 ## Inspect the completed bars
 
 The Python diagnostic reports each threshold and the number of source rows admitted into completed bars. Its incomplete tail remains excluded. The Compiled table counts completed bars inside each declared split, before model preparation. The fitting split loses its ROC warm-up; later splits carry the preceding completed bar as context. The forward label removes the final row in each split. The proof checks the test rows against the saved prediction alignment. `last_available` is the end of the final source interval consumed by a completed bar; `datetime` alone is its start, not its availability.
@@ -172,4 +291,4 @@ The Python diagnostic reports each threshold and the number of source rows admit
 
 ## Read next
 
-Continue to [define the experiment](Compiled-Research.md); helper details remain in the [bar reference](../limen/data/bars/README.md).
+Continue to [feature design](Feature-Design.md) to define the information available on the chosen bar clock. Helper details remain in the [bar reference](../limen/data/bars/README.md).

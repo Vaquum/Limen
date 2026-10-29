@@ -35,7 +35,9 @@ def test_publication_evidence():
 
 
 def test_divergent_authored_source_fails(tmp_path):
-    document = (ROOT / 'docs/Research-Book.md').read_text().replace('research = bars[:1440]', 'research = bars[:1500]')
+    original = (ROOT / 'docs/Research-Book.md').read_text()
+    document = original.replace('n_permutations=4', 'n_permutations=5')
+    assert document != original
     changed = tmp_path / 'changed.md'
     changed.write_text(document)
     with pytest.raises(ValueError, match='differs from executable'):

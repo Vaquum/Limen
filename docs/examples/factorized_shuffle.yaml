@@ -2,7 +2,7 @@ schema_version: '1.0'
 metadata:
   name: factorized_shuffle
   description: Bounded seeded factorized traversal over recorded hourly observations
-  limen_version: "5.46.2"
+  limen_version: "6.0.0"
   mode: development
 sfd:
   manifest:

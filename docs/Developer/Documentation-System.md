@@ -363,6 +363,8 @@ The recorded run is CPU, one ensemble, Python 3.12 and macOS ARM64. Its source/v
 
 ## Prose editing
 
+The contributor guide [Edit and verify the research book](Editing-The-Book.md) develops reader, editor, and source-authoring tasks. This section owns deployment configuration, session behavior, and activation requirements.
+
 Authoring is configured separately from the released book at `limen-editor.vaquum.fi/limen/edit/`. Activation remains tracked in [issue #1207](https://github.com/Vaquum/Limen/issues/1207). GitHub sign-in requires current write permission on Vaquum/Limen. Read the branch and revision shown there before editing; the public book may identify an earlier package release.
 
 Edit existing words in place, then use Review to inspect drafts across pages. Commit sends those drafts to an origin branch. Further commits accumulate on that branch. Open PR includes the committed changes and starts the normal checks and review. Local Undo does not revert a remote commit. Code examples, recorded results and structural changes remain source work.

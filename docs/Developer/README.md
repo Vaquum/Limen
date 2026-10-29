@@ -106,6 +106,7 @@ Limen does not define a tox, nox, or Makefile contract; these direct commands ar
 
 ## Read next
 
+- [Edit and verify the research book](Editing-The-Book.md)
 - [Documentation System Contract](Documentation-System.md)
 - [End-to-End Workflow](../End-to-End-Workflow.md)
 - [Glossary](../Glossary.md)

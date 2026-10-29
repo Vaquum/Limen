@@ -130,7 +130,15 @@
     "docs/Selected-Behavior.md",
     "docs/Public-API.md",
     "docs/Search-Reference.md",
-    "docs/Historical-Data-Reference.md"
+    "docs/Historical-Data-Reference.md",
+    "docs/Feature-Design.md",
+    "docs/Target-Design.md",
+    "docs/Model-Selection.md",
+    "docs/Rule-Research.md",
+    "docs/Robustness-Research.md",
+    "docs/Linked-Models.md",
+    "docs/Research-Evidence.md",
+    "docs/Developer/Editing-The-Book.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -249,6 +257,13 @@
       ]
     },
     "binance_trades_btcusdt_2025-05-23_90s.zip": {
+      "scenario": "bars",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    },
+    "recorded-trade-points.parquet": {
       "scenario": "bars",
       "interfaces": [
         "python",
@@ -2997,7 +3012,8 @@
       "python/selection"
     ],
     "docs/examples/compiled-research/README.md": [
-      "compiled/selection"
+      "compiled/selection",
+      "compiled/search"
     ],
     "docs/Walk-Forward.md": [
       "python/walk_forward",
@@ -3009,7 +3025,9 @@
     ],
     "docs/Features.md": [
       "python/selection",
-      "compiled/selection"
+      "compiled/selection",
+      "compiled/search",
+      "python/search"
     ],
     "docs/Transforms.md": [
       "python/selection",
@@ -3025,7 +3043,9 @@
     ],
     "docs/Historical-Data.md": [
       "python/bars",
-      "compiled/selection"
+      "compiled/selection",
+      "compiled/search",
+      "python/search"
     ],
     "docs/Data-Bars.md": [
       "python/bars",
@@ -3179,7 +3199,9 @@
       "compiled/execution"
     ],
     "docs/Command-Line-Interface.md": [
-      "compiled/command_line"
+      "compiled/command_line",
+      "compiled/holdout",
+      "compiled/search"
     ],
     "docs/Single-File-Decoder.md": [
       "python/selection",
@@ -3214,7 +3236,8 @@
       "python/calibration",
       "compiled/calibration",
       "compiled/search",
-      "compiled/execution"
+      "compiled/execution",
+      "python/search"
     ],
     "docs/Built-In-SFDs.md": [
       "compiled/selection",
@@ -3230,7 +3253,9 @@
     ],
     "docs/Cohort.md": [
       "python/selection",
-      "compiled/walk_forward"
+      "compiled/walk_forward",
+      "compiled/selection",
+      "python/calibration"
     ],
     "docs/Conserved-Flux-Renormalization.md": [
       "python/bars",
@@ -3242,7 +3267,9 @@
     ],
     "docs/Log.md": [
       "python/selection",
-      "compiled/selection"
+      "compiled/selection",
+      "compiled/search",
+      "python/search"
     ],
     "docs/Benchmark.md": [
       "python/calibration",
@@ -3371,7 +3398,8 @@
       "python/calibration",
       "compiled/calibration",
       "python/execution",
-      "compiled/execution"
+      "compiled/execution",
+      "python/observed_costs"
     ],
     "docs/Selected-Behavior.md": [
       "python/selection",
@@ -3397,7 +3425,44 @@
     ],
     "docs/Historical-Data-Reference.md": [
       "python/bars",
-      "compiled/selection"
+      "compiled/selection",
+      "compiled/search",
+      "python/search"
+    ],
+    "docs/Feature-Design.md": [
+      "compiled/search",
+      "python/search",
+      "python/selection"
+    ],
+    "docs/Target-Design.md": [
+      "compiled/search",
+      "compiled/selection",
+      "python/search",
+      "python/selection"
+    ],
+    "docs/Model-Selection.md": [
+      "compiled/search",
+      "python/selection"
+    ],
+    "docs/Rule-Research.md": [
+      "compiled/search",
+      "python/search"
+    ],
+    "docs/Robustness-Research.md": [
+      "compiled/search",
+      "python/search"
+    ],
+    "docs/Linked-Models.md": [
+      "compiled/search",
+      "python/search"
+    ],
+    "docs/Research-Evidence.md": [
+      "compiled/search",
+      "python/search"
+    ],
+    "docs/Developer/Editing-The-Book.md": [
+      "compiled/selection",
+      "python/selection"
     ]
   }
 }

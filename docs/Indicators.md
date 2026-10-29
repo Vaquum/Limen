@@ -10,7 +10,7 @@ This page covers indicator selection, naming conventions, and default added colu
 
 - Indicators append columns. They do not replace the input frame with a reduced schema.
 - Helpers assume the standard OHLCV names: `open`, `high`, `low`, `close`, `volume`.
-- TA-Lib-backed wrappers treat TA-Lib parity as the source of truth. If Limen and TA-Lib diverge, TA-Lib wins unless there is a deliberate, documented reason not to.
+- Indicator calculations are native implementations. TA-Lib supplies optional comparison/reference tooling for functions following its numerical conventions.
 - Output column names encode key defaults, such as `rsi_14` or `apo_12_26_0`.
 - Candlestick pattern helpers add a same-named integer column following TA-Lib's positive bullish, negative bearish, zero neutral convention.
 - Legacy compatibility helpers intentionally expose legacy behavior. `sma` adds both `sma_{period}` and `{price_col}_sma_{period}`.
@@ -98,14 +98,14 @@ These helpers focus on rate of change, directional persistence, oscillator state
 | `rocp` | `rocp_10` | Rate of change percentage as decimal fraction. |
 | `rocr` | `rocr_10` | Rate of change ratio. |
 | `rocr100` | `rocr100_10` | Ratio scaled by 100. |
-| `rsi` | `rsi_14` | TA-Lib RSI wrapper. |
+| `rsi` | `rsi_14` | Native Wilder-smoothed RSI following TA-Lib conventions. |
 | `rsi_sma` | `rsi_sma_14` | SMA-based RSI-style helper. |
 | `wilder_rsi` | `wilder_rsi_14` | Wilder-smoothed RSI variant. |
 | `cmo` | `cmo_14` | Chande Momentum Oscillator. |
 | `cci` | `cci_14` | Commodity Channel Index. |
 | `ultosc` | `ultosc_7_14_28` | Ultimate Oscillator over three windows. |
 | `willr` | `willr_14` | Williams %R. |
-| `stoch` | `stoch_slowk`, `stoch_slowd` | TA-Lib stochastic oscillator. |
+| `stoch` | `stoch_slowk`, `stoch_slowd` | Native stochastic oscillator following TA-Lib conventions. |
 | `stochf` | `stochf_fastk`, `stochf_fastd` | Fast stochastic variant. |
 | `stochrsi` | `stochrsi_fastk`, `stochrsi_fastd` | Stochastic RSI. |
 | `stochastic_oscillator` | `stoch_k`, `stoch_d` | Native rolling-high/low implementation. |
@@ -220,7 +220,7 @@ Only three patterns expose an extra parameter today.
 
 - Use `bbands` for TA-Lib parity and configurable moving-average type.
 - Use `bollinger_bands` for the native SMA-based band helper.
-- Use `stoch` or `stochf` for TA-Lib parity. Use `stochastic_oscillator` for the native rolling implementation.
+- `stoch` and `stochf` follow the stated TA-Lib conventions. `stochastic_oscillator` uses its separately documented rolling definition.
 - Use `sma` for the canonical moving average helper used across Limen manifests. Use `ma` when `ma_type` itself is part of the search space.
 - Use `returns`, `price_change_pct`, and `window_return` for one-bar returns, configurable percent change, and wider-window return summaries respectively.
 

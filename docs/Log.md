@@ -8,6 +8,23 @@ In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.c
 
 All table-valued `Log` methods return `polars.DataFrame`. Correlation results contain explicit `cohort_pct` and `feature` columns instead of a pandas MultiIndex. Use Polars filtering and grouping on these columns. Pandas is not required by the package runtime.
 
+## Migration from 5.x analysis tables
+
+Version 6.0 changes public analysis tables from pandas to Polars. This affects `uel.experiment_log`, post-processing tables, and table-valued `Log` results. Callers consuming these values must use Polars operations or perform an explicit conversion at their own integration boundary.
+
+| Previous pandas operation or convention | Polars operation or representation |
+|---|---|
+| `sort_values(...)` | `sort(...)`, with explicit sort columns and direction |
+| Row selection through `.loc` | `filter(...)` with an expression over named columns |
+| Column subset through indexed lists | `select(...)` with the required columns or expressions |
+| `groupby(...)` | `group_by(...)` over explicit grouping columns |
+| `to_dict(orient="records")` | `to_dicts()` for row dictionaries |
+| Correlation MultiIndex levels | Explicit `cohort_pct` and `feature` columns |
+
+The [Python selection function](examples/python-research/research.py) demonstrates sorting the actual Polars log by its validation metric and tie-break parameter. [Research evidence](Research-Evidence.md) demonstrates the current correlation and importance tables on a complete candidate population.
+
+Pandas remains a test dependency for comparison checks. Its removal from runtime requirements does not convert caller-owned pandas inputs or custom functions automatically. Research definitions retain responsibility for their chosen containers and library boundaries.
+
 ## Follow the two projects
 
 Python Research reads the completed loop's Polars frame and sorts its caller-defined validation return. Compiled Research retains the configured native results on disk; `limen assess` ranks their declared validation objective. The Python helper below is not a Compiled prerequisite and does not manufacture native metric groups for arbitrary results.

@@ -8,6 +8,22 @@ The [Python project](examples/python-research/README.md) and [Compiled project](
 
 Use the matching Limen wheel, its recorded input bundle and the extras stated on each project page. Run Compiled commands from the bundle root. Python Research supplies its own data and functions; its complete project gives the corresponding entry point.
 
+## The declaration connects the research decisions
+
+The feature, target, learner, and execution policy jointly define an experiment. A feature expresses information available at a decision time. A target supplies the observed outcome. The learner fits their relationship, and the execution policy determines how its output requests a position.
+
+The preceding chapters develop [features](Feature-Design.md), [targets](Target-Design.md), [model families](Model-Selection.md), and [rule strategies](Rule-Research.md). This chapter connects those decisions in the complete research definition. The [workflow table](Experiment-Manifest.md#supported-research-workflows) identifies additional requirements for recovery, workers, folds, and promotion.
+
+The three chronological populations serve different roles:
+
+| Population | State or decision it can supply | Consequence |
+|---|---|---|
+| Training | Fitted targets, scalers, PCA, and model parameters | Later observations apply the retained fitted state. |
+| Validation | Candidate ranking, probability calibration, and threshold selection | Every choice consumes the declared validation evidence. |
+| Test | The later result measured under the chosen definition | Reading this result to revise the definition consumes it as research evidence. |
+
+A reserved final assessment adds a separately protected population after those research choices. Its reservation precedes research, as developed in [final holdout](Final-Holdout.md).
+
 ## Own the Python experiment
 
 The Python project supplies data, a parameter space and ordinary preparation and model functions to UEL. Its model function fits one candidate, scores validation and retains that fitted object. Selection wraps those same evaluated objects in Sensors and combines compatible forecasts in a Cohort.
@@ -197,7 +213,17 @@ Assessment selects two finite validation results, breaking metric ties by record
 
 This reconstruction is a checked refit, rather than restoration of arbitrary saved weights. [Trainer](Trainer.md) and [Cohort](Cohort.md) document the artifact and inference contracts. Their optional Python APIs are reference material; the Compiled workflow remains YAML and CLI.
 
+## Validation establishes the declared contract
+
+Schema version `1.0` identifies the configuration language independently of the package version. Structural validation rejects unknown fields, incompatible types, broken references, and unsupported combinations. Native validation also checks callable binding, consumed search parameters, chronology, and component contracts. An editor schema supplies structural assistance while native validation establishes those additional checks.
+
+Profiling loads real observations and samples preparation and fitting. Its completed and failed sample counts determine whether the estimate contains successful work. A zero-error process exit alone can accompany a profile with no successful samples. Dry-run checks compilation and setup without executing the candidate campaign.
+
+Changing source, parameters, target geometry, or execution economics creates a changed research definition. The CLI retains the exact declaration used by the experiment and requires that declaration for assessment. Project storage and lineage preserve the relationship between successive definitions, as developed in the [complete workflow](End-to-End-Workflow.md).
+
 ## Continue the question
+
+Continue to [controlled perturbations](Robustness-Research.md) to compare changes to the declared population, features, representation, target, and learner.
 
 Use [search](Advanced-Search.md) to change traversal, [feedback](Reducers-And-Feedback.md) to bound the remaining work, and [walk-forward](Walk-Forward.md) to repeat the decision over later windows. Reserve final observations before research with the separate [guarded YAML project](Final-Holdout.md).
 

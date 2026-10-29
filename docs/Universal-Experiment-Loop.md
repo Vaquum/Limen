@@ -63,7 +63,7 @@ def search(data_dir, output):
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
     return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
-            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars)}
+            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars), 'linked': residual_research(bars, output / 'linked')}
 ```
 
 Result availability follows the selected interface and retention policy:
@@ -570,7 +570,8 @@ def recovery(data_dir, output):
     full.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
     if not project.completed_log(resumed).drop('execution_time').equals(project.completed_log(full).drop('execution_time')):
         raise ValueError('Resumed Python results differ from uninterrupted research')
-    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
+    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True,
+            'captured': captured_state(bars, output / 'captured')}
 ```
 
 ### Resume Compiled Research

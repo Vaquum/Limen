@@ -1,7 +1,7 @@
 schema_version: '1.0'
 metadata:
   name: pseudo_label_binary_experiment
-  limen_version: 5.46.2
+  limen_version: 6.0.0
   mode: development
   description: Explicit pseudo-label training with recoverable provenance
 sfd:

@@ -3,6 +3,8 @@ Copyright 2026 Vaquum.
 
 Limen is distributed under the MIT License. See LICENSE.
 
-This repository depends on third-party open source packages. See THIRD_PARTY.md for dependency and license-review notes.
+This repository depends on third-party packages. See THIRD_PARTY.md for dependency and license-review notes.
+
+The optional TabPFN example is Built with PriorLabs-TabPFN. Its package and pinned checkpoint use the separately retained Prior Labs licenses, including additional attribution provisions. See THIRD_PARTY.md and share/limen/licenses in the installed distribution.
 
 Recorded Chainticks observations have separate CC BY 4.0 attribution and modification notices; see THIRD_PARTY.md and tests/fixtures/observed_costs/license.json.

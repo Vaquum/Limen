@@ -167,10 +167,12 @@ def verify(interface, name, result, output, inputs):
     if name == 'search':
         if interface == 'python':
             from helper_oracles import verify_helpers, verify_targets, verify_multiclass, verify_rules
+            from link_oracle import verify_residual
             verify_helpers(result['helper_diagnostics'], output / 'helpers', inputs)
             verify_targets(result['target_diagnostics'], output / 'targets', inputs)
             verify_multiclass(result['multiclass'], inputs)
             verify_rules(result['rules'], inputs)
+            verify_residual(result['linked'], output / 'linked', inputs)
             verify_analysis(result['analysis'], inputs)
             verify_source_formats(result['input_formats'], inputs)
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
@@ -255,6 +257,23 @@ def verify(interface, name, result, output, inputs):
         assert records(output / 'experiment') == records(output / 'uninterrupted')
         if interface == 'python':
             assert result['fitted_state_restored'] is False
+            captured = result['captured']
+            assert captured['rounds'] == captured['models'] == 4
+            assert captured['forecast_rows'] == 467 and captured['restored_fitted_state'] is True
+            snapshot = output / 'captured/captured.uel'
+            assert hashlib.sha256(snapshot.read_bytes()).hexdigest() == captured['snapshot_sha256']
+            bars = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+            close, opening = bars['close'].to_numpy(), bars['open'].to_numpy()
+            assert {(row['window'], row['alpha']) for row in captured['forecasts']} == {(w, a) for w in (4, 12) for a in (.1, 1.)}
+            for row in captured['forecasts']:
+                window, alpha = row['window'], row['alpha']
+                x = close[12:959] / close[12-window:959-window] - 1
+                y = close[13:960] / opening[13:960] - 1
+                z = (x-x.mean()) / x.std()
+                coefficient = np.dot(z, y-y.mean()) / (np.dot(z, z)+alpha)
+                later = close[972:1439] / close[972-window:1439-window] - 1
+                expected = (later-x.mean()) / x.std() * coefficient + y.mean()
+                np.testing.assert_allclose(row['predictions'], expected, rtol=1e-10, atol=1e-12)
         else:
             assert result['reconstructed_sensors'] == 1
     elif name == 'walk_forward':
@@ -400,6 +419,8 @@ def verify(interface, name, result, output, inputs):
                 assert row['backtest_funding_pnl'] == pytest.approx(sum(payment['recognized_delta'] for payment in ledger['funding']))
     elif name == 'bars':
         if interface == 'python':
+            from bar_oracles import verify_adaptive
+            verify_adaptive(result['adaptive'], output / 'adaptive', inputs)
             raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=384)
             assert {row['kind'] for row in result['formed']} == {'volume', 'trade', 'liquidity'}
             for row in result['formed']:

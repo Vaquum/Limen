@@ -68,6 +68,14 @@ The Python rows show the four assessed folds and their selected alpha. The Compi
 
 <!-- result: windows-compiled-geometry interface=compiled scenario=walk_forward fields=folds,members -->
 
+## Acceptance reports retain the full trial comparison
+
+The Compiled `acceptance.yaml` case records two trial return tracks across its two folds. Its report retains 96 synchronous assessment observations, the supplied trial count, deflated Sharpe probability, PBO, and the declared threshold verdicts:
+
+<!-- result: windows-compiled-acceptance interface=compiled scenario=walk_forward fields=acceptance.n_trials,acceptance.n_bars,acceptance.n_blocks,acceptance.deflated_sharpe_probability,acceptance.pbo,acceptance.verdicts -->
+
+Threshold failures remain advisory report outcomes. They do not erase a completed run or its retained alternatives. [Research evidence](Research-Evidence.md) develops their statistical interpretation. The [family-report contract](Benchmark.md#comparing-a-recorded-experiment-family) adds explicit supplied-experiment comparisons, compatible groups, and missing-track accounting.
+
 ## Keep the assessment separate from selection
 
 Repeated windows provide several later assessment populations. Using their outcomes to choose the research definition makes those outcomes part of selection. A collection of folds therefore does not create an untouched final sample.

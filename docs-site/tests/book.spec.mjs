@@ -19,9 +19,11 @@ test('reader command rejects substituted expected identities',()=>{
 test('complete research chapter',async({page})=>{
   await open(page);await expect(page.getByRole('heading',{level:1})).toHaveText('From a research question to a Sensor');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await expect(page.locator('figure.code')).toHaveCount(5);
-  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(5);
-  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
+  for(const summary of await page.locator('main article details > summary').all())await summary.click();
+  await page.evaluate(()=>scrollTo(0,0));
+  await expect(page.locator('figure.code')).toHaveCount(7);
+  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(7);
+  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(5);
   const typography=await page.locator('h1').evaluate(el=>{const s=getComputedStyle(el);return {family:s.fontFamily,weight:s.fontWeight,stretch:s.fontStretch};});
   expect(typography.family).toContain('Archivo Variable');expect(typography.weight).toBe('200');expect(typography.stretch).toBe('125%');
   expect(await page.evaluate(()=>document.fonts.check('400 17px "Archivo Variable"'))).toBe(true);
@@ -111,7 +113,7 @@ test('reference returns to the same passage and focus',async({page})=>{
 test('copy preserves canonical source without gutters',async({page,context})=>{
   await context.grantPermissions(['clipboard-read','clipboard-write']);await open(page);
   const source=await fs.readFile(path.join(root,'docs/examples/python-research/research.py'),'utf8');
-  const expected=source.split('# region experiment\n')[1].split('# endregion experiment')[0].replace(/\n+$/,'')+'\n';
+  const expected=source.split('# region trials\n')[1].split('# endregion trials')[0].replace(/\n+$/,'')+'\n';
   await page.locator('figure.code').first().getByRole('button',{name:'Copy',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(expected);
 });
@@ -262,7 +264,7 @@ test('page links start at the named chapter while reload and history retain thei
   await page.locator('main article p').last().scrollIntoViewIfNeeded();
   const old=await page.evaluate(()=>scrollY);expect(old).toBeGreaterThan(300);
   await page.goto('/limen/');await page.waitForFunction(()=>document.fonts.status==='loaded');
-  const link=page.getByRole('link',{name:'recorded observations',exact:true});
+  const link=page.locator('main article').getByRole('link',{name:'Historical Data',exact:true});
   await link.scrollIntoViewIfNeeded();const origin=await page.evaluate(()=>scrollY);
   await link.click();await expect(page).toHaveURL(/book\/historical-data\/$/);await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(100);
@@ -294,8 +296,8 @@ test('search closes and reveals a passage in the current chapter, including the 
   for(let attempt=0;attempt<2;attempt++){
     await page.getByRole('button',{name:'Python Research',exact:true}).click();
     await page.getByRole('button',{name:'Search',exact:true}).click();
-    await page.getByRole('searchbox').fill('adopt the compiled pipeline');
-    await page.locator('[data-search-dialog] ol a').filter({hasText:'Adopt the Compiled pipeline'}).first().click();
+    await page.getByRole('searchbox').fill('Compiled Research executes a YAML definition');
+    await page.locator('[data-search-dialog] ol a').filter({hasText:'Compiled Research executes a YAML definition'}).first().click();
     await expect(page.locator('[data-search-dialog]')).not.toBeVisible();
     await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
     await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
@@ -336,7 +338,8 @@ test('reading state is isolated by product identity',async({page})=>{
 test('without JavaScript both interfaces and proof links remain readable',async({browser})=>{
   const context=await browser.newContext({javaScriptEnabled:false,viewport:test.info().project.name==='phone'?{width:390,height:844}:{width:1440,height:1000}});
   const page=await context.newPage();await page.goto(test.info().project.use.baseURL+'/limen/');
-  await expect(page.locator('figure.code')).toHaveCount(5);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
+  for(const summary of await page.locator('main article details > summary').all())await summary.click();
+  await expect(page.locator('figure.code')).toHaveCount(7);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(5);
   if(test.info().project.name==='phone'){await page.locator('.mobile-nav > summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
   const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Carry selected behavior into inference');await context.close();
 });
@@ -385,7 +388,7 @@ test('search indexes literal CLI flags and lands on their section',async({page})
 test('interface choice hides only the other authoring examples and survives navigation',async({page})=>{
   await open(page);await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
   await expect(page.locator('figure[data-research-interface=python]').first()).toBeHidden();
-  await expect(page.locator('figure[data-research-interface=compiled]').first()).toBeVisible();
+  await expect(page.locator('figure[data-research-interface=compiled]').filter({hasText:'limen validate'}).first()).toBeVisible();
   await page.reload();await expect(page.getByRole('button',{name:'Compiled Research',exact:true})).toHaveAttribute('aria-pressed','true');
   await page.getByRole('button',{name:'Both interfaces',exact:true}).click();await expect(page.locator('figure[data-research-interface=python]').first()).toBeVisible();
 });
