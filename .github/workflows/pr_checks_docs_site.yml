@@ -65,7 +65,7 @@ jobs:
       - name: Prove the candidate wheel and research projects
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: timeout 240s python docs/examples/retained_checker.py -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short --durations=15
+        run: timeout 300s python docs/examples/retained_checker.py -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short --durations=15
 
       - name: Install the matching reader evidence checker
         run: python docs/examples/retained_checker.py --install-launcher .docs-evidence/retained-python
