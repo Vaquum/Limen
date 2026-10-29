@@ -47,4 +47,3 @@ The list is long because this repository ships a package: alongside the governan
 19. **No direct push to `main`. No force-push. No branch deletion.** Branches may merge without rebasing onto latest `main`; conflicting merges stay blocked and the push-triggered suite on `main` guards against stale-green breaks. One approving review, code-owner review on the enforcement surfaces owned in `.github/CODEOWNERS`, and every review thread resolved. *(branch protection, server-side)*
 
 Beyond the gates, `audit_main_ruleset` re-checks the live ruleset on every push to `main` with a privileged token — including `bypass_actors`, which the PR-time ruleset gate (`pr_checks_ruleset`) cannot observe. It is a post-merge alarm, not a merge gate, so it carries no law of its own. The release and publish path (`pr_post_release`, `pr_publish_pypi`), the weekly fuzz smoke, and the OpenSSF Scorecard analysis run outside the merge gate for the same reason.
-
