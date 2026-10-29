@@ -1,6 +1,6 @@
 # Contributing
 
-Start with [CLAUDE.md](CLAUDE.md) and the [developer docs](docs/Developer/README.md). Changes to research examples and the reader follow the [documentation system contract](docs/Developer/Documentation-System.md).
+Start with [AGENTS.md](AGENTS.md), the [repository laws](.github/REPOSITORY-LAW.md), and the [developer docs](docs/Developer/README.md). Changes to research examples and the reader follow the [documentation system contract](docs/Developer/Documentation-System.md).
 
 ## Local Setup
 
@@ -31,7 +31,7 @@ The candidate reader also requires current execution evidence from both projects
 
 ## Pull Requests
 
-Commit a useful increment, push it and open a non-draft PR before local checks, as required by [CLAUDE.md](CLAUDE.md#workflow). Then:
+Commit a useful increment, push it and open a non-draft PR before local checks. Then:
 
 - read the relevant docs page for the touched subsystem
 - update tests and docs with the behavior change

@@ -27,7 +27,7 @@ Limen-local version surfaces:
 - MINOR: new compatible public capability.
 - PATCH: compatible fix, docs correction, package metadata correction, dependency/security refresh, or proof-gate change.
 - Keep `pyproject.toml`, `CITATION.cff`, template `metadata.limen_version`, changelog entry, release tag, and release notes aligned to the same version.
-- Ordinary PRs do not touch version surfaces. The release cuts the package version and changelog entry under [repository law 5](../CLAUDE.md#the-laws). Update affected public docs in the PR that changes the behavior they describe.
+- Ordinary PRs do not touch version surfaces. The release cuts the package version and changelog entry under [repository law 5](../.github/REPOSITORY-LAW.md#the-laws). Update affected public docs in the PR that changes the behavior they describe.
 
 ## Documentation compatibility
 

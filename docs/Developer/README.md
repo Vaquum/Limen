@@ -23,7 +23,7 @@ Before opening or updating a Limen PR:
 
 | Task | Read this next | Why |
 |---|---|---|
-| planning or delivering research, maintenance or private prerequisites | [Constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) | Defines the delivery laws: every PR closes one issue, `feat` work goes through a PRD. |
+| planning or delivering research, maintenance or private prerequisites | [Repository law](https://github.com/Vaquum/Limen/blob/main/.github/REPOSITORY-LAW.md) | Defines the delivery laws: every PR closes one issue, `feat` work goes through a PRD. |
 | changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
 | updating reducer behavior | [Pruning Strategies](Pruning-Strategies.md) | Defines reducer semantics, YAML shape, testing, and failure modes. |
 | planning a search identity or recovery-format change | [Search Identity Compatibility](Search-Identity-Compatibility.md) | Defines historical-ID preservation and the proof required for a future protocol. |
@@ -39,7 +39,7 @@ Before opening or updating a Limen PR:
 
 ## Contributor workflow
 
-The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canonical. Every PR closes exactly one issue — a PRD for `feat` work, any issue otherwise. All PRs satisfy the required checks.
+The [repository law](https://github.com/Vaquum/Limen/blob/main/.github/REPOSITORY-LAW.md) is canonical. Every PR closes exactly one issue — a PRD for `feat` work, any issue otherwise. All PRs satisfy the required checks.
 
 For research behavior changes:
 
@@ -65,7 +65,7 @@ Canonical bootstrap:
 | 3 | `python -m pip install --upgrade pip` |
 | 4 | `python -m pip install -e ".[dev]"` |
 
-Package validation commands (run from the repository root; the exact required planes are listed in [CLAUDE.md](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md#the-laws)):
+Package validation commands (run from the repository root; the exact required planes are listed in [repository law](https://github.com/Vaquum/Limen/blob/main/.github/REPOSITORY-LAW.md#the-laws)):
 
 | Step | Command |
 |---|---|
