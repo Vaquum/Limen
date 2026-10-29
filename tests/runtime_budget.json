@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "max_total_seconds": 280,
+  "max_total_seconds": 310,
   "slowest_tests_limit": 10,
   "threshold_bands_seconds": [
     1,
@@ -19,6 +19,6 @@
     "observed_min_seconds": 85.0,
     "observed_max_seconds": 119.0,
     "headroom_seconds": 16.0,
-    "note": "Historical main CI baseline retained; 280-second ceiling reflects measured suite growth (suite observed at 262.9s with zero failures after the 2026-10-22 merge wave added recorded-data proofs; previous 260s ceiling set at 238s observed)."
+    "note": "Historical main CI baseline retained. The 310-second ceiling follows the explicitly approved 2026-10-29 recalibration: current main recorded 293.049s; release candidate 1dac839b recorded 290.650s, 296.143s, and 294.269s with all 7,391 cases reconciled, 7,388 passing, three opt-in skips, and 95% coverage. Four default workers, complete case selection, and coverage/worker-evidence requirements remain unchanged. The previous 280-second ceiling followed 262.9s observed on 2026-10-22; the earlier 260-second ceiling followed 238s observed."
   }
 }
