@@ -19,9 +19,9 @@ test('reader command rejects substituted expected identities',()=>{
 test('complete research chapter',async({page})=>{
   await open(page);await expect(page.getByRole('heading',{level:1})).toHaveText('From a research question to a Sensor');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await expect(page.locator('figure.code')).toHaveCount(5);
-  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(5);
-  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
+  await expect(page.locator('figure.code')).toHaveCount(7);
+  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(7);
+  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(5);
   const typography=await page.locator('h1').evaluate(el=>{const s=getComputedStyle(el);return {family:s.fontFamily,weight:s.fontWeight,stretch:s.fontStretch};});
   expect(typography.family).toContain('Archivo Variable');expect(typography.weight).toBe('200');expect(typography.stretch).toBe('125%');
   expect(await page.evaluate(()=>document.fonts.check('400 17px "Archivo Variable"'))).toBe(true);
@@ -111,7 +111,7 @@ test('reference returns to the same passage and focus',async({page})=>{
 test('copy preserves canonical source without gutters',async({page,context})=>{
   await context.grantPermissions(['clipboard-read','clipboard-write']);await open(page);
   const source=await fs.readFile(path.join(root,'docs/examples/python-research/research.py'),'utf8');
-  const expected=source.split('# region experiment\n')[1].split('# endregion experiment')[0].replace(/\n+$/,'')+'\n';
+  const expected=source.split('# region trials\n')[1].split('# endregion trials')[0].replace(/\n+$/,'')+'\n';
   await page.locator('figure.code').first().getByRole('button',{name:'Copy',exact:true}).click();
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(expected);
 });

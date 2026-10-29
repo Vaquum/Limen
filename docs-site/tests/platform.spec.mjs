@@ -35,6 +35,7 @@ test('code ranges and interface choice survive direct navigation',async({page})=
   await page.goto('/limen/');await page.waitForFunction(()=>document.fonts.status==='loaded');
   await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
   await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  await page.getByText('Read the complete selection.yaml',{exact:true}).click();
   const figure=page.locator('figure.code[data-research-interface="compiled"]').first();
   await figure.locator('.line-number').first().focus();await page.keyboard.press('Shift+ArrowDown');
   await expect(figure.locator('.selected-line')).toHaveCount(2);

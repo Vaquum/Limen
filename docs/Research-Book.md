@@ -4,9 +4,11 @@ Limen is a research engine for Bitcoin trading. The engine evaluates model and s
 
 Research proceeds from **observations → experiment → search → selection → Sensor or Cohort**. A Sensor combines a fitted model, its input preparation, and timing information for inference. A Cohort combines compatible Sensors. The Python and Compiled projects provide executable examples for each stage.
 
+<a id="choose-who-owns-the-experiment" data-reader-heading="plain"></a>
+
 ## The interfaces assign research responsibility
 
-The interfaces share one engine and assign different parts of the methodology to the caller.
+Research responsibility differs across [the two interfaces](../README.md#two-interfaces-different-purposes). Both use the same experiment engine.
 
 | Research responsibility | Python Research | Compiled Research |
 |---|---|---|
@@ -23,7 +25,11 @@ Python Research supports caller-defined data sources, models, backtesting, and s
 
 The Python project predicts the return on the next bar with Ridge regression. The Compiled project uses logistic regression with a fitted binary target. The models, date partitions, and trading policies differ. Their scores measure separate experiments.
 
+## Prerequisites
+
 Both projects require Python 3.10–3.13 and the [matching project bundle and wheel](examples/python-research/README.md#acquire-the-matching-project). The bundle contains the recorded inputs and both complete projects, distributed separately from the installed package. The commands execute from the acquired bundle root with its environment activated. Each excerpt comes from the corresponding complete project.
+
+<a id="own-the-python-methodology" data-reader-heading="python"></a>
 
 ## Python Research executes caller-defined functions
 
@@ -69,7 +75,7 @@ def selected_sensors(bars, selected, retained):
     ]
 ```
 
-Each Sensor retains the evaluated scaler and model. The caller-defined `prepare_live` function computes the matching feature and its availability time. `Cohort.from_python` averages the compatible next-bar return forecasts. The caller defines the prediction meaning and units.
+Each Sensor retains the evaluated scaler and model. The caller-defined `prepare_live` function computes the matching feature and its availability time. `Cohort.from_python` averages the compatible next-bar return forecasts. The [Python Sensor construction](Trainer.md#python-construction) and [Cohort composition](Cohort.md#python-cohorts) contracts define adapters and output compatibility.
 
 The [complete Python project](examples/python-research/README.md#run-the-selection-scenario) executes with this command:
 
@@ -79,6 +85,8 @@ python python-research/research.py --scenario selection --data-dir inputs --outp
 ```
 
 The command writes `research.csv` and `summary.json`. The evaluated models and Cohort remain in process memory. The project function `run_research` returns those objects for continued inference within that process.
+
+<a id="adopt-the-compiled-pipeline" data-reader-heading="compiled"></a>
 
 ## Compiled Research executes a YAML definition
 
@@ -184,7 +192,9 @@ limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 
 `validate` checks the declaration. `profile` reports the search size and estimates runtime by loading data and sampling preparation and fitting. The dry run checks readiness. `run` evaluates candidates and records results. `assess` applies the declared validation ranking, reconstructs the selected Sensor, and writes Cohort predictions. The [complete Compiled project](examples/compiled-research/README.md) documents the artifacts.
 
-Reconstruction refits the selected model under the recorded contract and checks numeric replay metrics against the recorded round. Pipeline checks establish compliance with the configured safeguards. Source accuracy and feature causality require independent verification. Source selection and research assumptions remain caller-controlled.
+Reconstruction refits the selected model under the recorded contract and checks numeric replay metrics against the recorded round. [Trainer](Trainer.md) defines the required artifacts and metric comparisons. Source accuracy and feature causality require independent verification. Source selection and research assumptions remain caller-controlled.
+
+<a id="inspect-the-result-before-continuing" data-reader-heading="plain"></a>
 
 ## Retained results record selection and inference
 
