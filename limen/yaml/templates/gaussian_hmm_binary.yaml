@@ -1,7 +1,7 @@
 schema_version: '1.0'
 metadata:
   name: gaussian_hmm_binary_experiment
-  limen_version: '6.0.0'
+  limen_version: '6.0.1'
   mode: development
   description: Homogeneous Gaussian return regimes predicting the next positive return
 sfd:

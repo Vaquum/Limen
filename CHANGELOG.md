@@ -1983,3 +1983,9 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve protected source populations and genuine operation lineage across resume, factorization, native workers, walk-forward, fitted preparation, Trainer reconstruction, and final-assessment readback.
 - Expand the research book to 19 sequential chapters covering features, targets, models, rules, linked learning, robustness, and research evidence. Develop the existing chapters, workflow compatibility matrix, contributor guide, and current capability references in the approved voice.
 - Execute caller-owned residual learning, captured fitted-state restoration, and adaptive trade-point examples alongside the canonical Python and YAML/CLI research projects, with pinned recorded inputs and independent assertions.
+
+## [6.0.1] - 2026-10-29
+
+- Publish the reviewed package, research book, and README changes prepared for 6.0.0 under an unused version after PyPI rejects the previously withdrawn 6.0.0 filename. Preserve the failed release and immutable source tags.
+- Align package, citation, editor schema, templates, and public YAML metadata to 6.0.1, and refresh the separately executed real TabPFN wheel observation.
+- Record the known withdrawn 6.0.0 and 7.0.0 filenames in the release policy.
