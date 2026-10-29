@@ -314,7 +314,16 @@ test('modified source-line links retain native navigation and open their permali
   expect(prevented).toEqual([false,false,false]);
   const opened=context.waitForEvent('page');await line.click({button:'middle'});const linked=await opened;
   await linked.bringToFront();await linked.waitForLoadState('domcontentloaded');
-  await expect(linked).toHaveURL(/#code-1-L1$/);await expect(linked.locator('#code-1-L1')).toBeInViewport();
+  await expect(linked).toHaveURL(/#code-1-L1$/);
+  const lineVisible=()=>linked.evaluate(()=>new Promise(resolve=>{
+    const target=document.getElementById('code-1-L1');
+    if(!target||document.readyState!=='complete'||document.fonts.status!=='loaded'||location.hash!=='#code-1-L1'){resolve(false);return;}
+    const observer=new IntersectionObserver(([entry])=>{observer.disconnect();resolve(entry.intersectionRatio>0);});
+    observer.observe(target);
+  }));
+  await expect.poll(lineVisible).toBe(true);
+  await linked.evaluate(()=>scrollTo(0,document.documentElement.scrollHeight));
+  await expect.poll(lineVisible).toBe(false);
   expect(new URL(page.url()).hash).toBe('');await linked.close();
 });
 
