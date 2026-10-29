@@ -5,8 +5,8 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "5.46.2"
-description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
+version = "6.0.0"
+description = "Bitcoin research engine for Python and YAML experiments, parameter search, backtesting, and selected-model inference."
 readme = "README.md"
 authors = [
   { name = "Mikko Kotila", email = "mailme@mikkokotila.com" },

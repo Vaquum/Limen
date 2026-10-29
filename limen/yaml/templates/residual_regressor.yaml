@@ -2,7 +2,7 @@ schema_version: '1.0'
 
 metadata:
   name: residual_regressor_experiment
-  limen_version: 5.46.2
+  limen_version: 6.0.0
   mode: development
   description: Ridge plus an observed-residual XGBoost correction
 

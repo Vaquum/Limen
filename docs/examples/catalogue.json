@@ -3005,63 +3005,63 @@
   },
   "page_contexts": {
     "docs/Research-Book.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/examples/python-research/README.md": [
       "python/selection"
     ],
     "docs/examples/compiled-research/README.md": [
-      "compiled/search",
-      "compiled/selection"
+      "compiled/selection",
+      "compiled/search"
     ],
     "docs/Walk-Forward.md": [
-      "compiled/walk_forward",
-      "python/walk_forward"
+      "python/walk_forward",
+      "compiled/walk_forward"
     ],
     "docs/Indicators.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Features.md": [
-      "compiled/search",
+      "python/selection",
       "compiled/selection",
-      "python/search",
-      "python/selection"
+      "compiled/search",
+      "python/search"
     ],
     "docs/Transforms.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Scalers.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Targets.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Historical-Data.md": [
-      "compiled/search",
-      "compiled/selection",
       "python/bars",
+      "compiled/selection",
+      "compiled/search",
       "python/search"
     ],
     "docs/Data-Bars.md": [
-      "compiled/bars",
-      "python/bars"
+      "python/bars",
+      "compiled/bars"
     ],
     "docs/Final-Holdout.md": [
-      "compiled/holdout",
-      "python/holdout"
+      "python/holdout",
+      "compiled/holdout"
     ],
     "limen/backtest/README.md": [
-      "compiled/execution",
-      "python/execution"
+      "python/execution",
+      "compiled/execution"
     ],
     "limen/calibration/README.md": [
-      "compiled/calibration",
-      "python/calibration"
+      "python/calibration",
+      "compiled/calibration"
     ],
     "limen/cli/README.md": [
       "compiled/command_line"
@@ -3070,133 +3070,133 @@
       "compiled/command_line"
     ],
     "limen/cohort/README.md": [
-      "compiled/walk_forward",
-      "python/selection"
+      "python/selection",
+      "compiled/walk_forward"
     ],
     "limen/cohort/sfc/README.md": [
       "compiled/walk_forward"
     ],
     "limen/data/README.md": [
-      "compiled/selection",
-      "python/bars"
+      "python/bars",
+      "compiled/selection"
     ],
     "limen/data/bars/README.md": [
-      "compiled/bars",
-      "python/bars"
+      "python/bars",
+      "compiled/bars"
     ],
     "limen/data/utils/README.md": [
-      "compiled/walk_forward",
-      "python/walk_forward"
+      "python/walk_forward",
+      "compiled/walk_forward"
     ],
     "limen/experiment/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "limen/experiment/param_search/README.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "limen/experiment/reducer/README.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "limen/features/README.md": [
-      "compiled/bars",
-      "python/bars"
+      "python/bars",
+      "compiled/bars"
     ],
     "limen/indicators/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "limen/inference/README.md": [
-      "compiled/walk_forward",
-      "python/selection"
+      "python/selection",
+      "compiled/walk_forward"
     ],
     "limen/log/README.md": [
-      "compiled/recovery",
-      "python/recovery"
+      "python/recovery",
+      "compiled/recovery"
     ],
     "limen/metrics/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "limen/scalers/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "limen/sfd/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "limen/sfd/foundational_sfd/README.md": [
-      "compiled/search",
-      "python/selection"
+      "python/selection",
+      "compiled/search"
     ],
     "limen/sfd/reference_architecture/README.md": [
-      "compiled/search",
-      "python/selection"
+      "python/selection",
+      "compiled/search"
     ],
     "limen/sfd/rule_based/README.md": [
-      "compiled/allocation",
-      "python/execution"
+      "python/execution",
+      "compiled/allocation"
     ],
     "limen/targets/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "limen/transforms/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "limen/utils/README.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "limen/yaml/README.md": [
       "compiled/command_line"
     ],
     "docs/Advanced-Search.md": [
-      "compiled/recovery",
+      "python/search",
       "compiled/search",
       "python/recovery",
-      "python/search"
+      "compiled/recovery"
     ],
     "docs/Calibration.md": [
-      "compiled/calibration",
-      "compiled/selection",
-      "compiled/walk_forward",
       "python/calibration",
-      "python/selection"
+      "compiled/calibration",
+      "python/selection",
+      "compiled/selection",
+      "compiled/walk_forward"
     ],
     "docs/Reducers-And-Feedback.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "docs/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Glossary.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Semantic-Versioning.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/TechnicalDebt.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Roadmap.md": [
-      "compiled/execution",
-      "compiled/search",
+      "python/selection",
       "compiled/selection",
+      "python/search",
+      "compiled/search",
+      "python/walk_forward",
       "compiled/walk_forward",
       "python/execution",
-      "python/search",
-      "python/selection",
-      "python/walk_forward"
+      "compiled/execution"
     ],
     "docs/Command-Line-Interface.md": [
       "compiled/command_line",
@@ -3204,229 +3204,229 @@
       "compiled/search"
     ],
     "docs/Single-File-Decoder.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/End-to-End-Workflow.md": [
-      "compiled/allocation",
-      "compiled/bars",
-      "compiled/calibration",
-      "compiled/command_line",
-      "compiled/execution",
-      "compiled/holdout",
-      "compiled/recovery",
-      "compiled/search",
-      "compiled/selection",
-      "compiled/walk_forward",
-      "python/bars",
+      "python/selection",
+      "python/search",
+      "python/recovery",
+      "python/walk_forward",
+      "python/holdout",
       "python/calibration",
       "python/execution",
-      "python/holdout",
+      "python/bars",
       "python/observed_costs",
-      "python/recovery",
-      "python/search",
-      "python/selection",
-      "python/walk_forward"
-    ],
-    "docs/Utilities.md": [
       "compiled/selection",
-      "python/selection"
-    ],
-    "docs/Standard-Metrics-Library.md": [
+      "compiled/search",
+      "compiled/recovery",
+      "compiled/walk_forward",
+      "compiled/holdout",
       "compiled/calibration",
       "compiled/execution",
-      "compiled/search",
+      "compiled/bars",
+      "compiled/allocation",
+      "compiled/command_line"
+    ],
+    "docs/Utilities.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Standard-Metrics-Library.md": [
       "python/calibration",
+      "compiled/calibration",
+      "compiled/search",
+      "compiled/execution",
       "python/search"
     ],
     "docs/Built-In-SFDs.md": [
-      "compiled/execution",
+      "compiled/selection",
       "compiled/search",
-      "compiled/selection"
+      "compiled/execution"
     ],
     "docs/Trainer.md": [
-      "compiled/calibration",
+      "python/selection",
       "compiled/selection",
-      "compiled/walk_forward",
       "python/calibration",
-      "python/selection"
+      "compiled/calibration",
+      "compiled/walk_forward"
     ],
     "docs/Cohort.md": [
-      "compiled/selection",
+      "python/selection",
       "compiled/walk_forward",
-      "python/calibration",
-      "python/selection"
-    ],
-    "docs/Conserved-Flux-Renormalization.md": [
-      "compiled/bars",
-      "python/bars"
-    ],
-    "README.md": [
       "compiled/selection",
-      "python/selection"
-    ],
-    "docs/Log.md": [
-      "compiled/search",
-      "compiled/selection",
-      "python/search",
-      "python/selection"
-    ],
-    "docs/Benchmark.md": [
-      "compiled/calibration",
-      "compiled/walk_forward",
       "python/calibration"
     ],
-    "docs/Universal-Experiment-Loop.md": [
-      "compiled/recovery",
-      "compiled/search",
+    "docs/Conserved-Flux-Renormalization.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Log.md": [
+      "python/selection",
       "compiled/selection",
-      "python/recovery",
+      "compiled/search",
+      "python/search"
+    ],
+    "docs/Benchmark.md": [
+      "python/calibration",
+      "compiled/calibration",
+      "compiled/walk_forward"
+    ],
+    "docs/Universal-Experiment-Loop.md": [
+      "python/selection",
+      "compiled/selection",
       "python/search",
-      "python/selection"
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
     ],
     "docs/Backtest.md": [
-      "compiled/allocation",
-      "compiled/execution",
       "python/execution",
-      "python/observed_costs"
+      "compiled/execution",
+      "python/observed_costs",
+      "compiled/allocation"
     ],
     "docs/Developer/README.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Developer/Packaging.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Developer/Making-Release.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Developer/Release-Policy.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Developer/Security-Assurance-Case.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Developer/Writing-Docstrings.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Developer/Contributing-Foundational-SFDs.md": [
       "compiled/selection"
     ],
     "docs/Developer/Pruning-Strategies.md": [
-      "compiled/recovery",
+      "python/search",
       "compiled/search",
       "python/recovery",
-      "python/search"
+      "compiled/recovery"
     ],
     "docs/Developer/Search-Identity-Compatibility.md": [
-      "compiled/recovery",
-      "python/recovery"
+      "python/recovery",
+      "compiled/recovery"
     ],
     "docs/Developer/Documentation-System.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Developer/Indicator-Performance.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "docs/Backtest-Benchmarks.md": [
-      "compiled/execution",
-      "python/execution"
+      "python/execution",
+      "compiled/execution"
     ],
     "docs/Fractional-Differentiation.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "docs/Triple-Barrier-Method.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "docs/Perturbation-Strategies.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "docs/Experiment-Manifest.md": [
-      "compiled/execution",
-      "compiled/search",
       "compiled/selection",
+      "compiled/search",
       "compiled/walk_forward",
+      "compiled/execution",
       "python/search"
     ],
     "docs/Reference-Architecture.md": [
-      "compiled/search",
+      "python/selection",
       "compiled/selection",
-      "python/selection"
+      "compiled/search"
     ],
     "docs/Common-Strategies.md": [
-      "compiled/search",
-      "python/search"
+      "python/search",
+      "compiled/search"
     ],
     "docs/Compiled-Research.md": [
-      "compiled/search",
+      "python/selection",
       "compiled/selection",
-      "python/selection"
+      "compiled/search"
     ],
     "docs/Guarded-Holdout-Reference.md": [
-      "compiled/holdout",
-      "python/holdout"
+      "python/holdout",
+      "compiled/holdout"
     ],
     "docs/Run-And-Recover.md": [
-      "compiled/calibration",
-      "compiled/execution",
-      "compiled/recovery",
-      "compiled/search",
+      "python/selection",
       "compiled/selection",
-      "python/calibration",
-      "python/execution",
       "python/recovery",
+      "compiled/recovery",
       "python/search",
-      "python/selection"
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
     ],
     "docs/Trading-Behavior.md": [
-      "compiled/calibration",
-      "compiled/execution",
-      "compiled/recovery",
-      "compiled/search",
+      "python/selection",
       "compiled/selection",
-      "python/calibration",
-      "python/execution",
-      "python/observed_costs",
       "python/recovery",
+      "compiled/recovery",
       "python/search",
-      "python/selection"
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution",
+      "python/observed_costs"
     ],
     "docs/Selected-Behavior.md": [
-      "compiled/calibration",
-      "compiled/execution",
-      "compiled/recovery",
-      "compiled/search",
+      "python/selection",
       "compiled/selection",
-      "python/calibration",
-      "python/execution",
       "python/recovery",
+      "compiled/recovery",
       "python/search",
-      "python/selection"
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
     ],
     "docs/Public-API.md": [
-      "compiled/selection",
-      "python/selection"
+      "python/selection",
+      "compiled/selection"
     ],
     "docs/Search-Reference.md": [
-      "compiled/recovery",
+      "python/search",
       "compiled/search",
       "python/recovery",
-      "python/search"
+      "compiled/recovery"
     ],
     "docs/Historical-Data-Reference.md": [
-      "compiled/search",
-      "compiled/selection",
       "python/bars",
+      "compiled/selection",
+      "compiled/search",
       "python/search"
     ],
     "docs/Feature-Design.md": [

@@ -1,7 +1,7 @@
 schema_version: '1.0'
 metadata:
   name: lstm_binary_experiment
-  limen_version: 5.46.2
+  limen_version: 6.0.0
   mode: development
   description: CPU LSTM predicting the next positive return from completed windows
 sfd:
