@@ -91,14 +91,14 @@ The [reducer reference](Developer/Pruning-Strategies.md#constructor-reference) l
 
 ## When to use which reducer
 
-The five reducers answer different questions. Pick by the problem you have, not by wanting "more feedback".
+The five reducers address distinct resource and search decisions. Their intervention policy determines which remaining candidates execute.
 
-| Reducer | Reach for it when | What it does | Reversible |
+| Reducer | Decision addressed | Intervention | Reversible |
 |---|---|---|---|
 | `BudgetReducer` | the sweep must finish inside a walltime or permutation cap | trims the remaining queue once, when the budget is projected to overrun | no — a trim is permanent |
-| `SanityReducer` | you want to stop wasting rounds on broken parameter values | hard-removes values whose metric is mostly null; flags zero-metric, timeout, and warning-heavy values as suggestions | removals no; suggestions are advisory |
-| `CorrelationReducer` | you want to prune values that move the metric the wrong way or barely at all | removes wrong-direction values, suggests keeps for low-impact ones | removals no; suggestions advisory |
-| `FocusReducer` | a breakthrough score has appeared and you want to exploit near the winner | narrows each parameter around the best round and injects nearby variations | yes — named filters, snaps back after a timeout |
+| `SanityReducer` | parameter values produce unusable observations | removes values whose metric is mostly null; flags zero-metric, timeout, and warning-heavy values as suggestions | removals no; suggestions are advisory |
+| `CorrelationReducer` | metric relationships guide the remaining domain | removes wrong-direction values and suggests retention of low-impact values | removals no; suggestions advisory |
+| `FocusReducer` | an observed improvement supplies a temporary search center | narrows parameters around the best round and injects nearby variations | yes — named filters restore after a timeout |
 | `SaturationReducer` | a value's metric has stopped varying and no longer earns full budget | down-samples saturated values, keeping a monitoring sample | yes — restores a value if it starts varying again |
 
 `SanityReducer` identifies unusable observations; its removals still change the search population. `BudgetReducer` is a resource cap. The other three change *what* the search explores, so they carry more risk of steering the run — introduce them one at a time and read `audit.jsonl` to see their effect.
@@ -108,6 +108,20 @@ Reducers combine, but with no conflict resolution. Within a feedback trigger the
 ## Tune against a declared metric
 
 Choose the metric and its direction before interpreting an intervention. Missingness, time budgets, variance and a breakthrough score answer different questions. The [constructor reference](Developer/Pruning-Strategies.md#constructor-reference) owns the complete defaults, domains and refusal rules for each reducer. The project cases set their thresholds explicitly and retain the actual actions.
+
+## Forest analysis supplies a separate suggestion mechanism
+
+`CorrelationReducer(analyzer="random_forest")` uses held-out surrogate parameter importance. Its input can contain numeric, Boolean, and categorical scalar parameters. The analysis requires at least 20 distinct successful configurations and the declared minimum observation count.
+
+The held-out surrogate must reach `min_model_score` before its parameter suggestions become available. Repeated shuffles estimate how much each parameter contributes to prediction of the recorded metric. Low-importance parameters receive advisory keep suggestions under the configured screening rule. This mode does not infer a monotonic direction from a nonlinear relationship.
+
+The forest is an analyzer choice within `CorrelationReducer`. The five reducer types remain Budget, Sanity, Correlation, Focus, and Saturation. [Research evidence](Research-Evidence.md) develops the separate parameter-importance result and its interpretation; the [constructor contract](Developer/Pruning-Strategies.md#constructor-reference) defines analyzer arguments.
+
+## Feedback preserves the order of applied changes
+
+A feedback cycle evaluates reducers, then the Python callback, then the intervention file. The audit records the source and operation for each applied change. Reducer observations describe the pre-trigger queue, while the eventual queue reflects the ordered interventions.
+
+A priority injection can deliberately repeat a candidate or bypass ordinary filters. Parameter identity identifies the configuration; occurrence identity identifies each admitted execution. The audit and completed log therefore answer different questions about the campaign. Search changes affect future work without rewriting completed observations.
 
 ## Audit trail
 

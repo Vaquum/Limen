@@ -1,0 +1,67 @@
+# region declaration
+schema_version: '1.0'
+metadata:
+  name: recorded_adaptive_bars
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/recorded-trade-points.parquet
+        expected_sha256: '873faec863bbcc6656f902b17daf4d29a043b4f9d38b2872670920a3dac4bec5'
+    split_walk_forward:
+      n_folds: 2
+      test_bars: 225
+      purge_bars: 1
+      embargo_bars: 1
+      anchored: true
+    bar_formation:
+      func: limen.data.utils.compute_data_bars
+      params:
+        bar_type: '{bar_type}'
+        expected_num_ticks: '{expected_num_ticks}'
+        ema_span: '{ema_span}'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: 2
+    target:
+      name: next_return
+      class: limen.targets.NextReturnTarget
+    reference_architecture: limen.sfd.reference_architecture.dlinear_regressor
+    backtest:
+      fee_bps: 4.0
+      slip_bps: 0.0
+      notional_rate: 0.5
+      product:
+        kind: linear_perpetual
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1.0e-9
+        min_notional: 0.0
+  params:
+    bar_type: [imbalance, run]
+    expected_num_ticks: [5]
+    ema_span: [10]
+uel:
+  output_path: compiled-bars-adaptive
+  n_permutations: 2
+  prep_each_round: true
+  search_strategy:
+    type: grid
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+# endregion declaration

@@ -56,6 +56,7 @@ limen run --no-progress-bar \
 # endregion execution
 # region bars
 limen run --no-progress-bar compiled-research/bars.yaml
+limen run --no-progress-bar compiled-research/bars_adaptive.yaml
 # endregion bars
 # region allocation
 limen run --no-progress-bar \

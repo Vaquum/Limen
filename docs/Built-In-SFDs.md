@@ -244,13 +244,6 @@ The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template 
 - Choose `tabpfn_binary` only when that dependency is installed and the TabPFN workflow is required.
 - Choose `dollar_bar_crash_reversal` for the bundled exhaustive dollar-bar rule sweep and its fixed-cost evidence contract.
 
-## Read next
-
-- Continue to [Single-File Decoder](Single-File-Decoder.md) for the general SFD contract.
-- Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run loop.
-- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
-- Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.
-
 ## `gaussian_hmm_binary`
 
 The native manifest supplies hourly returns with 12/24-bar lookbacks and a
@@ -308,3 +301,10 @@ return windows with recorded row timestamps. The dated YAML template exposes
 eight combinations of lookback, upstream regularization and weight floor.
 See [Reference Architecture](Reference-Architecture.md#weightlinkedbinary)
 for causal fit boundaries, actual row-weight fitting and provenance.
+
+## Read next
+
+- Continue to [Single-File Decoder](Single-File-Decoder.md) for the general SFD contract.
+- Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run loop.
+- Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model layer underneath these built-in decoders.
+- Continue to [Experiment Manifest](Experiment-Manifest.md) to adapt one of these into a custom SFD.

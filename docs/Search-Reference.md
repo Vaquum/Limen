@@ -96,7 +96,8 @@ def recovery(data_dir, output):
     full.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
     if not project.completed_log(resumed).drop('execution_time').equals(project.completed_log(full).drop('execution_time')):
         raise ValueError('Resumed Python results differ from uninterrupted research')
-    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
+    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True,
+            'captured': captured_state(bars, output / 'captured')}
 ```
 
 <!-- example: search-compiled-recovery source=docs/examples/compiled-research/run.sh region=recovery scenario=recovery interface=compiled role=executed -->
@@ -161,3 +162,33 @@ Implement a strategy only when the built-ins do not meet the experiment's search
 - react to domain changes if its internal state depends on the current domain
 
 Use the shipped [GridStrategy implementation](https://github.com/Vaquum/Limen/blob/main/limen/experiment/param_search/grid_strategy.py) as the exhaustive-search reference. It checks the inherited seen set before yielding candidates, rebuilds its cursor after domain changes, and saves/restores its enumeration state. Custom strategies must preserve this deduplication behavior across feedback and resume; resetting a cursor alone can repeat completed combinations.
+
+## Seeded finite traversal
+
+The Python search function constructs its shuffled grid with `shuffle=True, seed=42`. The Compiled declarations record every traversal choice: the random and Sobol definitions use seed 7, while the factorized grid declares `factorize: true`, `shuffle: true` and seed 13. These choices are executed directly from the displayed files.
+
+Fresh seeded shuffled grids use version 2: eight balanced Feistel rounds with SHAKE-256, cycle-walked into the finite index domain. Candidate generation never materializes the Cartesian product or a permutation list. Cycle-walk cost varies. Sorted parameter keys and declared level order define the mixed-radix mapping. The seed changes the permutation; the round budget does not, so increasing it extends the same prefix. Exhaustion stops normally.
+
+Each parameter's choices must have distinct execution identities. YAML, `ParamDomain`, legacy `ParamSpace` and restored domain states reject collisions before accepting the domain. Identity uses the existing sorted JSON encoding with `default=str` and SHA-256; mapping key order, tuple/list pairs or an object and its identical string representation can collide. Values such as `1`, `1.0` and `True` retain distinct identities. Inputs are never silently deduplicated, and existing hashes and seeded traversal remain unchanged. A checkpoint with colliding choices requires a corrected declaration and a new run. Exact-choice removal, retention, membership and injection use that same identity. Numeric reducer decisions are rebound to the unique original domain choice when log concatenation widens integers to floats; ambiguous numeric groups fail explicitly. Reducer checkpoint pairs retain their existing format and distinguish exact identities. Numeric range operations retain their comparison semantics. Injecting an existing domain identity returns `False` without notification; priority `MSQ.inject` retains its explicit queue semantics.
+
+This is joint candidate traversal, rather than shuffling levels before nested enumeration. Tests measure marginal and pair-projection prefix coverage over pinned unequal domains/seeds against affine and nested-enumeration controls. They establish those cases, not a universal prefix-coverage guarantee or uniform random sampling. A search seed does not seed models.
+
+Version and ordered-domain identity are saved in strategy state; existing metadata independently pins version 2. Factorized resume rejects seed/version/ordered-domain changes before rewriting artifacts and restarts reuse caches empty. Versionless old integer-seeded shuffled checkpoints retain their affine version-1 order on the ordinary path. Seedless native shuffle remains legacy version 1, without a reproducible resume guarantee, and is not admitted by factorization. Existing unshuffled behavior is unchanged.
+
+Factorized traversal retains its [snapshot admission and cache limits](Universal-Experiment-Loop.md#factorized-snapshot-grids). Live pruning, callbacks and interventions remain excluded; use a new immutable manifest for a follow-up search.
+
+## Seeded Sobol sampling
+
+Install the existing statistics extra with `pip install 'vaquum-limen[stats]'` for SciPy `>=1.15,<2`.
+
+Each traversal comparison uses four candidate combinations. The Python variants use seed `42`; Compiled random and Sobol use `7`, and its factorized grid uses `13`; the assertions compare completed candidate identities and retain the resulting scores. The Compiled scenario also runs its separate model-family diagnostics.
+
+Python Research uses `SobolStrategy(domain, seed=42)`, imported from `limen.experiment.param_search`. The seed is a required literal, non-boolean, nonnegative integer. Scrambling is always enabled; `scramble`, `shuffle` and other unsupported Sobol fields are rejected. This selects a candidate generator for the existing MSQ path, without changing model execution or its randomness. `factorize=True` still requires GridStrategy and rejects Sobol.
+
+The sampler uses [SciPy's Sobol engine](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.qmc.Sobol.html) with LMS+shift scrambling and 30 bits. Sorted parameter keys define coordinates; declared value-list order defines equal-width bins. Coordinate `u` selects `values[floor(u * len(values))]`, preserving the declared value and its existing parameter hash. No Cartesian product is materialized. Domain value changes update these bins while retaining the raw sequence position and accepted hashes. Existing MSQ budgets, filters, feedback and explicit repeat injections keep their semantics.
+
+Different points can select the same discrete combination. Accepted combinations are deduplicated; failure to find a novel combination within 1,000 proposals raises an error, without switching samplers. The engine also raises when its `2**30` points are exhausted. Use grid search when exhaustive traversal is required. Discrete projection, arbitrary prefixes, filters and deduplication remove Sobol balance guarantees; no convergence gain, speedup or universal finite-domain coverage is promised.
+
+Checkpoint state pins the seed, stream format, raw point position, generated count, ordered current domain and SciPy version. Resume reconstructs the engine and fast-forwards to that position, using the existing domain and accepted-hash restoration. Changed or unsupported state fails before persisted artifacts are rewritten; keep the same SciPy version when resuming. The existing [recording requirements](Search-Reference.md#resume-flow) still apply.
+
+The project proof uses the pinned hourly observations. [Sobol protocol tests](../tests/test_sobol_search.py) retain additional state, mutation and refusal cases; the [scenario assertions](examples/tests/scenario_oracles.py) check the project runs.

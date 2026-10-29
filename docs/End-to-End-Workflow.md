@@ -44,6 +44,14 @@ The selection declaration applies chronological splits before preparation, fits 
 
 Its `project.sh` validates, profiles, compiles, commits and executes the recorded production declaration in `project.yaml` through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
 
+## Project lineage preserves successive definitions
+
+The Compiled lifecycle stores canonical YAML by content hash, records parent lineage, and creates explicit working forks. A stored definition and its Git commit are separate recorded outcomes. `limen ls`, `limen lineage`, and `limen reindex` inspect or rebuild the manifest index from those definitions.
+
+The complete `project.sh` case commits a parent definition, derives and commits a child, executes a content-addressed manifest, backs up the Git project, and restores it from the local backup remote. Its assertions check definition identity, lineage, result completion, and restored source. The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) gives the exact executable command sequence.
+
+Git backup follows ignore rules. Runtime artifacts and private protected-history evidence therefore need their own declared preservation plan. A restored repository supplies the committed definitions; continuing a guarded project also requires its matching marker, history, and evidence.
+
 ## Follow the retained state
 
 The Python `holdout` variant contains a complete caller-owned handoff in one process. It reads the pinned quarter-hour file, calls `run_research` on the first 1,440 observations, retains the evaluated fits, selects one per window and builds their Cohort. That returned Cohort predicts the following 480 observations with preceding feature context. Its first 479 decisions receive a following realized bar; the final decision has no next bar in the declared population. The assessment Parquet retains those decisions, positions and net returns. This variant performs its own selection; it does not restore weights from an earlier command's CSV.
@@ -64,6 +72,14 @@ The small selection, comprehensive preparation and later variants therefore shar
 | Measure execution | Direct event inputs, policy, source clocks, costs and recorded funding | Declared event policy, ledgers, source bindings and funded comparison | [Backtest](Backtest.md) |
 | Form alternate bars | Call the shared bar helper over recorded observations | Form bars separately after each chronological split | [Data bars](Data-Bars.md) |
 | Reuse fitted behavior | Wrap the evaluated models and compose compatible native Sensors | Reconstruct recorded rounds or qualified folds, then bind compatible members | [Sensors](Trainer.md), [Cohorts](Cohort.md) |
+
+## The complete chain preserves the research decision
+
+The reading sequence develops [features](Feature-Design.md), [targets](Target-Design.md), [models](Model-Selection.md), and [rules](Rule-Research.md) before execution. [Controlled perturbations](Robustness-Research.md) identify the alternatives. Search and feedback determine which alternatives execute, while retained artifacts identify what completed.
+
+[Trading behavior](Trading-Behavior.md) supplies execution meaning. [Linked models](Linked-Models.md) extends the learning mechanism under explicit chronology. [Research evidence](Research-Evidence.md) connects measured outcomes, parameter effects, and selection reports. Selected Sensors and Cohorts then carry the admitted fitted behavior into inference.
+
+Each change to population, target, representation, model, or economics remains identifiable as a research choice. The [workflow table](Experiment-Manifest.md#supported-research-workflows) states the recovery, worker, inference, and final-assessment requirements that apply to that choice.
 
 ## Review outputs
 

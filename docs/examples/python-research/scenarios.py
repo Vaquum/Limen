@@ -35,6 +35,9 @@ from inference_cases import compose_selected
 from source_cases import read_source_formats
 from metric_cases import evaluate_three_classes
 from rule_cases import evaluate_rules
+from linked_cases import residual_research
+from snapshot_cases import captured_state
+from bar_cases import adaptive_trade_bars
 from limen.backtest.observed_costs import CostCalibration
 
 INPUTS = {
@@ -167,7 +170,7 @@ def search(data_dir, output):
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
     return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
-            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars)}
+            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars), 'linked': residual_research(bars, output / 'linked')}
 # endregion search
 
 
@@ -250,7 +253,8 @@ def recovery(data_dir, output):
     full.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
     if not project.completed_log(resumed).drop('execution_time').equals(project.completed_log(full).drop('execution_time')):
         raise ValueError('Resumed Python results differ from uninterrupted research')
-    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
+    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True,
+            'captured': captured_state(bars, output / 'captured')}
 # endregion recovery
 
 
@@ -385,7 +389,8 @@ def bars(data_dir, output):
         formed = compute_data_bars(raw, bar_type=kind, **{parameter: threshold})
         formed.write_parquet(output / (kind + '.parquet'))
         results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1], 'first_start': formed['datetime'][0].isoformat(), 'last_start': formed['datetime'][-1].isoformat(), 'last_available': (raw['datetime'][int(formed['bar_count'].sum()) - 1] + timedelta(hours=1)).isoformat()})
-    return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output)}
+    return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output),
+            'adaptive': adaptive_trade_bars(data_dir, output / 'adaptive')}
 # endregion bars
 
 

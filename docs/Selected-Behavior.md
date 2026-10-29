@@ -31,6 +31,33 @@ limen assess compiled-research/research.yaml --results results/dev/compiled-rese
 
 <!-- result: selected-compiled-result interface=compiled scenario=search fields=rounds,selected_members -->
 
+## Output meaning determines compatible composition
+
+A Sensor carries a fitted prediction mechanism, preparation, output meaning, and relevant cutoffs. Fitting cutoff identifies observations that fitted state. Selection cutoff also includes observations used to choose that state. Actual availability then describes when each later decision can be acted upon.
+
+| Composition path | Admitted inputs | Aggregation and identity |
+|---|---|---|
+| Python mean | Compatible continuous, signed, or binary outputs | Mean preserves units and signed magnitude under a common output meaning. |
+| Python vote | Exact binary decisions | Majority vote resolves ties to zero and carries no calibrated probability. |
+| Python custom | Explicitly mapped compatible outputs | The supplied mapper and aggregate define meaning and retain strict decision alignment. |
+| Native homogeneous ordinary Cohort | Compatible Sensors from one architecture with retained artifact identity | Architecture hints select probability weighting or majority vote; ordinary regressor predictions vote up above zero. |
+| Native mixed or fold-containing Cohort | Admitted Sensors declaring compatible native binary outputs | Probability weighting requires every member's probability declaration; other admitted sets vote on binary decisions. |
+| Native explicit membership | Admitted rounds across experiments or qualified folds | Original experiment, round, and fold identities remain bound to each member. |
+
+Timestamp cardinality and alignment are part of compatibility. Python composition preserves unavailable-member blocking and the latest known member availability. Native composition follows its separately documented failure and probability policy. [Cohort](Cohort.md) owns those exact behaviors.
+
+## Reliability weighting consumes observed correctness evidence
+
+The Bayesian Python Cohort uses a Beta correctness prior and supplied observed binary outcomes to fix each member's historical reliability weight. Evidence names the member, prediction timestamp, later outcome availability, prediction, observed outcome, and source. Generated labels do not supply observed correctness evidence.
+
+The evidence availability extends the Cohort's selection cutoff. Weights remain fixed until a new explicit construction admits additional evidence. Correlated errors and changing regimes affect interpretation of historical correctness. The aggregate is a weighted vote and reports no calibrated probability. [Bayesian composition](Cohort.md#bayesian-reliability-voting) defines the evidence schema and posterior calculation.
+
+## Reconstruction checks the evidence actually present
+
+Trainer reconstructs native YAML rounds from their original definition and recorded parameters. With `results.csv`, it compares matching eligible numeric replay metrics under the architecture's tolerances. Metrics outside that intersection remain outside the comparison. Without the CSV, the component API skips metric validation and creates Sensors from the admitted reconstruction artifacts.
+
+The complete CLI selection workflow retains the CSV and invokes the metric comparison. Qualified fold promotion additionally needs its original witnesses. Reconstruction, live caller-owned state, and protected final assessment therefore retain distinct evidence requirements. The [workflow table](Experiment-Manifest.md#supported-research-workflows) connects those requirements to each mode.
+
 ## Calibration consumes evidence
 
 Probability calibration and threshold selection use the declared validation population. Comparing their four on/off modes explains what state was learned and retained; it does not create four untouched assessments:

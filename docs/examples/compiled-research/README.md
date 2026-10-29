@@ -285,3 +285,5 @@ The [documentation contract](../../Developer/Documentation-System.md) requires e
 The project lifecycle uses the static production declaration in `project.yaml`. Its four candidates share the selection pipeline; production mode permits content-addressed commits and lineage. The shell script copies that declaration unchanged.
 
 `limen fork` leaves an editable development declaration. The lifecycle commits the separately reviewed `project_child.yaml` unchanged, with the original identity supplied through `--parent`; its content and lineage are explicit.
+
+The [adaptive bar cases](../../Data-Bars.md#recorded-trade-points-exercise-adaptive-formation) use a pinned unique-clock view of the recorded trade archive. They retain their actual formed populations and the native fold-promotion limitation.

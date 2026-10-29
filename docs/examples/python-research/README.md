@@ -1,6 +1,6 @@
 # Python Research project
 
-Your functions own preparation, fitting, backtesting and selection. The selected Sensors reuse the evaluated fitted objects.
+Python functions define preparation, fitting, backtesting, and selection. The selected Sensors reuse the evaluated fitted objects.
 
 The [research chapter](../../Research-Book.md) develops the project. The [documentation contract](../../Developer/Documentation-System.md) defines the source, execution and publication proof maintained with the book.
 
@@ -27,7 +27,7 @@ Enter `limen-research/` and activate its environment with `. .venv/bin/activate`
 
 ## Prerequisites
 
-Use the project and input bundle identified by the example evidence, Python 3.10–3.13, and its matching Limen wheel. Selection needs the data extra. The full project needs `vaquum-limen[data,stats]`; Sobol uses statistics.
+The project uses Python 3.10–3.13 and the matching wheel and input bundle identified by its execution evidence. Selection needs the `data` extra. The full project needs `vaquum-limen[data,stats,boosting]`; Sobol uses statistics, and residual correction uses XGBoost.
 
 ## Run the selection scenario
 
@@ -41,6 +41,8 @@ python python-research/research.py --scenario selection --data-dir inputs --outp
 From a repository checkout, work in `docs/examples/`, use `--data-dir ../../tests/fixtures` and put generated output under `../../.docs-evidence/`. The command checks the recorded file digest before research. It writes `research.csv` and `summary.json`. The evaluated models and Sensors remain in caller-owned memory during the run; those two files do not restore fitted state. Import `run_research` to continue using the returned Cohort and retained models in the same Python process.
 
 ## Continue through the research decisions
+
+The [linked-learning case](../../Linked-Models.md) fits caller-owned Ridge and XGBoost residual stages, selects correction depth on validation, and retains each component's output. The recovery scenario also executes the [captured-state case](../../Run-And-Recover.md), preserving explicitly retained fitted pipelines in a trusted `.uel` snapshot and checking their restored forecasts.
 
 Search also executes all eight [common strategy baselines](../../Common-Strategies.md) on the recorded 2024 hourly source. Each comparison names its own assessment window. The Python case owns next-open-to-close one-bar trades with a declared 2 bp round-trip cost; the Compiled case uses the native lagged held-position snapshot with 10 bp fee and 5 bp slippage per fill. Independent assertions check causal signals and each policy's arithmetic; these are different trading interpretations, not a cross-engine return ranking.
 
@@ -56,19 +58,21 @@ The observed-cost scenario creates one immutable calibration from the recorded C
 
 | Scenario | Decision and output |
 |---|---|
-| `search` | Compare traversal, preparation, eight common rules, budget reduction and mixed feedback under their declared populations. |
-| `recovery` | Interrupt after two rounds, retain a checkpoint, resume without repeating a completed round. |
+| `search` | Compare traversal, preparation, eight common rules, residual learning, parameter analysis, budget reduction, and mixed feedback under their declared populations. |
+| `recovery` | Compare interrupted/resumed execution with a complete run; separately capture and restore explicitly retained fitted pipelines. |
 | `walk_forward` | Keep each test window after its fitting/validation observations, with purge and embargo. |
 | `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |
 | `calibration` | Compare all four calibration/threshold modes and disclose validation reuse. |
 | `execution` | Execute recorded observations under explicit costs, product rules and causal clocks. |
 | `observed_costs` | Pin recorded execution-cost evidence; compare frozen caller candidates without transferring account fees. |
-| `bars` | Form volume, trade and liquidity bars; omit an incomplete final bar. |
+| `bars` | Form fixed activity bars and adaptive trade-point bars, retaining complete constituents and omitted trailing observations. |
 
-Python recovery restores search/results, not arbitrary model weights. Continue inference with the evaluated objects returned in memory, or own the persistence and identity contract yourself.
+Checkpoint recovery preserves search and results. The separate captured-state case restores explicitly retained fitted pipelines from a trusted snapshot. In-process inference uses the evaluated objects returned by the selection functions.
 
 Walk-forward selection and final assessment remain caller-owned. They do not create guarded project reservations, compiled fold identities or an exposure-history guarantee. Calibration shows an arbitrary fitted classifier through `Sensor.from_python`; its output mapping owns the meaning of the binary decision.
 
 The search variant also fits a caller-owned three-class nearest-neighbor model. Training-only next-return quantiles define its labels; a later partition supplies macro precision, recall, AUC and accuracy. The [metric reference](../../Standard-Metrics-Library.md#recorded-three-class-evaluation) shows the exact function and current results.
 
 The [optional model-template campaign](../compiled-research/README.md#optional-model-campaign) records a real TabPFN CPU run separately. Python Research keeps the choice and fitting of an ordinary Python model caller-owned.
+
+The [adaptive bar cases](../../Data-Bars.md#recorded-trade-points-exercise-adaptive-formation) use a pinned unique-clock view of the recorded trade archive. They retain their actual formed populations and the native fold-promotion limitation.

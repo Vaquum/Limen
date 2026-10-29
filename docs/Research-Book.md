@@ -2,7 +2,7 @@
 
 Limen is a research engine for Bitcoin trading. The engine evaluates model and strategy parameters, records results, and carries selected models into inference. Python Research defines the methodology through ordinary Python functions. Compiled Research declares experiments in YAML and executes them through the configured Limen pipeline.
 
-Research proceeds from **observations → experiment → search → selection → Sensor or Cohort**. A Sensor combines a fitted model, its input preparation, and timing information for inference. A Cohort combines compatible Sensors. The Python and Compiled projects provide executable examples for each stage.
+Research proceeds from **observations → experiment → search → selection → Sensor or Cohort**. A Sensor combines a fitted model, its input preparation, and timing information for inference. A Cohort combines compatible Sensors. The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) provide executable examples for each stage.
 
 <a id="choose-who-owns-the-experiment" data-reader-heading="plain"></a>
 

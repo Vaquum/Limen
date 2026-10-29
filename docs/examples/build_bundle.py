@@ -8,6 +8,7 @@ import tarfile
 
 
 INPUTS = {
+    'recorded-trade-points.parquet': '873faec863bbcc6656f902b17daf4d29a043b4f9d38b2872670920a3dac4bec5',
     'recorded-hourly.csv': 'c763aa3bfd07c6e67754c14786f636e12085ba201fe2e91bf5d860133fbd7c7f',
     'recorded-hourly.zip': '4bd430b7e839128cf688ee824ea02cfffcf637351493563d745050b189adb24c',
     'recorded-hourly.arrow': 'b30dc10270712f5b12525d2991c4f401f65a9ce81890189f209eb681b4c350f5',

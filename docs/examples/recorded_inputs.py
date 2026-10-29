@@ -1,5 +1,6 @@
 import hashlib
 import json
+from zipfile import ZipFile
 
 import polars as pl
 
@@ -53,6 +54,23 @@ def trade_profile(data_dir, output):
     rows = [{**row, 'datetime': row['datetime'].isoformat()} for row in profile.to_dicts()]
     return {'trade_rows': trades.height, 'bars': rows, 'input_sha256': HASHES[TRADES], 'population': '90 recorded seconds for flow diagnostics; no compiled training population is asserted'}
 # endregion trade_profile
+
+
+# region trade_points
+def trade_points(data_dir):
+    with ZipFile(checked_path(data_dir, TRADES)) as archive, archive.open(archive.namelist()[0]) as stream:
+        recorded = pl.read_csv(stream, has_header=False)
+    points = recorded.select(
+        pl.from_epoch('column_5', time_unit='us').dt.replace_time_zone('UTC').alias('datetime'),
+        *[pl.col('column_2').alias(name) for name in ('open', 'high', 'low', 'close', 'mean')],
+        pl.col('column_3').alias('volume'), pl.lit(1).alias('no_of_trades'),
+        pl.col('column_4').alias('liquidity_sum'), pl.col('column_6').cast(pl.Float64).alias('maker_ratio'),
+        (pl.col('column_3') * pl.col('column_6')).alias('maker_volume'),
+        (pl.col('column_4') * pl.col('column_6')).alias('maker_liquidity'),
+    ).unique(subset='datetime', keep='first', maintain_order=True)
+    return points.with_columns([pl.col('datetime').dt.epoch('ns').alias(name)
+        for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns')])
+# endregion trade_points
 
 
 # region target_label_inputs
