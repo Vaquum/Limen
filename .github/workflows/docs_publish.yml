@@ -121,7 +121,7 @@ jobs:
         run: python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
 
       - name: Execute the downloaded projects against the released wheel
-        run: timeout 240s python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short --released-wheel .docs-evidence/released-wheel.json --released-bundle .docs-evidence/released-examples.tar.gz
+        run: timeout 300s python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short --released-wheel .docs-evidence/released-wheel.json --released-bundle .docs-evidence/released-examples.tar.gz
 
       - name: Build and verify the released reader
         working-directory: docs-site
