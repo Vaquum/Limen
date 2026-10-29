@@ -2,6 +2,7 @@ import argparse
 from functools import lru_cache
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -20,10 +21,24 @@ def base_revision(root):
     return git(root, 'rev-parse', changes[0] + '^1') if changes else main
 
 
+@lru_cache(maxsize=32)
+def _first_parent_changes(root, revision):
+    raw = subprocess.check_output(['git', 'log', '--first-parent', '--diff-merges=first-parent',
+                                   '--format=%H', '--raw', '-z', '--no-renames', revision, '--'], cwd=root)
+    entries = iter(os.fsdecode(raw).split('\0'))
+    changes, commit = {}, ''
+    for entry in entries:
+        if entry.startswith(('\n:', ':')):
+            changes.setdefault(next(entries), commit)
+        elif entry:
+            commit = entry.lstrip('\n')
+    return changes
+
+
 @lru_cache(maxsize=4096)
 def history_change(root, revision, path, first_parent):
-    options = ['--first-parent', '--diff-merges=first-parent'] if first_parent else []
-    commit = git(root, 'log', *options, '--no-patch', '-1', '--format=%H', revision, '--', path)
+    commit = (_first_parent_changes(root, revision).get(path) if first_parent else
+              git(root, 'log', '--no-patch', '-1', '--format=%H', revision, '--', path))
     if not commit:
         raise ValueError('No source change: ' + path)
     return commit

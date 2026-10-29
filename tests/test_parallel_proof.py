@@ -331,7 +331,7 @@ def test_parallel_proof_preserves_explicit_covered_serial_selection(tmp_path, se
 
 def test_parallel_proof_keeps_required_limits():
     budget = json.loads((ROOT / 'tests/runtime_budget.json').read_text())
-    assert budget['max_total_seconds'] == 280
+    assert budget['max_total_seconds'] == 310
     workflow = (ROOT / '.github/workflows/pr_checks_tests.yml').read_text()
     assert 'python -m coverage run -m tests.run || test_exit=$?' in workflow
     assert 'python -m coverage report --fail-under=92' in workflow

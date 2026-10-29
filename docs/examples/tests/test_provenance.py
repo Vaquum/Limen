@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from provenance import acquire, base_revision, git, identity, latest_change, main, merged_pull, pull_associations, tree_objects, validate_provenance
+from provenance import acquire, base_revision, git, history_change, identity, latest_change, main, merged_pull, pull_associations, tree_objects, validate_provenance
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -130,6 +130,36 @@ def test_source_association_requires_its_exact_merged_main_pr():
             merged_pull(commit, changed)
     with pytest.raises(ValueError, match='unique merged PR'):
         merged_pull(commit, responses + responses)
+
+
+def test_first_parent_inventory_matches_individual_history_with_one_scan(recorded_history, monkeypatch):
+    root, run, _, _ = recorded_history
+    names = ['project with spaces.md', 'project\nwith\ttabs.md', 'project\rwithCR.md', 'a' * 40]
+    for name in names:
+        (root / name).write_text((root / 'page.md').read_text())
+    run('add', '.');run('commit', '-qm', 'docs: retain named sources')
+    run('checkout', '-q', 'main');run('merge', '--no-ff', 'chapter', '-qm', 'merge: integrate named sources')
+    merged = git(root, 'rev-parse', 'HEAD')
+    run('mv', names[0], 'renamed.md');run('commit', '-qm', 'docs: rename retained source')
+    names += ['page.md', 'renamed.md']
+    revision = git(root, 'rev-parse', 'HEAD')
+    expected = {name: git(root, 'log', '--first-parent', '--diff-merges=first-parent',
+                          '--no-patch', '-1', '--format=%H', revision, '--', name) for name in names}
+    original, calls = subprocess.check_output, []
+
+    def observe(command, **kwargs):
+        if command[:2] == ['git', 'log']:
+            calls.append(command)
+        return original(command, **kwargs)
+
+    monkeypatch.setattr('provenance.subprocess.check_output', observe)
+    assert {name: history_change(root, revision, name, True) for name in names} == expected
+    assert expected['page.md'] == merged
+    assert expected['renamed.md'] == expected[names[0]] == revision
+    assert len(calls) == 1 and '--no-renames' in calls[0] and '-z' in calls[0]
+    with pytest.raises(ValueError, match='No source change'):
+        history_change(root, revision, 'missing-source.md', True)
+    assert len(calls) == 1
 
 
 def test_incomplete_github_response_retries_and_retains_exact_association(monkeypatch, capsys):
