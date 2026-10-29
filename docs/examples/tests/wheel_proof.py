@@ -54,6 +54,8 @@ def unpack(bundle: Path, target: Path, root: Path):
         required |= {'inputs/' + name for name in INPUTS}
         required |= {'requirements/research-env.txt', 'requirements/research-macos.txt', 'requirements/build.txt', 'inputs.json', 'recorded_inputs.py', 'commands.json', 'python-research/scenarios.py', 'compiled-research/final/holdout.yaml', 'compiled-research/final/run.sh'}
         required |= {'retained/selection.json', 'retained/python-selection.json', 'retained/compiled-selection.json'}
+        required |= {'compiled-research/licenses/TabPFN-code-6.4.1-LICENSE.txt',
+                     'compiled-research/licenses/TabPFN-v2-model-LICENSE.txt'}
         if not required <= names:
             raise ValueError('Candidate archive is incomplete')
         if len(names) != len(archive.getmembers()) or any(not member.isfile() for member in archive.getmembers()):
@@ -80,7 +82,7 @@ def unpack(bundle: Path, target: Path, root: Path):
             raise ValueError('Candidate recorded input differs')
     for interface in ('python', 'compiled'):
         for source in (root / f'docs/examples/{interface}-research').rglob('*'):
-            if source.is_file() and source.suffix in ('.py', '.yaml', '.md', '.sh', '.toml'):
+            if source.is_file() and source.suffix in ('.py', '.yaml', '.md', '.sh', '.toml', '.txt'):
                 relative = source.relative_to(root / 'docs/examples')
                 if not (target / relative).is_file() or (target / relative).read_bytes() != source.read_bytes():
                     raise ValueError('Candidate project source differs: ' + str(relative))

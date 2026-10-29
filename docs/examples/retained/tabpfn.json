@@ -1,7 +1,7 @@
 {
-  "observed_at": "2026-10-28T19:37:40.339278+00:00",
-  "execution_checkout_head": "4c9dfd8e1a1084dca13c369edc6943afcfe7e779",
-  "package_version": "5.46.2",
+  "observed_at": "2026-10-29T11:24:49.935764+00:00",
+  "execution_checkout_head": "20ff17d2bd7860e701dd74d90feba934c501178e",
+  "package_version": "6.0.0",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
     "__main__.py": "c42a7f594f2d8539d47cb9986d6fe6be5253e30f35c137309231f984e3f26739",

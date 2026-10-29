@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Limen depends on Python and JavaScript open source packages declared in:
+Limen's Python and JavaScript dependencies are declared in:
 
 - `pyproject.toml`
 - `docs-site/package.json`
@@ -9,6 +9,22 @@ Limen depends on Python and JavaScript open source packages declared in:
 - `docs-site/publisher/package-lock.json`
 
 Dependency license review is required before release when dependencies are added, removed, or materially upgraded.
+
+## Version 6.0.0 dependency review
+
+The release review on 29 October 2026 covers the dependency changes since 5.46.2 and the separately executed TabPFN environment. Third-party dependency code and checkpoint weights remain external to the Limen wheel. Upstream distributions retain their own bundled-library notices.
+
+| Reviewed dependency | Release use | Reviewed license surface |
+|---|---|---|
+| `cloudpickle` 3.1.2 | Runtime captured-object serialization | BSD-3-Clause |
+| `hmmlearn` 0.3.3 | Optional HMM backend | BSD-3-Clause, with the upstream copyright notice |
+| `torch` 2.13.0 and 2.14.1 | Locked neural proof and separate TabPFN proof | Apache-2.0, Apache-2.0 WITH LLVM-exception, BSD-2-Clause, BSD-3-Clause, BSL-1.0, and MIT notices in the reviewed wheels |
+| `tabpfn` 6.4.1 | Optional classifier and its recorded CPU example | Prior Labs License 1.2, derived from Apache-2.0 with an additional attribution provision |
+| Pinned TabPFN-v2 checkpoint at `f851f2a3c941544733b712d8c0f96dfae9b28862` | Separately downloaded optional model | Prior Labs License 1.1 with its additional attribution provision |
+
+Built with PriorLabs-TabPFN: the optional TabPFN example uses [Prior Labs TabPFN](https://github.com/PriorLabs/TabPFN). The unmodified [package license](docs/examples/compiled-research/licenses/TabPFN-code-6.4.1-LICENSE.txt) and [pinned checkpoint license](docs/examples/compiled-research/licenses/TabPFN-v2-model-LICENSE.txt) are retained with that project and in the distribution's license data. Their additional attribution and distributed-model naming terms remain applicable to downstream use. TabPFN is a separate optional license surface, rather than Apache-2.0-only dependency metadata.
+
+Pandas moves from runtime requirements to test/development requirements. The existing boosting, data, statistics, indicator-comparison, reader, typography, and publisher dependencies retain their separately declared distributions and notices. This review records the named package versions and checkpoint revision; later dependency changes require their own review.
 
 ## Current Known Notes
 

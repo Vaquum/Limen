@@ -142,9 +142,7 @@ def verify_bars(project):
                 assert len(predictions(directory, record)) == formed.height - 1
                 assert datetime.fromisoformat(record['alignment']['first_test_datetime']) == formed['datetime'][0]
                 assert datetime.fromisoformat(record['alignment']['last_test_datetime']) == formed['datetime'][-2]
-    from bar_oracles import verify_adaptive_cli
-    return {'modes': log['bar_type'].to_list(), 'populations': populations,
-            'adaptive': verify_adaptive_cli(project)}
+    return {'modes': log['bar_type'].to_list(), 'populations': populations}
 
 
 def verify_allocation(project, name):
@@ -308,7 +306,8 @@ def verify_project(project):
         {'method': method, 'reconstructed_members': json.loads((base / directory / 'assessment.json').read_text())['members']}
         for method, directory in [('sigmoid', 'compiled-calibration-assessment'), ('isotonic', 'compiled-calibration-isotonic')]]
     summaries['execution'] = {name: verify_execution(project, name) for name in ('execution', 'funded')}
-    summaries['bars'] = verify_bars(project)
+    from bar_oracles import verify_adaptive_cli
+    summaries['bars'] = verify_bars(project) | {'adaptive': verify_adaptive_cli(project)}
     allocation = {name: verify_allocation(project, name) for name in ('allocation', 'allocation_ml', 'allocation_funded')}
     summaries['allocation'] = allocation
     original, restored = project / 'results/compiled-project', project / 'results/compiled-restored'

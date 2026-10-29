@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Limen experiment manifest",
   "description": "Portable structure only. Native Limen admission owns executable references, parameter identity, data evidence and scientific compatibility.",
-  "x-limen-package-version": "5.46.2",
+  "x-limen-package-version": "6.0.0",
   "x-limen-contract-inventory-sha256": "69db9a044c8f07e4dfaeb7789bc36574e8950d4f065102aadda3e27967a0c018",
   "type": "object",
   "properties": {

@@ -197,6 +197,8 @@ It requires `scipy` (the `stats` extra), loaded lazily inside the model.
 
 ## `tabpfn_binary`
 
+Built with PriorLabs-TabPFN. The [optional model project](examples/compiled-research/README.md#optional-model-campaign) retains the package and checkpoint licenses with their additional attribution provisions.
+
 `tabpfn_binary` is an optional packaged SFD. Its lazy module and exported symbols can be imported without TabPFN, but model construction and training require the `tabpfn` extra. That dependency is intentionally outside the base install because it is materially larger than the default sklearn path.
 
 It uses `CalibrationBuilder` with the same probability calibration and threshold optimization wiring as `logreg_binary`, so its results also include `optimal_threshold` and `val_score` when calibration is active.

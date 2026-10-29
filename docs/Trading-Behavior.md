@@ -113,7 +113,7 @@ def observed_costs(data_dir, output):
             'historical_delivery': 'unknown; retrospective stress only'}
 ```
 
-<!-- result: trading-python-cost-support interface=python scenario=observed_costs fields=calibration.support,historical_delivery -->
+<!-- result: trading-python-cost-support interface=python scenario=observed_costs fields=calibration.support.disposition,calibration.support.selected_legs,calibration.support.admitted_legs,calibration.support.low_effective_support_sides,historical_delivery -->
 
 Support, side concentration, source clocks, and historical delivery limits remain part of the comparison. The retained sample supports a retrospective stress comparison under its stated assumptions. [Observed-cost contracts](Backtest.md#recorded-execution-price-costs) define admission, immutable calibration, comparison artifacts, and unchanged candidate identity.
 

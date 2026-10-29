@@ -477,6 +477,8 @@ The strategy walks the boolean logic tree defined in `strategy['conditions']`, r
 
 ## TabPFN controls
 
+Built with PriorLabs-TabPFN. The [optional model project](examples/compiled-research/README.md#optional-model-campaign) retains the package and checkpoint licenses with their additional attribution provisions.
+
 `tabpfn_binary` exposes the nondeprecated constructor controls of
 [TabPFN 6.4.1](https://github.com/PriorLabs/TabPFN/blob/v6.4.1/src/tabpfn/classifier.py).
 The existing `n_ensemble_configurations` name maps to upstream `n_estimators`;

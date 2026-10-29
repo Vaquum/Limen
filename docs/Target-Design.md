@@ -142,10 +142,10 @@ uel:
 
 The Python target campaign constructs each target on training observations, transforms the three chronological partitions, and retains labeled Parquet files. Its state checks require transformation to preserve fitted target state, apart from the declared random baseline. The volatility-normalized targets also enforce their training-volatility sanity gate.
 
-<!-- result: target-design-python-outcomes interface=python scenario=search fields=target_diagnostics -->
+<!-- result: target-design-python-outcomes interface=python scenario=search fields=target_diagnostics.TripleBarrierTarget.status,target_diagnostics.TripleBarrierTarget.partitions[].rows,target_diagnostics.TripleBarrierTarget.partitions[].null_rows,target_diagnostics.VolNormalizedReturnTarget.status,target_diagnostics.ExitQualityTarget.supplied_context.rows -->
 
 The Compiled project executes the corresponding YAML target campaigns. Its result records both completed predictions and explicit training-gate refusals:
 
-<!-- result: target-design-compiled-outcomes interface=compiled scenario=search fields=target_diagnostics -->
+<!-- result: target-design-compiled-outcomes interface=compiled scenario=search fields=target_diagnostics.TripleBarrierTarget.status,target_diagnostics.TripleBarrierTarget.rows,target_diagnostics.VolNormalizedReturnTarget.status -->
 
 A refused target leaves no successful model result for that case. The report preserves that distinction alongside the admitted populations. Continue to [model choice](Model-Selection.md) with the target meaning, label availability, and assessment population fixed.
