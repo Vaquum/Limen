@@ -69,7 +69,7 @@ all = [
   "xgboost>=2.1,<4",
 ]
 test = ["pandas>=2.3,<3", "markdown-it-py>=4.2,<5", "coverage[toml]>=7,<8", "hypothesis>=6,<7", "jsonschema>=4.18,<5", "pytest>=8,<10", "pytest-xdist>=3.8,<4"]
-release = ["anthropic>=0.54,<1"]
+release = ["anthropic>=0.54,<3"]
 dev = [
   "markdown-it-py>=4.2,<5",
   "build>=1,<2",
