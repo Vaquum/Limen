@@ -82,3 +82,55 @@ test('long callable reference remains searchable and renders within the reading 
   expect(timing.dom_ready_ms).toBeLessThan(5000);
   await fs.writeFile(path.join(evidence,test.info().project.name+'-long-reference.json'),JSON.stringify(timing,null,2));
 });
+
+test('search fades in and out and restores focus, with an immediate reduced-motion path', async ({page}) => {
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.goto('/limen/');
+  const opener = page.getByRole('button', {name: 'Search', exact: true});
+  await expect(opener).toBeVisible();
+  const dialog = page.locator('[data-search-dialog]');
+  await opener.evaluate(button => {
+    const panel = document.querySelector('[data-search-dialog]');
+    window.searchMotion = {};
+    panel.addEventListener('transitionrun', event => {
+      if (event.target === panel && event.propertyName === 'opacity') {
+        window.searchMotion[panel.hasAttribute('data-closing') ? 'exit' : 'enter'] = true;
+      }
+    });
+    button.focus();
+    button.click();
+  });
+  await expect.poll(() => page.evaluate(() => window.searchMotion.enter)).toBe(true);
+  await expect(dialog.getByRole('searchbox')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect.poll(() => page.evaluate(() => window.searchMotion.exit)).toBe(true);
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await opener.evaluate(button => button.click());
+  expect(await dialog.evaluate(panel => panel.getAnimations().length)).toBe(0);
+  await dialog.getByRole('button', {name: 'Close', exact: true}).evaluate(button => button.click());
+  await expect(dialog).toBeHidden();
+  await expect(opener).toBeFocused();
+});
+
+test('chapter navigation crossfades only when motion is enabled', async ({page}) => {
+  await page.emulateMedia({reducedMotion: 'no-preference'});
+  await page.addInitScript(() => {
+    addEventListener('pagereveal', event => {
+      window.chapterTransition = Boolean(event.viewTransition);
+    });
+  });
+  await page.goto('/limen/');
+  test.skip(!await page.evaluate(() => 'onpagereveal' in window), 'Requires native document transitions');
+  const parts = page.getByRole('navigation', {name: 'Parts'});
+  await parts.getByRole('link', {name: 'Developer', exact: true}).click();
+  await expect(page).toHaveURL(/developer\/home\/$/);
+  await expect.poll(() => page.evaluate(() => window.chapterTransition)).toBe(true);
+
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await parts.getByRole('link', {name: 'Book', exact: true}).click();
+  await expect(page).toHaveURL(/\/limen\/$/);
+  await expect.poll(() => page.evaluate(() => window.chapterTransition)).toBe(false);
+});

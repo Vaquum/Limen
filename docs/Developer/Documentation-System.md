@@ -269,9 +269,9 @@ The fixed navy/paper composition replaces the old light/dark/system theme-switch
 
 ### Motion and reading
 
-Motion must explain continuity between the selected object, its detail and the reader's return. Keep values and identities stable through the transition. Use subtle parallax only where it makes that relationship clearer. Long-form prose and code remain stable while being read.
+Motion connects a selection with its detail and the reader's return. Prose and code stay steady while being read.
 
-The reference uses one damped spring with stiffness 180 and damping 20; retargeting preserves position and velocity. Its selected entry/return timings are 2400/1600 ms and local transitions use 220 ms. Apply these values to the corresponding interaction, not indiscriminately to every control. Wheel, touch and navigation input interrupt camera travel. Scrolling alone must not open an unrelated continuation.
+Search and reference panels enter in 200 ms and leave in 140 ms. The backdrop fades with the panel. Search shifts 8 px vertically and references shift 20 px from the right edge. Back and Forward can reverse a dismissal. Browsers that support document transitions crossfade chapters in 140 ms and keep the header in place.
 
 Reduced motion reaches the same content, selection and focus directly. Keyboard controls expose the same information as pointer controls. The reference's visible focus is `2px` with a `3px` offset. Static prose, source and navigation remain readable without JavaScript.
 

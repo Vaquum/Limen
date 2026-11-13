@@ -1,4 +1,4 @@
-import {spring} from './motion.mjs';
+import {openDialog,closeDialog} from './motion.mjs';
 import {position,restore,announce} from './place.mjs';
 import {initCode} from './code.mjs';
 export function initNavigation(){
@@ -6,9 +6,11 @@ export function initNavigation(){
   const body=dialog.querySelector('[data-reference-body]');
   const close=dialog.querySelector('[data-reference-close]');
   let opener=null,origin=null,referenceDocument=null,token=0;
+  function focusChapterAnchor(){
+    document.getElementById(decodeURIComponent(location.hash.slice(1)))?.focus({preventScroll:true});
+  }
   const documentURL=value=>{const url=new URL(value,location.href);return url.origin+url.pathname+url.search;};
   function revealAnchor(){const anchor=decodeURIComponent(location.hash.slice(1));if(anchor){const target=body.querySelector(`#reference-${CSS.escape(anchor)}`);target?.scrollIntoView({block:'start'});target?.focus({preventScroll:true});}else dialog.scrollTop=0;}
-  const camera=spring(x=>{dialog.style.transform=`translateX(${x}px)`;dialog.querySelector('.return-rule').style.opacity=String(1-x/Math.max(innerWidth,1)*.5);},innerWidth);
   async function show(link,{updateHistory=true,originOverride=null,referenceURL=link.href}={}){
     const attempt=++token,nested=dialog.open;
     if(!nested)opener=link;
@@ -25,8 +27,9 @@ export function initNavigation(){
       for(const node of fragment.querySelectorAll('[href^="#"]')){const id=node.getAttribute('href').slice(1);if(names.has(id)){node.setAttribute('href',new URL('#'+id,referenceURL).href);node.dataset.referenceFragment=id;}}
       const title=document.createElement('h1');title.textContent=parsed.querySelector('h1')?.textContent||'Reference';
       const intro=parsed.querySelector('.hero-lead')?.cloneNode(true);if(intro)intro.className='reference-intro';body.replaceChildren(title,...(intro?[intro]:[]),...fragment.childNodes);
-      initCode(body);dialog.scrollTop=0;if(!dialog.open)dialog.showModal();referenceDocument=documentURL(referenceURL);
-      if(updateHistory)history.pushState({readerReference:true,readerOrigin:origin,readerDepth:nested?(history.state?.readerDepth||0)+1:1},'',referenceURL);camera.to(0);close.focus({preventScroll:true});revealAnchor();
+      initCode(body);dialog.scrollTop=0;openDialog(dialog);referenceDocument=documentURL(referenceURL);
+      if(updateHistory)history.pushState({readerReference:true,readerOrigin:origin,readerDepth:nested?(history.state?.readerDepth||0)+1:1},'',referenceURL);
+      close.focus({preventScroll:true});revealAnchor();
     }catch(error){
       if(attempt!==token)return;
       if(updateHistory&&history.state?.readerEntry===attemptOrigin.entry&&!history.state?.readerReference)
@@ -37,11 +40,11 @@ export function initNavigation(){
     }
   }
   function hide(){++token;if(!dialog.open)return;
-    camera.to(innerWidth,()=>{dialog.close();if(origin){
+    closeDialog(dialog,()=>{if(origin){
       if(origin.entry&&history.state?.readerEntry===origin.entry){
         if(origin.width===innerWidth)scrollTo({top:origin.scroll,behavior:'instant'});else restore(origin.place);
         history.replaceState({...history.state,readerPlace:null},'',location.href);opener?.focus({preventScroll:true});
-      }else document.getElementById(decodeURIComponent(location.hash.slice(1)))?.focus({preventScroll:true});
+      }else focusChapterAnchor();
     }});
   }
   document.addEventListener('click',event=>{
@@ -60,12 +63,12 @@ export function initNavigation(){
   dialog.addEventListener('cancel',event=>{event.preventDefault();returnToChapter();});
   addEventListener('popstate',event=>{
     if(event.state?.readerReference){
-      if(dialog.open&&referenceDocument===documentURL(location.href)){camera.to(0);revealAnchor();return;}
+      if(dialog.open&&referenceDocument===documentURL(location.href)){++token;openDialog(dialog);revealAnchor();return;}
       const link=document.getElementById(event.state.readerOrigin.focus);
       if(link)show(link,{updateHistory:false,originOverride:event.state.readerOrigin,referenceURL:location.href});
       else location.reload();
     }
-    else hide();
+    else if(dialog.open)hide();
+    else{++token;if(origin)focusChapterAnchor();}
   });
-  for(const name of ['wheel','touchstart','pointerdown'])dialog.addEventListener(name,()=>camera.finish(),{passive:true});
 }

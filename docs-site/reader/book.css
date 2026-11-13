@@ -11,3 +11,57 @@
 .result{margin:32px 0;padding:24px;background:var(--stock);border-top:2px solid var(--gold-ink);min-width:0}.result figcaption{font:12px "IBM Plex Mono",monospace;color:var(--muted);margin-bottom:20px}.result dl{margin:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px 24px}.result dt{font-size:14px}.result dd{margin:0;min-width:0}.result pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 "IBM Plex Mono",monospace}.result .status{margin:24px 0 0}@media(max-width:639px){.result{margin-inline:0;padding:16px}.result dl{grid-template-columns:minmax(0,1fr)}.result dd{margin-bottom:12px}}
 
 .interface-nav button{transition:color 220ms ease,border-color 220ms ease}
+
+:root {
+  --reader-enter: 200ms;
+  --reader-exit: 140ms;
+  --reader-ease-out: cubic-bezier(.2, .7, .2, 1);
+  --reader-ease-in: cubic-bezier(.4, 0, 1, 1);
+}
+
+:is(.reference-dialog, .search-dialog)[data-closing] { pointer-events: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-header { view-transition-name: reader-header; }
+  ::view-transition-group(*) { animation-duration: var(--reader-exit); }
+
+  .reference-dialog { --reader-panel-offset: 20px 0; }
+  .search-dialog { --reader-panel-offset: 0 -8px; }
+
+  :is(.reference-dialog, .search-dialog) {
+    opacity: 0;
+    translate: var(--reader-panel-offset);
+    transition: opacity var(--reader-exit) var(--reader-ease-in),
+                translate var(--reader-exit) var(--reader-ease-in);
+  }
+
+  :is(.reference-dialog, .search-dialog)::backdrop {
+    opacity: 0;
+    transition: opacity var(--reader-exit) var(--reader-ease-in);
+  }
+
+  :is(.reference-dialog, .search-dialog)[open]:not([data-closing]) {
+    opacity: 1;
+    translate: none;
+    transition-duration: var(--reader-enter);
+    transition-timing-function: var(--reader-ease-out);
+  }
+
+  :is(.reference-dialog, .search-dialog)[open]:not([data-closing])::backdrop {
+    opacity: 1;
+    transition-duration: var(--reader-enter);
+    transition-timing-function: var(--reader-ease-out);
+  }
+
+  @starting-style {
+    :is(.reference-dialog, .search-dialog)[open]:not([data-closing]) {
+      opacity: 0;
+      translate: var(--reader-panel-offset);
+    }
+
+    :is(.reference-dialog, .search-dialog)[open]:not([data-closing])::backdrop { opacity: 0; }
+  }
+
+  .mobile-nav[open] > nav { animation: reader-contents-enter var(--reader-enter) var(--reader-ease-out); }
+  @keyframes reader-contents-enter { from { opacity: .55; } }
+}
