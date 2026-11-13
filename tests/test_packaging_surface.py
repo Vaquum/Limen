@@ -224,7 +224,8 @@ def test_supply_chain_surfaces() -> None:
         else:
             assert checkouts == persisted, workflow.name
 
-    assert (ROOT / '.github' / 'dependabot.yml').is_file()
+    assert not (ROOT / '.github' / 'dependabot.yml').exists()
+    assert not (ROOT / '.github' / 'dependabot.yaml').exists()
     assert (ROOT / '.github' / 'vuln_exceptions.json').is_file()
     assert (ROOT / 'governance' / 'check_dependency_vulnerabilities.py').is_file()
 
