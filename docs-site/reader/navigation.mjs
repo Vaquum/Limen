@@ -6,6 +6,9 @@ export function initNavigation(){
   const body=dialog.querySelector('[data-reference-body]');
   const close=dialog.querySelector('[data-reference-close]');
   let opener=null,origin=null,referenceDocument=null,token=0;
+  function focusChapterAnchor(){
+    document.getElementById(decodeURIComponent(location.hash.slice(1)))?.focus({preventScroll:true});
+  }
   const documentURL=value=>{const url=new URL(value,location.href);return url.origin+url.pathname+url.search;};
   function revealAnchor(){const anchor=decodeURIComponent(location.hash.slice(1));if(anchor){const target=body.querySelector(`#reference-${CSS.escape(anchor)}`);target?.scrollIntoView({block:'start'});target?.focus({preventScroll:true});}else dialog.scrollTop=0;}
   async function show(link,{updateHistory=true,originOverride=null,referenceURL=link.href}={}){
@@ -41,7 +44,7 @@ export function initNavigation(){
       if(origin.entry&&history.state?.readerEntry===origin.entry){
         if(origin.width===innerWidth)scrollTo({top:origin.scroll,behavior:'instant'});else restore(origin.place);
         history.replaceState({...history.state,readerPlace:null},'',location.href);opener?.focus({preventScroll:true});
-      }else document.getElementById(decodeURIComponent(location.hash.slice(1)))?.focus({preventScroll:true});
+      }else focusChapterAnchor();
     }});
   }
   document.addEventListener('click',event=>{
@@ -65,6 +68,7 @@ export function initNavigation(){
       if(link)show(link,{updateHistory:false,originOverride:event.state.readerOrigin,referenceURL:location.href});
       else location.reload();
     }
-    else hide();
+    else if(dialog.open)hide();
+    else{++token;if(origin)focusChapterAnchor();}
   });
 }

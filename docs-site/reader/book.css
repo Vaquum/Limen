@@ -22,7 +22,6 @@
 :is(.reference-dialog, .search-dialog)[data-closing] { pointer-events: none; }
 
 @media (prefers-reduced-motion: no-preference) {
-  @view-transition { navigation: auto; }
   .site-header { view-transition-name: reader-header; }
   ::view-transition-group(*) { animation-duration: var(--reader-exit); }
 
@@ -63,19 +62,6 @@
     :is(.reference-dialog, .search-dialog)[open]:not([data-closing])::backdrop { opacity: 0; }
   }
 
-  @supports (interpolate-size: allow-keywords) {
-    .mobile-nav::details-content {
-      block-size: 0;
-      interpolate-size: allow-keywords;
-      overflow: clip;
-      transition: block-size var(--reader-exit) var(--reader-ease-in),
-                  content-visibility var(--reader-exit) allow-discrete;
-    }
-
-    .mobile-nav[open]::details-content {
-      block-size: auto;
-      transition-duration: var(--reader-enter);
-      transition-timing-function: var(--reader-ease-out);
-    }
-  }
+  .mobile-nav[open] > nav { animation: reader-contents-enter var(--reader-enter) var(--reader-ease-out); }
+  @keyframes reader-contents-enter { from { opacity: .55; } }
 }
