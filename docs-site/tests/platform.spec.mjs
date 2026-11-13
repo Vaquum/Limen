@@ -89,17 +89,15 @@ test('search fades in and out and restores focus, with an immediate reduced-moti
   const opener = page.getByRole('button', {name: 'Search', exact: true});
   await expect(opener).toBeVisible();
   const dialog = page.locator('[data-search-dialog]');
-  await opener.evaluate(button => {
-    const panel = document.querySelector('[data-search-dialog]');
+  await dialog.evaluate(panel => {
     window.searchMotion = {};
     panel.addEventListener('transitionrun', event => {
       if (event.target === panel && event.propertyName === 'opacity') {
         window.searchMotion[panel.hasAttribute('data-closing') ? 'exit' : 'enter'] = true;
       }
     });
-    button.focus();
-    button.click();
   });
+  await opener.click();
   await expect.poll(() => page.evaluate(() => window.searchMotion.enter)).toBe(true);
   await expect(dialog.getByRole('searchbox')).toBeFocused();
   await page.keyboard.press('Escape');

@@ -3,14 +3,14 @@ import {openDialog,closeDialog} from './motion.mjs';
 export function initSearch(){
   const button=document.querySelector('[data-search-open]');const dialog=document.querySelector('[data-search-dialog]');
   const input=dialog.querySelector('input');const results=dialog.querySelector('ol');let index=null,opener=null;
-  async function open(){if(dialog.open){openDialog(dialog);if(!input.disabled)input.focus();return;}
-    opener=document.activeElement;input.disabled=!index;openDialog(dialog);
+  async function open(trigger){if(dialog.open){openDialog(dialog);if(!input.disabled)input.focus();return;}
+    opener=trigger;input.disabled=!index;openDialog(dialog);
     if(index){input.focus();return;}
     dialog.querySelector('[data-search-count]').textContent='Loading search…';
     try{const response=await fetch(document.body.dataset.search);if(!response.ok)throw Error(`Search index returned ${response.status}`);index=await response.json();input.disabled=false;if(dialog.open&&!dialog.hasAttribute('data-closing'))input.focus();dialog.querySelector('[data-search-count]').textContent='Type at least two letters.';}
     catch(error){dialog.querySelector('[data-search-count]').textContent='Search is unavailable. Use the chapter and reference links.';announce('Search is unavailable.');console.error(error);}
   }
-  button.hidden=false;button.addEventListener('click',open);
+  button.hidden=false;button.addEventListener('click',()=>open(button));
   dialog.querySelector('[data-search-close]').addEventListener('click',()=>closeDialog(dialog));dialog.addEventListener('close',()=>{if(!dialog.open)opener?.focus({preventScroll:true});});
   results.addEventListener('click',event=>{if(event.target.closest('a[href]')&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey)dialog.close();});
   function dismiss(event){event.preventDefault();closeDialog(dialog);}
@@ -22,5 +22,5 @@ export function initSearch(){
     for(const page of matches.slice(0,20)){const li=document.createElement('li'),a=document.createElement('a'),p=document.createElement('p'),context=document.createElement('small');a.href=page.route;a.textContent=page.title+(page.heading?' / '+page.heading:'');context.textContent=page.part;p.textContent=page.text.slice(Math.max(0,page.at-48),Math.max(0,page.at-48)+180);li.append(context,a,p);results.append(li);}
     dialog.querySelector('[data-search-count]').textContent=matches.length>20?`Showing 20 of ${matches.length} passages`:`${matches.length} results`;
   });
-  document.addEventListener('keydown',event=>{const editing=event.target.closest('input,textarea,select,[contenteditable]');if(!editing&&((event.key.toLowerCase()==='k'&&(event.metaKey||event.ctrlKey))||event.key==='/')){event.preventDefault();open();}});
+  document.addEventListener('keydown',event=>{const editing=event.target.closest('input,textarea,select,[contenteditable]');if(!editing&&((event.key.toLowerCase()==='k'&&(event.metaKey||event.ctrlKey))||event.key==='/')){event.preventDefault();open(document.activeElement);}});
 }
