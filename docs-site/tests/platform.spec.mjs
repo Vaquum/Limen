@@ -100,6 +100,7 @@ test('search fades in and out and restores focus, with an immediate reduced-moti
   await opener.click();
   await expect.poll(() => page.evaluate(() => window.searchMotion.enter)).toBe(true);
   await expect(dialog.getByRole('searchbox')).toBeFocused();
+  await dialog.evaluate(panel => Promise.all(panel.getAnimations().map(animation => animation.finished)));
   await page.keyboard.press('Escape');
   await expect.poll(() => page.evaluate(() => window.searchMotion.exit)).toBe(true);
   await expect(dialog).toBeHidden();
