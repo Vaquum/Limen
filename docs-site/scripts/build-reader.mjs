@@ -30,13 +30,15 @@ const catalogue=JSON.parse(await fs.readFile(path.join(root,'docs/examples/catal
 for(const scenario of evidence.validation.scenarios){const identity=scenario.interface+'/'+scenario.id;const bytes=await fs.readFile(path.join(root,scenario.output_path));if(hash(bytes)!==scenario.output_sha256)throw Error('Changed scenario result: '+identity);results[identity]={value:JSON.parse(bytes),source:catalogue.scenario_details[identity].source};}
 await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'assets/fonts'),{recursive:true});
 const documentMotion = '<style>@view-transition{navigation:auto}@media(prefers-reduced-motion:reduce){@view-transition{navigation:none}}</style>';
+function publicPage(page){
+  return renderPage(page,pages,evidence,{results}).replace('</head>',documentMotion+'</head>');
+}
 for(const page of pages){
   const target=path.join(output,page.route,'index.html');
   await fs.mkdir(path.dirname(target),{recursive:true});
-  const html=renderPage(page,pages,evidence,{results});
-  await fs.writeFile(target,html.replace('</head>',documentMotion+'</head>'));
+  await fs.writeFile(target,publicPage(page));
 }
-await fs.writeFile(path.join(output,'404.html'),renderPage({source:null,route:'/404/',url:content.product.basePath+'/404/',part:'Book',title:'Page unavailable',markdown:'# Page unavailable\n\nThis address does not identify a page in the current book. [Return to the book]('+content.product.basePath+'/).\n'},pages,evidence));
+await fs.writeFile(path.join(output,'404.html'),publicPage({source:null,route:'/404/',url:content.product.basePath+'/404/',part:'Book',title:'Page unavailable',markdown:'# Page unavailable\n\nThis address does not identify a page in the current book. [Return to the book]('+content.product.basePath+'/).\n'}));
 for(const name of ['headings','main','motion','code','place','navigation','search','interfaces'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
 await fs.copyFile(path.join(site,'reader/book.css'),path.join(output,'assets/book.css'));
 await fs.copyFile(path.join(site,'src/security-headers.json'),path.join(output,'security-headers.json'));
