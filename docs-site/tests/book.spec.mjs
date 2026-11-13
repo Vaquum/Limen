@@ -171,11 +171,20 @@ test('Forward interrupts a reference return without closing the reopened panel',
   await page.route('**/reference/trainer/**',async route=>{requested();await allowed;await route.continue();});
   await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
   await received;release();const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
-  await dialog.dispatchEvent('pointerdown');const reference=page.url();
-  await page.evaluate(()=>history.back());await expect(page).toHaveURL(chapter);
-  await page.evaluate(()=>history.forward());await expect(page).toHaveURL(reference);
-  // Native pointer input settles the current motion without waiting for its animation.
-  await dialog.dispatchEvent('pointerdown');await expect(dialog).toBeVisible();await expect(page).toHaveURL(reference);
+  const reference=page.url();
+  const closing=await page.evaluate(()=>new Promise(resolve=>{
+    addEventListener('popstate',()=>{
+      const panel=document.querySelector('[data-reference-dialog]');
+      const closing=panel.hasAttribute('data-closing');
+      history.forward();
+      resolve(closing);
+    },{once:true});
+    history.back();
+  }));
+  expect(closing).toBe(true);
+  await expect(page).toHaveURL(reference);
+  await expect(dialog).not.toHaveAttribute('data-closing','');
+  await expect(dialog).toBeVisible();await expect(page).toHaveURL(reference);
   await page.keyboard.press('Escape');await expect(page).toHaveURL(chapter);await expect(dialog).not.toBeVisible();
 });
 
@@ -185,10 +194,9 @@ test('further Back navigation keeps the chapter passage chosen in history',async
   await page.goto('/limen/#adopt-the-compiled-pipeline');const origin=page.url();
   await page.getByRole('link',{name:'Trainer',exact:true}).click();
   const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
-  await dialog.dispatchEvent('pointerdown');
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(origin);
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(earlier);
-  await dialog.dispatchEvent('pointerdown');await expect(dialog).not.toBeVisible();
+  await expect(dialog).not.toBeVisible();
   await expect(page.locator('#choose-who-owns-the-experiment')).toBeInViewport();
   await expect(page.locator('#choose-who-owns-the-experiment')).toBeFocused();
 });
@@ -243,7 +251,7 @@ test('chapter navigation fits the viewport and offers usable targets',async({pag
 test('reduced motion and interruption retain readable content',async({page})=>{
   await page.emulateMedia({reducedMotion:'reduce'});await open(page);const link=page.getByRole('link',{name:'Python Sensor construction',exact:true});
   await link.click();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
-  expect(await page.locator('[data-reference-dialog]').evaluate(el=>getComputedStyle(el).transform)).toBe('matrix(1, 0, 0, 1, 0, 0)');
+  expect(await page.locator('[data-reference-dialog]').evaluate(el=>el.getAnimations().length)).toBe(0);
   await page.keyboard.press('Escape');await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();
   await page.emulateMedia({reducedMotion:'no-preference'});await link.click();await page.mouse.wheel(0,100);
   await expect(page.locator('[data-reference-dialog]')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();
