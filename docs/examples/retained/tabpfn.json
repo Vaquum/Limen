@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-29T14:14:07.364473+00:00",
-  "execution_checkout_head": "708e7b97be2b237d20520cba5f824c33df4fb58d",
+  "observed_at": "2026-11-23T10:07:49.063875+00:00",
+  "execution_checkout_head": "a2b67e1515511edf602d16f2dca2489b089078d1",
   "package_version": "6.0.1",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -177,7 +177,8 @@
     "experiment/reducer/registry.py": "56590ddcb2151c9adfeee200201a7678763226d4aea8a03e4185d9cd15949c28",
     "experiment/reducer/sanity_reducer.py": "fe7074387f6f846e881882f0774379fb200add481c607345afe862116f3ecbd8",
     "experiment/reducer/saturation_reducer.py": "a75527b2145cdf58f79d619f433c9910eb5800653f51c8dac65f63c1e2bde677",
-    "features/__init__.py": "04331cdb4ac34155ed48009cf3f4e1326a6bc0659ee346e8cf4914f2edab4a2b",
+    "features/__init__.py": "7d42f5a96b5d8f25e7907987aaa1c0fff1b5e97c825c6e6464ac7819aa4bf153",
+    "features/_filang_engine.py": "54273b1e5f352ff9e809e5ca5415d7dbe9122a893f5eee5298bc8f8127cf7aa2",
     "features/_regime_audit.py": "672fa7b9bf4a93e905d9d42dfe04856e136201781f09061ffc25d37fc2e7305c",
     "features/_regime_config.py": "0ac786369e9a97aa2b4ccbbe0f40d6ae53e7456df7390e1326474334807fae0e",
     "features/_regime_contract.py": "94bb114dfc889b8b06d50bb12d8013734beda97241ea0918d12d465e8d5a76d6",
@@ -215,6 +216,7 @@
     "features/ema_alignment.py": "ab2d7983bfa3368a016e4ecb7f99abac16e90622dc8dd69612b545a29fd030ec",
     "features/entry_score_microstructure.py": "45eecc752ac5b7e1e9b3fbc90521ad5f7f7f84ae31f8b1f9f799bbf986e6840d",
     "features/feature_aliases.py": "13a98e15f38291a1cd34177dec12e7305433d25afdeed9c7a664649ca8a083a8",
+    "features/filang_pattern.py": "727488236d93c4d33c35ca6b6960c46930c387f175cb5072eb3454e54af29808",
     "features/fractional_diff.py": "1c9eda8d44c57c14066540952fa90f524dda03b6a7f40bb4958d61bca9b9f10e",
     "features/gap_high.py": "54de367ba9084f24df822a84e53c19fe2e9bd4edd3bd48277de4d02f4353be75",
     "features/garman_klass_volatility.py": "23aec9f9e8c58459b8b6b6536371642e75a680645b681e26225cae40d3d7f9c3",

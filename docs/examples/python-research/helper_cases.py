@@ -21,6 +21,7 @@ PARAMETERS = {
     'lag_range': {'col': 'close', 'start': 1, 'end': 3},
     'lag_range_cols': {'cols': ['close', 'volume'], 'start': 1, 'end': 3},
     'rolling_zscore': {'column': 'close', 'window': 12},
+    'filang_pattern': {'definition': 'hammer()', 'interval_seconds': 3600},
     'find_min_d': {'col': 'close'},
     'fractional_diff': {'d': .4, 'cols': ['close'], 'threshold': .05},
 }

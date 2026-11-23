@@ -395,6 +395,7 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.features.ema_alignment`](Features.md#limenfeaturesema_alignment) | `signature` | `limen/features/ema_alignment.py` |
 | [`limen.features.entry_score_microstructure`](Features.md#limenfeaturesentry_score_microstructure) | `signature` | `limen/features/entry_score_microstructure.py` |
 | [`limen.features.feature_aliases`](Features.md#limenfeaturesfeature_aliases) | `signature` | `limen/features/feature_aliases.py` |
+| [`limen.features.filang_pattern`](Features.md#limenfeaturesfilang_pattern) | `signature` | `limen/features/filang_pattern.py` |
 | [`limen.features.find_min_d`](Fractional-Differentiation.md#finding-the-minimum-d) | `signature` | `limen/features/fractional_diff.py` |
 | [`limen.features.fractional_diff`](Fractional-Differentiation.md#adding-it-as-a-feature) | `signature` | `limen/features/fractional_diff.py` |
 | [`limen.features.gap_high`](Features.md#limenfeaturesgap_high) | `signature` | `limen/features/gap_high.py` |

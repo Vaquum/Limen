@@ -1085,6 +1085,7 @@
           "ema_alignment",
           "entry_score_microstructure",
           "feature_aliases",
+          "filang_pattern",
           "find_min_d",
           "fractional_diff",
           "gap_high",

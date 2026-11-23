@@ -19,7 +19,7 @@ REQUIRED = {
     'min_height_pct': .01, 'lookback_hours': 24, 'base_stop_loss': .01,
     'stop_volatility_multiplier': 1., 'base_min_breakout': .01,
     'target_volatility_multiplier': 1., 'momentum_threshold_bps': -100.,
-    'flow_z_threshold': 2., 'hold_minutes': 1,
+    'flow_z_threshold': 2., 'hold_minutes': 1, 'definition': 'hammer()',
 }
 
 
