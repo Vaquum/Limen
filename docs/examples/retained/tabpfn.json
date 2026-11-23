@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-11-23T10:00:01.355121+00:00",
-  "execution_checkout_head": "3660c3230db0259825830a440310f1f35fc46683",
+  "observed_at": "2026-11-23T10:07:49.063875+00:00",
+  "execution_checkout_head": "a2b67e1515511edf602d16f2dca2489b089078d1",
   "package_version": "6.0.1",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -178,7 +178,7 @@
     "experiment/reducer/sanity_reducer.py": "fe7074387f6f846e881882f0774379fb200add481c607345afe862116f3ecbd8",
     "experiment/reducer/saturation_reducer.py": "a75527b2145cdf58f79d619f433c9910eb5800653f51c8dac65f63c1e2bde677",
     "features/__init__.py": "7d42f5a96b5d8f25e7907987aaa1c0fff1b5e97c825c6e6464ac7819aa4bf153",
-    "features/_filang_engine.py": "b73e9b947af922f3819e8b1fe89944e4fe86c5eea71a8c35d89c90f87ef46b69",
+    "features/_filang_engine.py": "54273b1e5f352ff9e809e5ca5415d7dbe9122a893f5eee5298bc8f8127cf7aa2",
     "features/_regime_audit.py": "672fa7b9bf4a93e905d9d42dfe04856e136201781f09061ffc25d37fc2e7305c",
     "features/_regime_config.py": "0ac786369e9a97aa2b4ccbbe0f40d6ae53e7456df7390e1326474334807fae0e",
     "features/_regime_contract.py": "94bb114dfc889b8b06d50bb12d8013734beda97241ea0918d12d465e8d5a76d6",
