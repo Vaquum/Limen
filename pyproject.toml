@@ -57,10 +57,11 @@ stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.15"]
 tabpfn = ["tabpfn>=6,<7"]
 neural = ["torch>=2.6,<3"]
 hmm = ["hmmlearn>=0.3.3,<0.4"]
-filang = ["filang-engine>=0.10,<0.11"]
+filang = ["filang>=0.10,<0.11"]
 all = [
   "torch>=2.6,<3",
   "hmmlearn>=0.3.3,<0.4",
+  "filang>=0.10,<0.11",
   "lightgbm>=4.6,<5",
   "pyarrow>=23.0.1,<24",
   "scipy>=1.15,<2",

@@ -316,7 +316,7 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 
 ## Candle patterns from Filang
 
-`filang_pattern` brings a candle pattern written in Filang into a dataset. The pattern is answered by the Filang engine from the optional `filang-engine` package, the same engine that answers it in Vaquum's Query and Composer tools, so a shape drawn or asked there can be used here unchanged. Add it more than once under different prefixes to carry several patterns side by side, such as an entry and the pattern an exit rule reads.
+`filang_pattern` brings a candle pattern written in Filang into a dataset. The pattern is answered by the Filang engine from the optional `filang` package, the same engine that answers it in Vaquum's Query and Composer tools, so a shape drawn or asked there can be used here unchanged. Add it more than once under different prefixes to carry several patterns side by side, such as an entry and the pattern an exit rule reads.
 
 | Function | Adds by default | Notes |
 |---|---|---|
@@ -960,7 +960,7 @@ def filang_pattern(data: pl.DataFrame | pl.LazyFrame, definition: str, hold_bars
 
 Compute where a Filang candle pattern holds, with a fixed-length position after each match.
 
-The pattern is answered by the Filang engine from the optional `filang-engine` package (`pip install vaquum-limen[filang]`); Limen holds no pattern logic of its own. A pattern is an event, optionally narrowed by conditions, such as `breach_reclaim(prior_low(over: 4h)) where candle_share(lower_wick, min: 40%)`. At a close where Filang cannot decide, for example with too little history, the event is 0 and the unknown column is 1. A pattern that reads volume, trades, delta, size or imbalance also needs the `liquidity_sum`, `maker_liquidity` and `no_of_trades` columns of the native spot klines. In a manifest, `{name}` inside the definition is filled from the round's parameters, so the numbers and choices of a pattern can be searched.
+The pattern is answered by the Filang engine from the optional `filang` package (`pip install vaquum-limen[filang]`); Limen holds no pattern logic of its own. A pattern is an event, optionally narrowed by conditions, such as `breach_reclaim(prior_low(over: 4h)) where candle_share(lower_wick, min: 40%)`. At a close where Filang cannot decide, for example with too little history, the event is 0 and the unknown column is 1. A pattern that reads volume, trades, delta, size or imbalance also needs the `liquidity_sum`, `maker_liquidity` and `no_of_trades` columns of the native spot klines. In a manifest, `{name}` inside the definition is filled from the round's parameters, so the numbers and choices of a pattern can be searched.
 
 | Argument | Contract |
 | --- | --- |

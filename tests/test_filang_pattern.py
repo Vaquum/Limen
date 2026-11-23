@@ -133,5 +133,5 @@ def test_a_missing_engine_says_how_to_install_it(bars, monkeypatch):
         raise ImportError(f'{package} is required for this Limen surface. Install it with `pip install vaquum-limen[{extra}]`.')
     monkeypatch.setattr(_filang_engine, 'require_optional', missing)
     monkeypatch.setattr(_filang_engine, '_RECORDINGS', {})
-    with pytest.raises(ImportError, match=r'filang-engine is required.*vaquum-limen\[filang\]'):
+    with pytest.raises(ImportError, match=r'filang is required.*vaquum-limen\[filang\]'):
         filang_pattern(bars, 'hammer()')

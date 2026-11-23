@@ -34,7 +34,7 @@ Does **not** own raw technical indicators, feature scaling, or model fitting.
 | `body_to_range`, `wick_imbalance`, `range_overlap`, `rejection_intensity`, `absorption_intensity` | Candle anatomy and auction-style context from plain bars | Focuses on rejection, overlap, and body-versus-wick structure |
 | `trend_coherence`, `volatility_term_structure` | Short/medium/long horizon agreement features | Summarizes cross-timescale alignment without a large feature bundle |
 | `conserved_flux_renormalization` | Trade-derived multi-scale flux diagnostics | Requires trade-level input rather than plain OHLCV bars |
-| `filang_pattern` | A candle pattern written in Filang, as event, unknown and position columns | Answered by the optional `filang-engine` package; patterns on volume, trades, delta, size or imbalance read the native kline counters |
+| `filang_pattern` | A candle pattern written in Filang, as event, unknown and position columns | Answered by the optional `filang` package; patterns on volume, trades, delta, size or imbalance read the native kline counters |
 
 ## Adjacent modules
 

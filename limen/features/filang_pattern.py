@@ -16,7 +16,7 @@ def filang_pattern(
     '''
     Compute where a Filang candle pattern holds, with a fixed-length position after each match.
 
-    The pattern is answered by the Filang engine from the optional `filang-engine` package. A pattern
+    The pattern is answered by the Filang engine from the optional `filang` package. A pattern
     that reads volume, trades, delta, size or imbalance also needs the 'liquidity_sum',
     'maker_liquidity' and 'no_of_trades' columns of Limen's spot klines.
 

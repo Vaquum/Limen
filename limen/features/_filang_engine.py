@@ -42,7 +42,7 @@ class _Recording:
 
     def __init__(self, frame: pl.DataFrame, interval_seconds: int) -> None:
         super().__init__()
-        backend = require_optional('filang_engine', 'filang-engine', 'filang')
+        backend = require_optional('filang_engine', 'filang', 'filang')
         self._error = cast(type[Exception], backend.FilangError)
         minutes = interval_seconds // 60
         self._bar = f'{minutes // 60}h' if minutes % 60 == 0 else f'{minutes}m'
