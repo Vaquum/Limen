@@ -2014,6 +2014,11 @@
     "symbol": "feature_aliases",
     "role": "signature"
   },
+  "limen.features.filang_pattern": {
+    "source": "limen/features/filang_pattern.py",
+    "symbol": "filang_pattern",
+    "role": "signature"
+  },
   "limen.features.find_min_d": {
     "source": "limen/features/fractional_diff.py",
     "symbol": "find_min_d",

@@ -28,6 +28,7 @@ from limen.features.dynamic_target import dynamic_target
 from limen.features.ema_alignment import ema_alignment
 from limen.features.entry_score_microstructure import entry_score_microstructure
 from limen.features.feature_aliases import feature_aliases
+from limen.features.filang_pattern import filang_pattern
 from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
 from limen.features.gap_high import gap_high
@@ -148,6 +149,7 @@ __all__ = [
     'ema_alignment',
     'entry_score_microstructure',
     'feature_aliases',
+    'filang_pattern',
     'find_min_d',
     'fractional_diff',
     'gap_high',

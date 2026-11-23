@@ -57,6 +57,7 @@ stats = ["scipy>=1.15,<2", "statsmodels>=0.14,<0.15"]
 tabpfn = ["tabpfn>=6,<7"]
 neural = ["torch>=2.6,<3"]
 hmm = ["hmmlearn>=0.3.3,<0.4"]
+filang = ["filang-engine>=0.10,<0.11"]
 all = [
   "torch>=2.6,<3",
   "hmmlearn>=0.3.3,<0.4",

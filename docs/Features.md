@@ -314,6 +314,14 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 
 `market_regime` binds `sma_20` and `sma_50` to the selected short and long close averages, even for equal or swapped periods. `volume_sma` is the selected volume average. Fixed aliases take precedence over conflicting close `sma_<period>` names; close outputs take precedence over the volume `sma_<lookback>` output. Nonconflicting parameterized outputs remain in their existing order. Incoming `sma_20`, `sma_50` or `volume_sma` columns are rejected, including repeated application. These bindings apply to this call; later transforms retain their own output behavior. SMA warmup uses NaN, while the derived regime features use null.
 
+## Candle patterns from Filang
+
+`filang_pattern` brings a candle pattern written in Filang into a dataset. The pattern is answered by the Filang engine from the optional `filang-engine` package, the same engine that answers it in Vaquum's Query and Composer tools, so a shape drawn or asked there can be used here unchanged. Add it more than once under different prefixes to carry several patterns side by side, such as an entry and the pattern an exit rule reads.
+
+| Function | Adds by default | Notes |
+|---|---|---|
+| `filang_pattern` | `filang_event`, `filang_unknown`, `filang_position` | Where the pattern holds at each close, where Filang cannot decide, and a position held for `hold_bars` rows from each match. |
+
 ## Choosing between indicators and features
 
 - Use an indicator for a direct market calculation such as RSI, ATR, or MACD.
@@ -941,6 +949,28 @@ Compute feature aliases with null filling for dynamic and regime features.
 | volatility_regime_enabled (`bool`) | Whether to create regime feature aliases |
 
 **Returns:** pl.DataFrame: The input data with new columns 'dynamic_target_feature', 'entry_score_feature', 'momentum_score_feature' and optional regime columns
+
+### `limen.features.filang_pattern`
+
+<!-- reference: api-limen-features-filang-pattern source=limen/features/filang_pattern.py region=signature:filang_pattern role=signature -->
+```python
+def filang_pattern(data: pl.DataFrame | pl.LazyFrame, definition: str, hold_bars: int=1, interval_seconds: int=900, prefix: str='filang') -> pl.DataFrame | pl.LazyFrame:
+    ...
+```
+
+Compute where a Filang candle pattern holds, with a fixed-length position after each match.
+
+The pattern is answered by the Filang engine from the optional `filang-engine` package (`pip install vaquum-limen[filang]`); Limen holds no pattern logic of its own. A pattern is an event, optionally narrowed by conditions, such as `breach_reclaim(prior_low(over: 4h)) where candle_share(lower_wick, min: 40%)`. At a close where Filang cannot decide, for example with too little history, the event is 0 and the unknown column is 1. A pattern that reads volume, trades, delta, size or imbalance also needs the `liquidity_sum`, `maker_liquidity` and `no_of_trades` columns of the native spot klines. In a manifest, `{name}` inside the definition is filled from the round's parameters, so the numbers and choices of a pattern can be searched.
+
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame \| pl.LazyFrame`) | Klines dataset with 'datetime', 'open', 'high', 'low', 'close' and 'volume' columns |
+| definition (`str`) | Filang pattern: an event, optionally followed by `where <condition>` clauses |
+| hold_bars (`int`) | Number of rows a position is held from each matching close |
+| interval_seconds (`int`) | Bar length of the dataset in seconds, a whole number of minutes |
+| prefix (`str`) | Prefix of the three output column names |
+
+**Returns:** pl.DataFrame | pl.LazyFrame: The input data with new columns '<prefix>_event', '<prefix>_unknown' and '<prefix>_position'
 
 ### `limen.features.find_min_d`
 

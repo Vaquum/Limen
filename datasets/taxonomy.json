@@ -147,6 +147,7 @@
   {"name": "ema_alignment", "type": "feature", "category": "trend"},
   {"name": "entry_score_microstructure", "type": "feature", "category": "trade_logic"},
   {"name": "feature_aliases", "type": "feature", "category": "temporal"},
+  {"name": "filang_pattern", "type": "feature", "category": "market_structure"},
   {"name": "fractional_diff", "type": "feature", "category": "temporal"},
   {"name": "gap_high", "type": "feature", "category": "market_structure"},
   {"name": "garman_klass_volatility", "type": "feature", "category": "volatility"},
