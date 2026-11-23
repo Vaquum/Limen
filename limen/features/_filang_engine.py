@@ -47,7 +47,7 @@ class _Recording:
         minutes = interval_seconds // 60
         self._bar = f'{minutes // 60}h' if minutes % 60 == 0 else f'{minutes}m'
         opens = frame['datetime'].dt.epoch('ms').to_numpy().astype(np.int64)
-        self._row: dict[int, int] = {close + interval_seconds * 1000: row for row, close in enumerate(opens.tolist())}
+        self._row: dict[int, int] = {int(opens[row]) + interval_seconds * 1000: row for row in range(opens.shape[0])}
         self._answers: dict[str, Answers] = {}
         self.engine = cast(Callable[[], _Engine], backend.Engine)()
         self.engine.load_csv(_csv(frame, opens), interval_seconds * 1000)
