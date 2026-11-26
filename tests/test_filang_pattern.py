@@ -114,14 +114,14 @@ def test_prices_that_would_be_rounded_are_rejected(bars, column):
 
 def test_answer_cache_is_fifo_bounded_and_evicted_parts_are_recomputed(bars):
     recording = _filang_engine._Recording(bars.head(4), 900)
-    part = 'candle_relation(price(close), is: above, right: 0)'
+    part = 'candle_relation(volume(), is: above, right: volume(bars_ago: 1))'
     try:
         first = recording.ask(part, condition=False)
         np.testing.assert_array_equal(recording.ask(part, condition=True), first)
         assert len(recording._answers) == 2
         assert recording.ask(part, condition=False) is first
-        for threshold in range(1, _filang_engine._KEEP_ANSWERS):
-            recording.ask(f'candle_relation(price(close), is: above, right: {threshold})', condition=bool(threshold % 2))
+        for lag in range(2, _filang_engine._KEEP_ANSWERS + 1):
+            recording.ask(f'candle_relation(volume(), is: above, right: volume(bars_ago: {lag}))', condition=bool(lag % 2))
             assert len(recording._answers) <= _filang_engine._KEEP_ANSWERS
         assert len(recording._answers) == _filang_engine._KEEP_ANSWERS
         assert f'find {part}' not in recording._answers
