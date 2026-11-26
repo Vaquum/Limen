@@ -50,8 +50,9 @@ class _Recording:
         opens = frame['datetime'].dt.epoch('ms').to_numpy().astype(np.int64)
         self._row: dict[int, int] = {int(opens[row]) + interval_seconds * 1000: row for row in range(opens.shape[0])}
         self._answers: dict[str, Answers] = {}
+        csv = _csv(frame, opens)
         self.engine = cast(Callable[[], _Engine], backend.Engine)()
-        self.engine.load_csv(_csv(frame, opens), interval_seconds * 1000)
+        self.engine.load_csv(csv, interval_seconds * 1000)
 
     def _rows(self, closes: list[int]) -> list[int]:
         try:
