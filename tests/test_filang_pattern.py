@@ -1,3 +1,4 @@
+from importlib import import_module
 from pathlib import Path
 
 import numpy as np
@@ -104,6 +105,36 @@ def test_other_bar_sizes_and_frames_without_counters(bars):
         filang_pattern(prices, 'candle_relation(delta(), is: above, right: 0)')
 
 
+@pytest.mark.parametrize('column', ['open', 'high', 'low', 'close'])
+def test_prices_that_would_be_rounded_are_rejected(bars, column):
+    prices = bars.head(2).with_columns((pl.col(column) + 0.001).alias(column))
+    with pytest.raises(ValueError, match='OHLC prices must be exactly representable with two decimal places'):
+        filang_pattern(prices, 'hammer()')
+
+
+def test_answer_cache_is_fifo_bounded_and_evicted_parts_are_recomputed(bars):
+    recording = _filang_engine._Recording(bars.head(4), 900)
+    part = 'candle_relation(volume(), is: above, right: volume(bars_ago: 1))'
+    try:
+        first = recording.ask(part, condition=False)
+        np.testing.assert_array_equal(recording.ask(part, condition=True), first)
+        assert len(recording._answers) == 2
+        assert recording.ask(part, condition=False) is first
+        for lag in range(2, _filang_engine._KEEP_ANSWERS + 1):
+            recording.ask(f'candle_relation(volume(), is: above, right: volume(bars_ago: {lag}))', condition=bool(lag % 2))
+            assert len(recording._answers) <= _filang_engine._KEEP_ANSWERS
+        assert len(recording._answers) == _filang_engine._KEEP_ANSWERS
+        assert f'find {part}' not in recording._answers
+        assert f'where {part}' in recording._answers
+        recomputed = recording.ask(part, condition=False)
+        assert recomputed is not first
+        np.testing.assert_array_equal(recomputed, first)
+        assert len(recording._answers) == _filang_engine._KEEP_ANSWERS
+        assert f'where {part}' not in recording._answers
+    finally:
+        recording.engine.close()
+
+
 @pytest.mark.parametrize('definition,message', [
     ('not_a_filang_event()', 'not_a_filang_event'),
     ('hammer(', 'definition is not a pattern Filang can answer'),
@@ -117,7 +148,7 @@ def test_patterns_filang_cannot_answer_are_refused_with_its_reason(bars, definit
 def test_invalid_data_and_arguments_fail_before_the_engine_is_asked(bars, monkeypatch):
     def unavailable(*_: object) -> object:
         raise AssertionError('the engine was asked')
-    monkeypatch.setattr(_filang_engine, 'require_optional', unavailable)
+    monkeypatch.setattr(import_module('limen.features.filang_pattern'), 'pattern_answers', unavailable)
     with pytest.raises(ValueError, match="missing columns: \\['close'\\]"):
         filang_pattern(bars.drop('close'), 'hammer()')
     with pytest.raises(ValueError, match='already exist'):
