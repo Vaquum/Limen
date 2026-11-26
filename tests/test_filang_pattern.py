@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 import polars as pl
@@ -126,6 +127,20 @@ def test_invalid_data_and_arguments_fail_before_the_engine_is_asked(bars, monkey
         filang_pattern(bars, 'hammer()', interval_seconds=90)
     with pytest.raises(ValueError, match='definition'):
         filang_pattern(bars, '   ')
+
+
+@pytest.mark.parametrize('column,value', [
+    ('liquidity_sum', np.inf),
+    ('maker_liquidity', np.inf),
+    ('no_of_trades', -1),
+])
+def test_invalid_counters_fail_before_an_engine_is_created(bars, monkeypatch, column, value):
+    backend = Mock(FilangError=ValueError)
+    monkeypatch.setattr(_filang_engine, 'require_optional', lambda *_: backend)
+    invalid = bars.head(1).with_columns(pl.lit(value).alias(column))
+    with pytest.raises(ValueError, match='values that cannot be right'):
+        _filang_engine._Recording(invalid, 900)
+    backend.Engine.assert_not_called()
 
 
 def test_a_missing_engine_says_how_to_install_it(bars, monkeypatch):
