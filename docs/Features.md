@@ -318,6 +318,8 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 
 `filang_pattern` brings a candle pattern written in Filang into a dataset. The pattern is answered by the Filang engine from the optional `filang` package, the same engine that answers it in Vaquum's Query and Composer tools, so a shape drawn or asked there can be used here unchanged. Add it more than once under different prefixes to carry several patterns side by side, such as an entry and the pattern an exit rule reads.
 
+OHLC prices must be exactly representable with two decimal places; other values raise `ValueError`.
+
 | Function | Adds by default | Notes |
 |---|---|---|
 | `filang_pattern` | `filang_event`, `filang_unknown`, `filang_position` | Where the pattern holds at each close, where Filang cannot decide, and a position held for `hold_bars` rows from each match. |

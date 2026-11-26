@@ -19,6 +19,7 @@ COUNTER_COLUMNS = ('liquidity_sum', 'maker_liquidity', 'no_of_trades')
 # asked on its own.
 _EVERY_CLOSE = 'candle_relation(price(high), is: at_or_above, right: price(low))'
 _KEEP = 6
+_KEEP_ANSWERS = 32
 
 
 class _Result(TypedDict):
@@ -73,6 +74,8 @@ class _Recording:
             for closes in results[0]['unknown'].values():
                 answer[self._rows(closes)] = -1
             answer[self._rows(results[0]['anchors'])] = 1
+            while len(self._answers) >= _KEEP_ANSWERS:
+                _ = self._answers.pop(next(iter(self._answers)))
             self._answers[key] = answer
         return self._answers[key]
 
@@ -101,6 +104,8 @@ def _csv(frame: pl.DataFrame, opens: npt.NDArray[np.int64]) -> str:
 
 def _bar(opens: npt.NDArray[np.int64], prices: list[npt.NDArray[np.float64]], row: int) -> str:
     values = [f'{column[row]:.2f}' for column in prices[:4]]
+    if any(float(value) != column[row] for value, column in zip(values, prices[:4], strict=True)):
+        raise ValueError('filang_pattern OHLC prices must be exactly representable with two decimal places')
     return ','.join((str(int(opens[row])), *values, f'{prices[4][row]:.5f}'))
 
 
