@@ -152,7 +152,7 @@ def baseline_surface(captured: dict) -> dict:
 
 
 def stable(captured: dict) -> dict:
-    excluded = {'created_at', 'round_storage', 'limen_version', 'manifest_id', 'yaml_reference', 'factorize'}
+    excluded = {'created_at', 'round_storage', 'limen_version', 'filang_version', 'manifest_id', 'yaml_reference', 'factorize'}
     return {'columns': captured['columns'],
             'rows': [{k:v for k,v in row.items() if k!='execution_time'} for row in captured['rows']],
             'round_data':captured['round_data'],
