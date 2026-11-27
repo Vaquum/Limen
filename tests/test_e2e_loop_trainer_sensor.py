@@ -4,6 +4,7 @@ import json
 import math
 from pathlib import Path
 from datetime import date
+from importlib.metadata import version
 from tempfile import TemporaryDirectory
 from textwrap import dedent
 from unittest.mock import patch
@@ -236,6 +237,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
         metadata = json.loads((exp_dir / 'metadata.json').read_text())
         assert 'yaml_reference' in metadata
         assert 'limen_version' in metadata
+        assert metadata['filang_version'] == version('filang')
         assert metadata['yaml_reference']['metadata']['name'] == 'btc_logreg_15m_random_ctrl'
 
         round_ids: list[int] = []

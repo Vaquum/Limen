@@ -1030,7 +1030,7 @@ class UniversalExperimentLoop:
 
         metadata: dict[str, object] = _parallel.worker_metadata(self._workers, {
             'sfd_module': self._sfd_module_name, **self._round_error_policy.metadata,
-            'limen_version': self._get_limen_version(),
+            'limen_version': self._get_version('vaquum-limen', 'dev'), 'filang_version': self._get_version('filang', None),
             'created_at': datetime.now(timezone.utc).isoformat(), 'round_storage': _storage.FORMAT,
         }, context_parameter_keys=context_parameter_keys, manifest=self.manifest)
         if self._record_execution:
@@ -1059,12 +1059,12 @@ class UniversalExperimentLoop:
 
 
     @staticmethod
-    def _get_limen_version() -> str:
+    def _get_version(package: str, missing: str | None) -> str | None:
 
         try:
-            return importlib.metadata.version('vaquum-limen')
+            return importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError:
-            return 'dev'
+            return missing
 
 
     def _checkpoint(self, msq: MSQ | dict[str, object], domain: ParamDomain,

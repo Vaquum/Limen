@@ -335,7 +335,7 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
             raise ValueError('Holdout target must be an initialized exact next-bar binary target')
         unchanged(evaluation_target)
     versions: dict[str, object] = {'python': platform.python_version()}
-    for package in ('vaquum-limen', 'numpy', 'polars', 'scikit-learn', 'lightgbm'):
+    for package in ('vaquum-limen', 'filang', 'numpy', 'polars', 'scikit-learn', 'lightgbm'):
         try:
             versions[package] = version(package)
         except PackageNotFoundError:
