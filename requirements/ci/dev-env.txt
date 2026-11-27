@@ -487,9 +487,9 @@ execnet==2.1.2 \
     --hash=sha256:63d83bfdd9a23e35b9c6a3261412324f964c2ec8dcd8d3c6916ee9373e0befcd \
     --hash=sha256:67fba928dd5a544b783f6056f449e5e3931a5c378b128bc18501f7ea79e296ec
     # via pytest-xdist
-filang==0.10.0.post3 \
-    --hash=sha256:6618343016ea8dc3fb6b4aa61108008991c410a296d0ee6e96e02f38a5902707 \
-    --hash=sha256:bfa5cd61507646cddcaa9337a1d4f72223ccd6836832db928a62fa992c384230
+filang==0.10.0.post85 \
+    --hash=sha256:2b77ce87f7624e868229712535323875dffc964b7508d6b306b8fb1b1e1cf1fb \
+    --hash=sha256:73a0151b9f2c496a305df217c125e07faaf95bec9eda43b263ac756c7be63561
     # via
     #   -c requirements/constraints.txt
     #   vaquum-limen

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 import numpy as np
 import polars as pl
 import pytest
+from filang_engine import Engine
 from polars.testing import assert_frame_equal
 
 from limen import features
@@ -39,6 +40,54 @@ def test_counts_match_the_answers_filang_publishes_for_these_bars(bars, definiti
     assert result.height == bars.height
     assert int(result['filang_event'].sum()) == count
     assert result.select(pl.col('^filang_.*$').null_count().sum()).row(0) == (0, 0, 0)
+
+
+# Questions in the words Query writes them. Query asks the engine the whole question at once: a close matches where
+# the event and every condition hold, and the engine names separately the closes where it could not decide the event
+# or the conditions.
+QUERY = [
+    ('exact_g1("g1:o:0,1,2,3,u")', ['candle_share(lower_wick, min: 50%)']),
+    ('breach_reclaim(prior_low(over: 4h))', ['candle_share(lower_wick, min: 50%)', 'range_multiple(over: 4h, min: 1.5)']),
+    ('channel_breakout(over: 12h)', ['candle_relation(delta(), is: above, right: 0)']),
+    (f'chained_g1("{SHAPE}|volume:0,1")', []),
+    ('exact_g1("g1:o:0,1,3,4,u;2,3,5,6,u|delta:0,2/1")', []),
+    ('wick_rejection(body_max: 35%, wick_min: 45%)', ['near_level(prior_high(over: 24h), point: price(close), within: 1%)']),
+    ('hammer', ['candle_relation(volume(), is: above, right: volume(bars_ago: 1))', 'dimension_multiple(trades, over: 4h, min: 2)']),
+    ('candle_relation(price(close), is: above, right: price(high, bars_ago: 1))', ['held(quiet_range(width_max: 2.5%), for: 48h)']),
+]
+
+
+@pytest.fixture(scope='module')
+def query(bars):
+    # The bars go to the engine as Filang's own check of Limen's input writes them, not through this feature.
+    step = 900_000
+    frame = bars.select(pl.col('datetime').dt.epoch('ms'), 'open', 'high', 'low', 'close', 'volume', 'liquidity_sum',
+                        (pl.col('liquidity_sum') - pl.col('maker_liquidity')).alias('taker_buy'), 'no_of_trades')
+    lines = ['open_ms,open,high,low,close,base_volume,volume,taker_buy_volume,trade_count']
+    lines += [','.join((str(t), *(f'{price:.2f}' for price in (o, h, low, c)), repr(btc), repr(usdt), repr(buy), str(n)))
+              for t, o, h, low, c, btc, usdt, buy, n in frame.iter_rows()]
+    row = {t + step: i for i, t in enumerate(frame['datetime'].to_list())}
+    with Engine() as engine:
+        engine.load_csv('\n'.join(lines) + '\n', step)
+
+        def ask(find: str, wheres: list[str]) -> tuple[set[int], dict[str, set[int]]]:
+            result, = engine.study('on BTCUSDT 15m\nfind ' + find + ''.join('\nwhere ' + w for w in wheres))['results']
+            return {row[c] for c in result['anchors']}, {part: {row[c] for c in closes} for part, closes in result['unknown'].items()}
+        yield ask
+
+
+@pytest.mark.parametrize('find,wheres', QUERY)
+def test_matches_are_the_matches_query_finds_for_the_same_question(bars, query, find, wheres):
+    matches, undecided = query(find, wheres)
+    result = filang_pattern(bars, ' where '.join([find, *wheres]))
+    events = set(np.flatnonzero(result['filang_event'].to_numpy()).tolist())
+    unknown = set(np.flatnonzero(result['filang_unknown'].to_numpy()).tolist())
+    assert events == matches and matches
+    # Unknown only where the engine could not decide the event or a condition, and unknown wherever it could decide
+    # neither, or could not decide the event where the conditions hold.
+    assert unknown <= undecided['event'] | undecided['eligibility']
+    assert undecided['event'] & undecided['eligibility'] <= unknown
+    assert undecided['detectorWithinContext'] <= unknown
 
 
 def test_readings_of_the_counters_equal_plain_arithmetic_on_the_columns(bars):

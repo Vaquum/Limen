@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-11-26T11:04:34.333568+00:00",
-  "execution_checkout_head": "64e70e5488d5a5964273ccb88f80dbbf70d7b8bf",
+  "observed_at": "2026-11-27T15:41:04.752274+00:00",
+  "execution_checkout_head": "c4541d7b27cbb16659a6ac2f9679edfb8db687fb",
   "package_version": "6.0.1",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -115,7 +115,7 @@
     "experiment/_holdout_composition.py": "a17f3520b77f48a067c5e3f648bff3f19b17f0b88f85f50ba429448fb720a664",
     "experiment/_holdout_events.py": "042e133599255ac164cf73082b7048221fe52f7c17bdfaf492f0b7691d9ae80a",
     "experiment/_holdout_folds.py": "4ef149ccae6610f5bdb6f1d351bd94a2310958ced53fe82666d143cacf614bd8",
-    "experiment/_holdout_freeze.py": "d5497fba94e2c1133c3551b8387418ee276ddda1c27fb6b9b764101037c4aca3",
+    "experiment/_holdout_freeze.py": "8a12f5a6753e0a18ee8d7a49c94781d4399874d35471c7d00b9feba3b30d177b",
     "experiment/_holdout_history.py": "9ca37e2a7d5806b5998934e6e2b29f85c8c50a8ba4c6ce900fa4c1e62ac6fc72",
     "experiment/_holdout_report.py": "bc5dfb1b184a67f284ff504851a20c27ce208496b1022bb95f7e76a87a16b4d5",
     "experiment/_holdout_research.py": "944a0cef2075b792f1b3c2b49074991f9886da4189d65dff528af4d4992c3828",
@@ -153,7 +153,7 @@
     "experiment/checkpoint_manager.py": "fb8587a9364816a7f70208daf615af0fbf7726894b00fbfb4d1365b75e0f497f",
     "experiment/convergence_report.py": "63a3cda8861a939ebfa5a6f1aaecd2abd9e3bab4663acace92542414e2d0e0b3",
     "experiment/errors.py": "dbf7edfb45abd2156a255588e04454b3ed285defa741ed15f6cd3c2a6f54e5f5",
-    "experiment/experiment_core.py": "1c8b36745a504a77d2be931e67368f2a308d4d11e1247629ebdd35fa03e4b46c",
+    "experiment/experiment_core.py": "9f70cdafcff3e6818052a43eff931dd6a03df51a7dc3a092df1c07d2bef4f3aa",
     "experiment/family_acceptance_report.py": "b1a15c0541433581a25cb5acc095a689f5f820a06f79539a0dc4f5ba93f7fa51",
     "experiment/feedback_controller.py": "d3f1fd75c0e6bc976f0815c925a4a944144cfbb373807495ba3b0826e29284e9",
     "experiment/holdout.py": "e6f6a90b16b47394e09749b94e2af30ddf3cd032e664db7eff8fe845665970d1",

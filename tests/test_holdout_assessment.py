@@ -154,6 +154,7 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert calls == []
     assert report['spec']['target']['params']['target_name'] == 'observed_up'
     assert report['spec']['versions']['vaquum-limen'] == version('vaquum-limen')
+    assert report['spec']['versions']['filang'] == version('filang')
     assert len(predictions) == 48
     assert [row[1] for row in predictions] == [size for size in range(25, 49) for _ in range(2)]
     assert len({row[2] for row in predictions}) == 1

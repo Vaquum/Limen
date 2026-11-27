@@ -904,7 +904,7 @@ def test_protected_fold_lineage(population, tmp_path, monkeypatch):
     identity = strategy.compute_param_hash(params)
     writer = SimpleNamespace(_round_error_policy=RoundErrorPolicy(), manifest=manifest, _walk_forward=runner, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
         _yaml_reference=config, _record_execution=True, _record_model_outputs=True, _workers=1, _factorize=False,
-        _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_limen_version=UniversalExperimentLoop._get_limen_version)
+        _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_version=UniversalExperimentLoop._get_version)
     with pytest.raises(RuntimeError, match='interruption control'), research.operation(manifest, 'experiment') as campaign:
         UniversalExperimentLoop._write_metadata(writer, directory)
         started = perf_counter()
@@ -1054,7 +1054,7 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
     identity = strategy.compute_param_hash(params)
     writer = SimpleNamespace(_round_error_policy=RoundErrorPolicy(), manifest=manifest, _walk_forward=None, _recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
         _yaml_reference=config, _record_execution=True, _record_model_outputs=True, _workers=1, _factorize=False,
-        _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_limen_version=UniversalExperimentLoop._get_limen_version)
+        _search_strategy=strategy, _sfd_module_name=compiled.__name__, _get_version=UniversalExperimentLoop._get_version)
     with fixed_trade_sources(manifest, config['sfd']['params']) if secondary == 'fixed' else nullcontext(), source_operation(manifest):
         public = UniversalExperimentLoop(sfd=CompiledSFD(copy.deepcopy(config), project_root=root), project_root=root)
         assert public.data['datetime'].dt.epoch('ns').max() < history.utc_day('2024-01-07')

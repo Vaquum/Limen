@@ -320,6 +320,8 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 
 OHLC prices must be exactly representable with two decimal places; other values raise `ValueError`.
 
+Limen's locks pin the engine release Query and Composer run. A run's `metadata.json` names the installed release as `filang_version`, and a frozen holdout lists it among its versions as `filang`; both are null when the package is absent.
+
 | Function | Adds by default | Notes |
 |---|---|---|
 | `filang_pattern` | `filang_event`, `filang_unknown`, `filang_position` | Where the pattern holds at each close, where Filang cannot decide, and a position held for `hold_bars` rows from each match. |
